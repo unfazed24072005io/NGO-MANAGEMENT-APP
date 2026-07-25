@@ -122,9 +122,9 @@ export default function WorkingMemberECommerce({ navigation }) {
 
   const getWholesaleDiscount = () => {
     const total = getTotalAmount();
-    if (total >= 5000) return 0.20; // 20% off
-    if (total >= 2000) return 0.15; // 15% off
-    if (total >= 1000) return 0.10; // 10% off
+    if (total >= 5000) return 0.20;
+    if (total >= 2000) return 0.15;
+    if (total >= 1000) return 0.10;
     return 0;
   };
 
@@ -286,6 +286,15 @@ export default function WorkingMemberECommerce({ navigation }) {
     return products.filter(p => p.category === category).length;
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Loading products...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Blue Header Card */}
@@ -299,15 +308,8 @@ export default function WorkingMemberECommerce({ navigation }) {
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity 
-              style={[styles.wholesaleToggle, showWholesale && styles.wholesaleToggleActive]}
-              onPress={() => setShowWholesale(!showWholesale)}
-            >
-              <MaterialIcons name="inventory" size={16} color={showWholesale ? '#ffffff' : '#3b82f6'} />
-              <Text style={[styles.wholesaleToggleText, showWholesale && styles.wholesaleToggleTextActive]}>Bulk</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
               style={styles.ordersButton}
-              onPress={() => navigation.navigate('MyOrders')}
+              onPress={() => navigation.navigate('WorkingMemberMyOrders')}
             >
               <MaterialIcons name="receipt" size={18} color="#ffffff" />
               <Text style={styles.ordersButtonText}>Orders</Text>
@@ -564,6 +566,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+
   // Blue Header Card
   headerCard: {
     backgroundColor: '#3b82f6',
@@ -595,13 +609,13 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   wholesaleToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 4,
@@ -614,7 +628,7 @@ const styles = StyleSheet.create({
   },
   wholesaleToggleText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
+    fontSize: 12,
     color: '#ffffff',
   },
   wholesaleToggleTextActive: {
@@ -637,9 +651,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   profileIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -651,9 +665,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 50,
   },
 
   // Search inside header
@@ -776,18 +790,19 @@ const styles = StyleSheet.create({
   },
   retailPriceStrikethrough: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
+    fontSize: 12,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
   },
   wholesaleBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: 8,
+    left: 8,
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+    zIndex: 1,
   },
   wholesaleBadgeText: {
     fontFamily: Fonts.SemiBold,

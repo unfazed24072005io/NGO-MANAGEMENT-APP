@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, ActivityIndicator, RefreshControl, FlatList, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, getDocs, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
 
 export default function MyOrders({ navigation }) {
@@ -13,12 +13,30 @@ export default function MyOrders({ navigation }) {
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
 
   const statusFilters = ['All', 'pending', 'processing', 'completed', 'cancelled'];
 
   useEffect(() => {
     setupRealtimeListener();
+    fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfilePhoto(data.profilePhoto || null);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const setupRealtimeListener = () => {
     const userId = auth.currentUser?.uid;
@@ -94,15 +112,15 @@ export default function MyOrders({ navigation }) {
   };
 
   const StatCard = ({ label, count, icon, color }) => (
-    <TouchableOpacity style={[styles.statCard, { borderLeftColor: color }]}>
+    <View style={[styles.statCard]}>
+      <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={18} color={color} />
+      </View>
       <View style={styles.statContent}>
         <Text style={styles.statLabel}>{label}</Text>
         <Text style={[styles.statValue, { color }]}>{count}</Text>
       </View>
-      <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={18} color={color} />
-      </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const OrderCard = ({ order }) => {
@@ -163,30 +181,41 @@ export default function MyOrders({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Blue Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>My Orders</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.profileIcon}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            {profilePhoto ? (
+              <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+            ) : (
+              <MaterialIcons name="person" size={28} color="#3b82f6" />
+            )}
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Orders</Text>
-          <View style={{ width: 32 }} />
         </View>
-      </View>
 
-      {/* Stats */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.statsContainer}
-        contentContainerStyle={styles.statsContent}
-      >
-        <StatCard label="Total" count={orders.length} icon="receipt" color="#6b7280" />
-        <StatCard label="Pending" count={orders.filter(o => o.status === 'pending').length} icon="pending" color="#f59e0b" />
-        <StatCard label="Processing" count={orders.filter(o => o.status === 'processing').length} icon="settings" color="#3b82f6" />
-        <StatCard label="Completed" count={orders.filter(o => o.status === 'completed').length} icon="check-circle" color="#10b981" />
-        <StatCard label="Cancelled" count={orders.filter(o => o.status === 'cancelled').length} icon="cancel" color="#ef4444" />
-      </ScrollView>
+        {/* Stat Cards inside header */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.statsContainer}
+          contentContainerStyle={styles.statsContent}
+        >
+          <StatCard label="Total" count={orders.length} icon="receipt" color="#ffffff" />
+          <StatCard label="Pending" count={orders.filter(o => o.status === 'pending').length} icon="pending" color="#f59e0b" />
+          <StatCard label="Processing" count={orders.filter(o => o.status === 'processing').length} icon="settings" color="#3b82f6" />
+          <StatCard label="Completed" count={orders.filter(o => o.status === 'completed').length} icon="check-circle" color="#10b981" />
+          <StatCard label="Cancelled" count={orders.filter(o => o.status === 'cancelled').length} icon="cancel" color="#ef4444" />
+        </ScrollView>
+      </View>
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
@@ -287,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
-  // Blue Header
+  // Blue Header Card
   headerCard: {
     backgroundColor: '#3b82f6',
     paddingHorizontal: 20,
@@ -298,18 +327,90 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backButton: {
     padding: 4,
+    marginRight: 12,
   },
   headerTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
+    fontSize: 22,
     color: '#ffffff',
-    flex: 1,
+  },
+  profileIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+
+  // Stats inside header
+  statsContainer: { 
+    maxHeight: 80,
+  },
+  statsContent: { 
+    gap: 10,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  statCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 70,
+    width: 75,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 70,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  statContent: { 
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statLabel: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 8, 
+    color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+  },
+  statValue: { 
+    fontFamily: Fonts.Bold,
+    fontSize: 14, 
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  statIcon: { 
+    width: 24, 
+    height: 24, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 2,
   },
 
   loadingContainer: {
@@ -323,45 +424,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
-  },
-
-  statsContainer: {
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  statsContent: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  statCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    minWidth: 90,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  statContent: {
-    flex: 1,
-  },
-  statLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 10,
-    color: '#6b7280',
-  },
-  statValue: {
-    fontFamily: Fonts.Bold,
-    fontSize: 18,
-  },
-  statIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   listContent: {

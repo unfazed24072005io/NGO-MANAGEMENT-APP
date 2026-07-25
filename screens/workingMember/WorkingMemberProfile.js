@@ -311,35 +311,7 @@ export default function WorkingMemberProfile({ navigation }) {
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <MaterialIcons name="notifications" size={20} color="#6b7280" />
-              <Text style={styles.settingLabel}>Push Notifications</Text>
-            </View>
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#767577', true: '#3b82f6' }}
-              thumbColor={notifications ? '#ffffff' : '#f4f3f4'}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <MaterialIcons name="task-alt" size={20} color="#6b7280" />
-              <Text style={styles.settingLabel}>Task Reminders</Text>
-            </View>
-            <Switch
-              value={notifications}
-              onValueChange={setNotifications}
-              trackColor={{ false: '#767577', true: '#8b5cf6' }}
-              thumbColor={notifications ? '#ffffff' : '#f4f3f4'}
-            />
-          </View>
-        </View>
+        
 
         {editing && (
           <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>

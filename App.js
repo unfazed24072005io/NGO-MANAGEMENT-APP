@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Platform, SafeAreaView, View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Modal } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import WorkingMemberMemberDetail from './screens/workingMember/WorkingMemberMemberDetail';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { loadFonts, Fonts } from './config/fonts';
@@ -685,7 +686,12 @@ export default function App() {
         >
           {/* Welcome Screen */}
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          
+          <Stack.Screen 
+  name="WorkingMemberMemberDetail" 
+  component={WorkingMemberMemberDetail} 
+  options={{ headerShown: false }} 
+/>
+
           {/* Auth Screens */}
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
