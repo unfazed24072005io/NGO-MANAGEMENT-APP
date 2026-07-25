@@ -1,0 +1,43 @@
+# Node
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Expo
+.expo/
+dist/
+web-build/
+.expo-shared/
+
+# Firebase
+serviceAccountKey.json
+*.key
+*.pem
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build
+*.apk
+*.ipa
+*.aab
+
+# Temporary
+tmp/
+temp/
+*.tmp

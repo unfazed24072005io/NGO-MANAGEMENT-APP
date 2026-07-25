@@ -1,0 +1,972 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, Modal, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { db, auth } from '../../config/firebase';
+import { collection, getDocs, addDoc, doc, query, where, orderBy, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { Fonts } from '../../config/fonts';
+
+export default function WorkingMemberEvents({ navigation }) {
+  const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [registeredEventIds, setRegisteredEventIds] = useState([]);
+  const [assignedEventIds, setAssignedEventIds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('All');
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [dutyModalVisible, setDutyModalVisible] = useState(false);
+  const [dutyDetails, setDutyDetails] = useState(null);
+
+  const filters = ['All', 'Upcoming', 'Ongoing', 'Completed', 'Cancelled'];
+
+  useEffect(() => {
+    setupRealtimeListener();
+    fetchRegisteredEvents();
+    fetchAssignedEvents();
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setProfilePhoto(data.profilePhoto || null);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const setupRealtimeListener = () => {
+    const q = query(collection(db, 'events'), orderBy('date', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const eventsList = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        eventsList.push({ 
+          id: doc.id, 
+          ...data,
+          date: data.date?.toDate?.() || new Date(data.date)
+        });
+      });
+      setEvents(eventsList);
+      applyFilters(eventsList, searchQuery, selectedFilter);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  };
+
+  const fetchRegisteredEvents = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const regSnap = await getDocs(query(
+        collection(db, 'eventRegistrations'),
+        where('memberId', '==', userId),
+        where('status', '==', 'confirmed')
+      ));
+      
+      const ids = [];
+      regSnap.forEach((doc) => {
+        ids.push(doc.data().eventId);
+      });
+      setRegisteredEventIds(ids);
+    } catch (error) {
+      console.error('Error fetching registered events:', error);
+    }
+  };
+
+  const fetchAssignedEvents = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const assignSnap = await getDocs(query(
+        collection(db, 'eventAssignments'),
+        where('memberId', '==', userId),
+        where('status', '==', 'active')
+      ));
+      
+      const ids = [];
+      assignSnap.forEach((doc) => {
+        ids.push(doc.data().eventId);
+      });
+      setAssignedEventIds(ids);
+    } catch (error) {
+      console.error('Error fetching assigned events:', error);
+    }
+  };
+
+  const applyFilters = (data, searchText, filter) => {
+    let filtered = data;
+
+    if (searchText) {
+      filtered = filtered.filter(event =>
+        event.title?.toLowerCase().includes(searchText.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchText.toLowerCase()) ||
+        event.category?.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    if (filter !== 'All') {
+      filtered = filtered.filter(event => event.status === filter.toLowerCase());
+    }
+
+    setFilteredEvents(filtered);
+  };
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    applyFilters(events, text, selectedFilter);
+  };
+
+  const handleFilterPress = (filter) => {
+    setSelectedFilter(filter);
+    applyFilters(events, searchQuery, filter);
+  };
+
+  const handleRegister = async (event) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      Alert.alert('Error', 'Please login first');
+      return;
+    }
+
+    if (registeredEventIds.includes(event.id)) {
+      Alert.alert('Already Registered', 'You have already registered for this event');
+      return;
+    }
+
+    if (event.capacity && event.registeredCount >= event.capacity) {
+      Alert.alert('Event Full', 'This event has reached maximum capacity');
+      return;
+    }
+
+    setRegistering(true);
+    try {
+      await addDoc(collection(db, 'eventRegistrations'), {
+        eventId: event.id,
+        memberId: userId,
+        eventTitle: event.title,
+        eventDate: event.date,
+        eventLocation: event.location,
+        registeredAt: new Date().toISOString(),
+        status: 'confirmed',
+        memberType: 'working'
+      });
+
+      await updateDoc(doc(db, 'events', event.id), {
+        registeredCount: (event.registeredCount || 0) + 1
+      });
+
+      setRegisteredEventIds([...registeredEventIds, event.id]);
+      Alert.alert('Success', `You have successfully registered for ${event.title}`);
+      setDetailModalVisible(false);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleUnregister = async (event) => {
+    Alert.alert(
+      'Cancel Registration',
+      `Are you sure you want to cancel registration for ${event.title}?`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const userId = auth.currentUser?.uid;
+              const regSnap = await getDocs(query(
+                collection(db, 'eventRegistrations'),
+                where('eventId', '==', event.id),
+                where('memberId', '==', userId)
+              ));
+
+              regSnap.forEach(async (doc) => {
+                await updateDoc(doc.ref, { status: 'cancelled' });
+              });
+
+              setRegisteredEventIds(registeredEventIds.filter(id => id !== event.id));
+              await updateDoc(doc(db, 'events', event.id), {
+                registeredCount: Math.max((event.registeredCount || 0) - 1, 0)
+              });
+
+              Alert.alert('Success', 'Registration cancelled');
+              setDetailModalVisible(false);
+            } catch (error) {
+              Alert.alert('Error', error.message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleViewDuty = async (event) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      const assignSnap = await getDocs(query(
+        collection(db, 'eventAssignments'),
+        where('eventId', '==', event.id),
+        where('memberId', '==', userId)
+      ));
+
+      if (!assignSnap.empty) {
+        assignSnap.forEach((doc) => {
+          setDutyDetails({ id: doc.id, ...doc.data() });
+        });
+        setDutyModalVisible(true);
+      } else {
+        Alert.alert('No Duty', 'You are not assigned to this event');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchRegisteredEvents();
+    await fetchAssignedEvents();
+    setRefreshing(false);
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'upcoming': return '#3b82f6';
+      case 'ongoing': return '#10b981';
+      case 'completed': return '#6b7280';
+      case 'cancelled': return '#ef4444';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'upcoming': return 'event';
+      case 'ongoing': return 'play-circle';
+      case 'completed': return 'check-circle';
+      case 'cancelled': return 'cancel';
+      default: return 'event';
+    }
+  };
+
+  const EventCard = ({ event }) => {
+    const isRegistered = registeredEventIds.includes(event.id);
+    const isAssigned = assignedEventIds.includes(event.id);
+    const statusColor = getStatusColor(event.status);
+    const statusIcon = getStatusIcon(event.status);
+    const isFull = event.capacity && event.registeredCount >= event.capacity;
+
+    return (
+      <TouchableOpacity 
+        style={styles.eventCard}
+        onPress={() => {
+          setSelectedEvent(event);
+          setDetailModalVisible(true);
+        }}
+      >
+        {event.image ? (
+          <Image source={{ uri: event.image }} style={styles.eventImage} />
+        ) : (
+          <View style={styles.eventImagePlaceholder}>
+            <MaterialIcons name="event" size={40} color="#9ca3af" />
+          </View>
+        )}
+        
+        <View style={styles.badgesContainer}>
+          {isRegistered && (
+            <View style={styles.registeredBadge}>
+              <MaterialIcons name="check-circle" size={12} color="#ffffff" />
+              <Text style={styles.badgeText}>Registered</Text>
+            </View>
+          )}
+          {isAssigned && (
+            <View style={styles.assignedBadge}>
+              <MaterialIcons name="assignment" size={12} color="#ffffff" />
+              <Text style={styles.badgeText}>Assigned</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.eventContent}>
+          <View style={styles.eventHeader}>
+            <Text style={styles.eventTitle}>{event.title}</Text>
+            {event.featured && (
+              <View style={styles.featuredBadge}>
+                <MaterialIcons name="star" size={14} color="#f59e0b" />
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.eventDescription} numberOfLines={2}>
+            {event.description || 'No description'}
+          </Text>
+
+          <View style={styles.eventDetails}>
+            <View style={styles.eventDetailItem}>
+              <MaterialIcons name="event" size={14} color="#6b7280" />
+              <Text style={styles.eventDetailText}>
+                {event.date?.toLocaleDateString?.() || 'N/A'}
+              </Text>
+            </View>
+            <View style={styles.eventDetailItem}>
+              <MaterialIcons name="location-on" size={14} color="#6b7280" />
+              <Text style={styles.eventDetailText}>{event.location || 'N/A'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.eventFooter}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
+              <MaterialIcons name={statusIcon} size={12} color={statusColor} />
+              <Text style={[styles.statusBadgeText, { color: statusColor }]}>
+                {event.status || 'upcoming'}
+              </Text>
+            </View>
+            <View style={styles.capacityBadge}>
+              <MaterialIcons name="people" size={14} color="#6b7280" />
+              <Text style={styles.capacityText}>
+                {event.registeredCount || 0}/{event.capacity || '∞'}
+                {isFull && <Text style={styles.fullText}> (Full)</Text>}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const StatCard = ({ label, count, icon, color }) => (
+    <View style={[styles.statCard, { borderLeftColor: color }]}>
+      <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={18} color={color} />
+      </View>
+      <View style={styles.statContent}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statValue, { color }]}>{count}</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Blue Header Card */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Events</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.profileIcon}
+            onPress={() => navigation.navigate('WorkingMemberProfile')}
+          >
+            {profilePhoto ? (
+              <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+            ) : (
+              <MaterialIcons name="person" size={28} color="#3b82f6" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar inside header */}
+        <View style={styles.searchContainer}>
+          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search events..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearch('')}>
+              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Stat Cards inside header */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.statsContainer}
+          contentContainerStyle={styles.statsContent}
+        >
+          <StatCard label="Total" count={events.length} icon="event" color="#ffffff" />
+          <StatCard label="Upcoming" count={events.filter(e => e.status === 'upcoming').length} icon="event" color="#ffffff" />
+          <StatCard label="Registered" count={registeredEventIds.length} icon="check-circle" color="#ffffff" />
+          <StatCard label="Assigned" count={assignedEventIds.length} icon="assignment" color="#ffffff" />
+        </ScrollView>
+      </View>
+
+      {/* Events List */}
+      <FlatList
+        data={filteredEvents}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <EventCard event={item} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialIcons name="event-busy" size={44} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No events found</Text>
+            <Text style={styles.emptyStateSubtext}>Check back later for upcoming events</Text>
+          </View>
+        }
+        contentContainerStyle={styles.listContent}
+      />
+
+      {/* Event Detail Modal */}
+      <Modal animationType="slide" transparent={true} visible={detailModalVisible} onRequestClose={() => setDetailModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Event Details</Text>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedEvent && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {selectedEvent.image && <Image source={{ uri: selectedEvent.image }} style={styles.detailImage} />}
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailTitle}>{selectedEvent.title}</Text>
+                  <View style={styles.detailStatusRow}>
+                    <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedEvent.status) + '15' }]}>
+                      <Text style={[styles.detailStatusText, { color: getStatusColor(selectedEvent.status) }]}>
+                        {selectedEvent.status || 'upcoming'}
+                      </Text>
+                    </View>
+                    {selectedEvent.featured && (
+                      <View style={styles.detailFeaturedBadge}>
+                        <MaterialIcons name="star" size={14} color="#f59e0b" />
+                        <Text style={styles.detailFeaturedText}>Featured</Text>
+                      </View>
+                    )}
+                    {assignedEventIds.includes(selectedEvent.id) && (
+                      <View style={styles.detailAssignedBadge}>
+                        <MaterialIcons name="assignment" size={14} color="#8b5cf6" />
+                        <Text style={styles.detailAssignedText}>Assigned</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Description</Text>
+                  <Text style={styles.detailValue}>{selectedEvent.description || 'No description'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Date & Time</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedEvent.date?.toLocaleDateString?.() || 'N/A'} at {selectedEvent.time || 'N/A'}
+                  </Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Location</Text>
+                  <Text style={styles.detailValue}>{selectedEvent.location}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Venue</Text>
+                  <Text style={styles.detailValue}>{selectedEvent.venue || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Category</Text>
+                  <Text style={styles.detailValue}>{selectedEvent.category || 'General'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Capacity</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedEvent.registeredCount || 0} / {selectedEvent.capacity || '∞'} registered
+                  </Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Organizer</Text>
+                  <Text style={styles.detailValue}>{selectedEvent.organizer || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Contact</Text>
+                  <Text style={styles.detailValue}>
+                    {selectedEvent.contactEmail || 'N/A'}
+                    {selectedEvent.contactPhone ? ` • ${selectedEvent.contactPhone}` : ''}
+                  </Text>
+                </View>
+
+                {assignedEventIds.includes(selectedEvent.id) && (
+                  <TouchableOpacity 
+                    style={styles.viewDutyButton}
+                    onPress={() => handleViewDuty(selectedEvent)}
+                  >
+                    <MaterialIcons name="assignment" size={20} color="#ffffff" />
+                    <Text style={styles.viewDutyButtonText}>View My Duty</Text>
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.detailActions}>
+                  {registeredEventIds.includes(selectedEvent.id) ? (
+                    <TouchableOpacity style={[styles.detailActionButton, styles.unregisterButton]} onPress={() => handleUnregister(selectedEvent)}>
+                      <MaterialIcons name="cancel" size={20} color="#ffffff" />
+                      <Text style={styles.detailActionText}>Cancel Registration</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      style={[styles.detailActionButton, 
+                        (selectedEvent.capacity && selectedEvent.registeredCount >= selectedEvent.capacity) 
+                          ? styles.disabledButton 
+                          : styles.registerButton
+                      ]}
+                      onPress={() => handleRegister(selectedEvent)}
+                      disabled={registering || (selectedEvent.capacity && selectedEvent.registeredCount >= selectedEvent.capacity)}
+                    >
+                      <MaterialIcons name="event" size={20} color="#ffffff" />
+                      <Text style={styles.detailActionText}>
+                        {registering ? 'Registering...' : 
+                         (selectedEvent.capacity && selectedEvent.registeredCount >= selectedEvent.capacity) 
+                          ? 'Event Full' : 'Register Now'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Duty Details Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={dutyModalVisible}
+        onRequestClose={() => setDutyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>My Duty Details</Text>
+              <TouchableOpacity onPress={() => setDutyModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            {dutyDetails && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.dutySection}>
+                  <View style={styles.dutyIconContainer}>
+                    <MaterialIcons name="assignment" size={40} color="#8b5cf6" />
+                  </View>
+                  <Text style={styles.dutyTitle}>{dutyDetails.role || 'Event Duty'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Event Name</Text>
+                  <Text style={styles.detailValue}>{dutyDetails.eventTitle || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Duty Role</Text>
+                  <Text style={styles.detailValue}>{dutyDetails.role || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Responsibilities</Text>
+                  <Text style={styles.detailValue}>{dutyDetails.responsibilities || 'No responsibilities listed'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Time Slot</Text>
+                  <Text style={styles.detailValue}>
+                    {dutyDetails.startTime || 'N/A'} - {dutyDetails.endTime || 'N/A'}
+                  </Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Location</Text>
+                  <Text style={styles.detailValue}>{dutyDetails.dutyLocation || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Assigned By</Text>
+                  <Text style={styles.detailValue}>{dutyDetails.assignedBy || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Status</Text>
+                  <View style={[styles.detailStatusBadge, { backgroundColor: dutyDetails.status === 'active' ? '#10b981' : '#6b7280' }]}>
+                    <Text style={styles.detailStatusText}>{dutyDetails.status || 'active'}</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.closeDutyButton}
+                  onPress={() => setDutyModalVisible(false)}
+                >
+                  <Text style={styles.closeDutyButtonText}>Close</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  
+  // Blue Header Card
+  headerCard: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 4,
+    marginRight: 12,
+  },
+  headerTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 22,
+    color: '#ffffff',
+  },
+  profileIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 70,
+    height: 70,
+    borderRadius: 50,
+  },
+
+  // Search inside header
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    gap: 8,
+  },
+  searchInput: { 
+    flex: 1, 
+    fontFamily: Fonts.Regular,
+    fontSize: 14, 
+    color: '#1f2937' 
+  },
+
+  // Stats inside header
+  statsContainer: { 
+    maxHeight: 80,
+  },
+  statsContent: { 
+    gap: 10,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  statCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 70,
+    width: 75,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 70,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  statContent: { 
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statLabel: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 8, 
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  statValue: { 
+    fontFamily: Fonts.Bold,
+    fontSize: 14, 
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  statIcon: { 
+    width: 24, 
+    height: 24, 
+    borderRadius: 12, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 2,
+  },
+
+  // List
+  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  eventCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    position: 'relative',
+    marginTop: 12,
+  },
+  eventImage: { width: '100%', height: 150, resizeMode: 'cover' },
+  eventImagePlaceholder: { width: '100%', height: 150, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  badgesContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    gap: 4,
+    alignItems: 'flex-end',
+  },
+  registeredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  assignedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  badgeText: { 
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff', 
+    fontSize: 10 
+  },
+  eventContent: { padding: 14 },
+  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eventTitle: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16, 
+    color: '#1f2937', 
+    flex: 1 
+  },
+  featuredBadge: { paddingHorizontal: 4 },
+  eventDescription: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 13, 
+    color: '#6b7280', 
+    marginTop: 4 
+  },
+  eventDetails: { flexDirection: 'row', marginTop: 8, gap: 16 },
+  eventDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventDetailText: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 12, 
+    color: '#6b7280' 
+  },
+  eventFooter: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginTop: 8, 
+    paddingTop: 8, 
+    borderTopWidth: 1, 
+    borderTopColor: '#f3f4f6' 
+  },
+  statusBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 10, 
+    paddingVertical: 3, 
+    borderRadius: 12, 
+    gap: 4 
+  },
+  statusBadgeText: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11 
+  },
+  capacityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  capacityText: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 12, 
+    color: '#6b7280' 
+  },
+  fullText: { 
+    color: '#ef4444', 
+    fontFamily: Fonts.SemiBold 
+  },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
+  emptyStateText: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16, 
+    color: '#1f2937' 
+  },
+  emptyStateSubtext: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 13, 
+    color: '#6b7280' 
+  },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 },
+  modalContent: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, maxHeight: '85%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { 
+    fontFamily: Fonts.Bold,
+    fontSize: 20, 
+    color: '#1f2937' 
+  },
+  detailImage: { width: '100%', height: 200, borderRadius: 8, marginBottom: 16, resizeMode: 'cover' },
+  detailSection: { marginBottom: 12 },
+  detailTitle: { 
+    fontFamily: Fonts.Bold,
+    fontSize: 18, 
+    color: '#1f2937' 
+  },
+  detailStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' },
+  detailStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  detailStatusText: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12 
+  },
+  detailFeaturedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, gap: 4 },
+  detailFeaturedText: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11, 
+    color: '#f59e0b' 
+  },
+  detailAssignedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ede9fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, gap: 4 },
+  detailAssignedText: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11, 
+    color: '#8b5cf6' 
+  },
+  detailLabel: { 
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12, 
+    color: '#6b7280', 
+    marginBottom: 2 
+  },
+  detailValue: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 14, 
+    color: '#1f2937' 
+  },
+  detailActions: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  detailActionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 8 },
+  registerButton: { backgroundColor: '#3b82f6' },
+  unregisterButton: { backgroundColor: '#ef4444' },
+  disabledButton: { backgroundColor: '#9ca3af' },
+  detailActionText: { 
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff', 
+    fontSize: 16 
+  },
+  viewDutyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+  },
+  viewDutyButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 14,
+  },
+
+  // Duty Modal
+  dutySection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dutyIconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#ede9fe',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dutyTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+  },
+  closeDutyButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  closeDutyButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+});

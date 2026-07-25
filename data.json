@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "fullName": "Aarav Sharma",
+      "email": "aarav.sharma@example.com",
+      "phone": "9876543210",
+      "role": "admin",
+      "status": "active",
+      "level": "platinum",
+      "commissionRate": 25,
+      "commissionEarned": 25000,
+      "registeredMembers": 12,
+      "totalDonations": 75000,
+      "promotionEligible": false,
+      "promotionPending": false,
+      "bio": "Senior Administrator with 10+ years of NGO experience",
+      "designation": "Executive Director",
+      "createdAt": "2025-01-01T00:00:00.000Z",
+      "updatedAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
