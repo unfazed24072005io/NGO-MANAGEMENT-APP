@@ -8,6 +8,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage
 import { Fonts } from '../../config/fonts';
 
 const FILTERS = ['All', 'Active', 'Inactive', 'Featured'];
+const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 export default function ECommerceManagement({ navigation }) {
   const [activeTab, setActiveTab] = useState('products');
@@ -32,7 +33,14 @@ export default function ECommerceManagement({ navigation }) {
     images: [],
     featured: false,
     discount: '',
-    status: 'active'
+    status: 'active',
+    sizes: [],
+    discountType: 'percentage', // percentage or fixed
+    shortDescription: '',
+    material: '',
+    weight: '',
+    dimensions: '',
+    color: ''
   });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
@@ -109,7 +117,8 @@ export default function ECommerceManagement({ navigation }) {
       filtered = filtered.filter(product =>
         product.name?.toLowerCase().includes(searchText.toLowerCase()) ||
         product.category?.toLowerCase().includes(searchText.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchText.toLowerCase())
+        product.description?.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.shortDescription?.toLowerCase().includes(searchText.toLowerCase())
       );
     }
 
@@ -194,6 +203,25 @@ export default function ECommerceManagement({ navigation }) {
     setFormData({ ...formData, images: newImages });
   };
 
+  const toggleSize = (size) => {
+    const currentSizes = formData.sizes || [];
+    if (currentSizes.includes(size)) {
+      setFormData({ ...formData, sizes: currentSizes.filter(s => s !== size) });
+    } else {
+      setFormData({ ...formData, sizes: [...currentSizes, size] });
+    }
+  };
+
+  const calculateDiscountedPrice = (price, discount, discountType) => {
+    const numPrice = parseFloat(price) || 0;
+    const numDiscount = parseFloat(discount) || 0;
+    if (discountType === 'percentage') {
+      return numPrice - (numPrice * numDiscount / 100);
+    } else {
+      return numPrice - numDiscount;
+    }
+  };
+
   const handleSaveProduct = async () => {
     if (!formData.name || !formData.price || !formData.category) {
       Alert.alert('Error', 'Please fill all required fields');
@@ -205,13 +233,21 @@ export default function ECommerceManagement({ navigation }) {
       const productData = {
         name: formData.name,
         description: formData.description,
+        shortDescription: formData.shortDescription,
         price: parseFloat(formData.price),
         category: formData.category,
         stock: parseInt(formData.stock) || 0,
         images: formData.images,
         featured: formData.featured,
         discount: parseFloat(formData.discount) || 0,
+        discountType: formData.discountType,
         status: formData.status,
+        sizes: formData.sizes || [],
+        material: formData.material || '',
+        weight: formData.weight || '',
+        dimensions: formData.dimensions || '',
+        color: formData.color || '',
+        discountedPrice: calculateDiscountedPrice(formData.price, formData.discount, formData.discountType),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -259,13 +295,20 @@ export default function ECommerceManagement({ navigation }) {
     setFormData({
       name: '',
       description: '',
+      shortDescription: '',
       price: '',
       category: '',
       stock: '',
       images: [],
       featured: false,
       discount: '',
-      status: 'active'
+      discountType: 'percentage',
+      status: 'active',
+      sizes: [],
+      material: '',
+      weight: '',
+      dimensions: '',
+      color: ''
     });
     setEditingProduct(null);
   };
@@ -299,17 +342,17 @@ export default function ECommerceManagement({ navigation }) {
   };
 
   const StatCard = ({ label, count, icon, color, active, onPress }) => (
-  <TouchableOpacity 
-    style={[styles.statCard, active && styles.statCardActive]} 
-    onPress={onPress}
-  >
-    <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-      <MaterialIcons name={icon} size={20} color={color} />
-    </View>
-    <Text style={styles.statType}>{label}</Text>
-    <Text style={[styles.statCount, { color }]}>{count}</Text>
-  </TouchableOpacity>
-);
+    <TouchableOpacity 
+      style={[styles.statCard, active && styles.statCardActive]} 
+      onPress={onPress}
+    >
+      <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={20} color={color} />
+      </View>
+      <Text style={styles.statType}>{label}</Text>
+      <Text style={[styles.statCount, { color }]}>{count}</Text>
+    </TouchableOpacity>
+  );
 
   const FilterChip = ({ label, active, onPress }) => (
     <TouchableOpacity
@@ -335,7 +378,23 @@ export default function ECommerceManagement({ navigation }) {
         <View style={styles.productInfo}>
           <Text style={styles.productName}>{product.name}</Text>
           <Text style={styles.productCategory}>{product.category}</Text>
-          <Text style={styles.productPrice}>₹{product.price}</Text>
+          <View style={styles.productPriceContainer}>
+            {product.discount > 0 ? (
+              <>
+                <Text style={[styles.productPrice, styles.productPriceDiscounted]}>
+                  ₹{product.discountedPrice?.toFixed(2) || product.price}
+                </Text>
+                <Text style={styles.productOriginalPrice}>₹{product.price}</Text>
+              </>
+            ) : (
+              <Text style={styles.productPrice}>₹{product.price}</Text>
+            )}
+          </View>
+          {product.shortDescription && (
+            <Text style={styles.productShortDesc} numberOfLines={2}>
+              {product.shortDescription}
+            </Text>
+          )}
         </View>
       </View>
       <View style={styles.productFooter}>
@@ -351,7 +410,14 @@ export default function ECommerceManagement({ navigation }) {
         )}
         {product.discount > 0 && (
           <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>-{product.discount}%</Text>
+            <Text style={styles.discountText}>
+              {product.discountType === 'percentage' ? `-${product.discount}%` : `-₹${product.discount}`}
+            </Text>
+          </View>
+        )}
+        {product.sizes && product.sizes.length > 0 && (
+          <View style={styles.sizesBadge}>
+            <Text style={styles.sizesText}>{product.sizes.join(', ')}</Text>
           </View>
         )}
       </View>
@@ -418,6 +484,9 @@ export default function ECommerceManagement({ navigation }) {
           <Text style={styles.inventoryName}>{item.name}</Text>
           <Text style={styles.inventoryCategory}>{item.category}</Text>
           <Text style={styles.inventoryPrice}>₹{item.price}</Text>
+          {item.sizes && item.sizes.length > 0 && (
+            <Text style={styles.inventorySizes}>Sizes: {item.sizes.join(', ')}</Text>
+          )}
         </View>
       </View>
       <View style={styles.inventoryFooter}>
@@ -567,8 +636,6 @@ export default function ECommerceManagement({ navigation }) {
             />
           </ScrollView>
         )}
-
-        
       </View>
 
       {/* Content */}
@@ -645,14 +712,25 @@ export default function ECommerceManagement({ navigation }) {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Description</Text>
+              <Text style={styles.formLabel}>Short Description</Text>
+              <TextInput
+                style={styles.formInput}
+                value={formData.shortDescription}
+                onChangeText={(text) => setFormData({...formData, shortDescription: text})}
+                placeholder="Brief description for product listing"
+                maxLength={100}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Detailed Description</Text>
               <TextInput
                 style={[styles.formInput, styles.formTextArea]}
                 value={formData.description}
                 onChangeText={(text) => setFormData({...formData, description: text})}
-                placeholder="Enter product description"
+                placeholder="Full product description, features, benefits..."
                 multiline
-                numberOfLines={3}
+                numberOfLines={4}
               />
             </View>
 
@@ -668,11 +746,11 @@ export default function ECommerceManagement({ navigation }) {
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Discount %</Text>
+                <Text style={styles.formLabel}>Stock</Text>
                 <TextInput
                   style={styles.formInput}
-                  value={formData.discount}
-                  onChangeText={(text) => setFormData({...formData, discount: text})}
+                  value={formData.stock}
+                  onChangeText={(text) => setFormData({...formData, stock: text})}
                   placeholder="0"
                   keyboardType="numeric"
                 />
@@ -690,15 +768,99 @@ export default function ECommerceManagement({ navigation }) {
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Stock</Text>
+                <Text style={styles.formLabel}>Color</Text>
                 <TextInput
                   style={styles.formInput}
-                  value={formData.stock}
-                  onChangeText={(text) => setFormData({...formData, stock: text})}
+                  value={formData.color}
+                  onChangeText={(text) => setFormData({...formData, color: text})}
+                  placeholder="e.g., Black, Blue"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formField, styles.formHalf]}>
+                <Text style={styles.formLabel}>Discount</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={formData.discount}
+                  onChangeText={(text) => setFormData({...formData, discount: text})}
                   placeholder="0"
                   keyboardType="numeric"
                 />
               </View>
+              <View style={[styles.formField, styles.formHalf]}>
+                <Text style={styles.formLabel}>Discount Type</Text>
+                <View style={styles.discountTypeContainer}>
+                  <TouchableOpacity 
+                    style={[styles.discountTypeOption, formData.discountType === 'percentage' && styles.discountTypeActive]}
+                    onPress={() => setFormData({...formData, discountType: 'percentage'})}
+                  >
+                    <Text style={[styles.discountTypeText, formData.discountType === 'percentage' && styles.discountTypeTextActive]}>%</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.discountTypeOption, formData.discountType === 'fixed' && styles.discountTypeActive]}
+                    onPress={() => setFormData({...formData, discountType: 'fixed'})}
+                  >
+                    <Text style={[styles.discountTypeText, formData.discountType === 'fixed' && styles.discountTypeTextActive]}>₹</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Available Sizes</Text>
+              <View style={styles.sizesContainer}>
+                {SIZE_OPTIONS.map((size) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.sizeOption,
+                      (formData.sizes || []).includes(size) && styles.sizeOptionActive
+                    ]}
+                    onPress={() => toggleSize(size)}
+                  >
+                    <Text style={[
+                      styles.sizeOptionText,
+                      (formData.sizes || []).includes(size) && styles.sizeOptionTextActive
+                    ]}>
+                      {size}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.formField, styles.formHalf]}>
+                <Text style={styles.formLabel}>Material</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={formData.material}
+                  onChangeText={(text) => setFormData({...formData, material: text})}
+                  placeholder="e.g., Cotton, Leather"
+                />
+              </View>
+              <View style={[styles.formField, styles.formHalf]}>
+                <Text style={styles.formLabel}>Weight (g)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={formData.weight}
+                  onChangeText={(text) => setFormData({...formData, weight: text})}
+                  placeholder="e.g., 250"
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Dimensions</Text>
+              <TextInput
+                style={styles.formInput}
+                value={formData.dimensions}
+                onChangeText={(text) => setFormData({...formData, dimensions: text})}
+                placeholder="e.g., 10x15x5 cm"
+              />
             </View>
 
             <View style={styles.formField}>
@@ -951,51 +1113,50 @@ const styles = StyleSheet.create({
   },
 
   // Stats inside header
-  // Stats inside header
-statsContainer: {
-  maxHeight: 70,
-  marginBottom: 8,
-},
-statsContent: {
-  gap: 10,
-  alignItems: 'center',
-},
-statCard: {
-  backgroundColor: 'rgba(255,255,255,0.15)',
-  borderRadius: 12,
-  padding: 8,
-  minWidth: 70,
-  width: 75,
-  alignItems: 'center',
-  justifyContent: 'center',
-  height: 65,
-  borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.2)',
-},
-statCardActive: {
-  backgroundColor: 'rgba(255,255,255,0.3)',
-  borderColor: '#ffffff',
-},
-statIconCircle: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 2,
-},
-statType: {
-  fontFamily: Fonts.Regular,
-  fontSize: 8,
-  color: 'rgba(255,255,255,0.8)',
-  textAlign: 'center',
-},
-statCount: {
-  fontFamily: Fonts.Bold,
-  fontSize: 14,
-  color: '#ffffff',
-  textAlign: 'center',
-},
+  statsContainer: {
+    maxHeight: 70,
+    marginBottom: 8,
+  },
+  statsContent: {
+    gap: 10,
+    alignItems: 'center',
+  },
+  statCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 70,
+    width: 75,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 65,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  statCardActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderColor: '#ffffff',
+  },
+  statIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statType: {
+    fontFamily: Fonts.Regular,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  statCount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#ffffff',
+    textAlign: 'center',
+  },
 
   // Filter Chips inside header
   filterContainer: {
@@ -1073,11 +1234,31 @@ statCount: {
     color: '#6B7280',
     marginTop: 2,
   },
+  productShortDesc: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  productPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   productPrice: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10B981',
-    marginTop: 4,
+  },
+  productPriceDiscounted: {
+    color: '#EF4444',
+  },
+  productOriginalPrice: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
   },
   productFooter: {
     flexDirection: 'row',
@@ -1127,6 +1308,17 @@ statCount: {
   discountText: {
     fontFamily: Fonts.Bold,
     color: '#ffffff',
+    fontSize: 10,
+  },
+  sizesBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  sizesText: {
+    fontFamily: Fonts.Regular,
+    color: '#3B82F6',
     fontSize: 10,
   },
   productActions: {
@@ -1249,6 +1441,12 @@ statCount: {
     fontSize: 16,
     color: '#10B981',
     marginTop: 4,
+  },
+  inventorySizes: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   inventoryFooter: {
     flexDirection: 'row',
@@ -1416,6 +1614,55 @@ statCount: {
     fontSize: 12,
   },
   statusOptionTextActive: {
+    color: '#ffffff',
+  },
+  sizesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sizeOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  sizeOptionActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  sizeOptionText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  sizeOptionTextActive: {
+    color: '#ffffff',
+  },
+  discountTypeContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  discountTypeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  discountTypeActive: {
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+  },
+  discountTypeText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  discountTypeTextActive: {
     color: '#ffffff',
   },
   submitButton: {

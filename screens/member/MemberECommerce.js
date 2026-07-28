@@ -119,6 +119,29 @@ export default function MemberECommerce({ navigation }) {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  const calculateDiscountedPrice = (price, discount, discountType) => {
+  const numPrice = parseFloat(price) || 0;
+  const numDiscount = parseFloat(discount) || 0;
+  if (numDiscount === 0) return null;
+  
+  // Default to percentage if discountType is missing
+  if (discountType === 'fixed') {
+    return numPrice - numDiscount;
+  }
+  return numPrice - (numPrice * numDiscount / 100); // Default: percentage
+};
+
+
+  const getDiscountText = (discount, discountType) => {
+  if (!discount || discount === 0) return null;
+  // Default to percentage if discountType is missing
+  if (discountType === 'fixed') {
+    return `₹${discount} OFF`;
+  }
+  return `${discount}% OFF`; // Default: percentage
+};
+
+
   const handleCheckout = async () => {
     if (cart.length === 0) {
       Alert.alert('Cart Empty', 'Please add items to your cart');
@@ -175,37 +198,68 @@ export default function MemberECommerce({ navigation }) {
     </TouchableOpacity>
   );
 
-  const ProductCard = ({ product }) => (
-    <View style={styles.productCard}>
-      <TouchableOpacity 
-        style={styles.productCardInner}
-        onPress={() => Alert.alert('Product Details', product.name)}
-      >
-        {product.images && product.images.length > 0 ? (
-          <Image source={{ uri: product.images[0] }} style={styles.productCardImage} />
-        ) : (
-          <View style={styles.productCardImagePlaceholder}>
-            <MaterialIcons name="image" size={30} color="#9ca3af" />
+  const ProductCard = ({ product }) => {
+    const discountText = getDiscountText(product.discount, product.discountType);
+    const discountedPrice = product.discount && product.discount > 0 
+      ? calculateDiscountedPrice(product.price, product.discount, product.discountType)
+      : null;
+
+    return (
+      <View style={styles.productCard}>
+        <TouchableOpacity 
+          style={styles.productCardInner}
+          onPress={() => Alert.alert('Product Details', product.name)}
+          activeOpacity={0.9}
+        >
+          {/* Product Image */}
+          {product.images && product.images.length > 0 ? (
+            <Image source={{ uri: product.images[0] }} style={styles.productCardImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.productCardImagePlaceholder}>
+              <MaterialIcons name="image" size={30} color="#9ca3af" />
+            </View>
+          )}
+          
+          {/* Product Name */}
+          <Text style={styles.productCardName} numberOfLines={2}>{product.name}</Text>
+          
+          {/* Discount Badge */}
+          {discountText && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{discountText}</Text>
+            </View>
+          )}
+          
+          {/* Price Section */}
+          <View style={styles.priceContainer}>
+            {discountedPrice ? (
+              <>
+                <Text style={styles.originalPrice}>₹{product.price}</Text>
+                <Text style={styles.discountedPrice}>₹{discountedPrice.toFixed(2)}</Text>
+              </>
+            ) : (
+              <Text style={styles.discountedPrice}>₹{product.price}</Text>
+            )}
           </View>
-        )}
-        <Text style={styles.productCardName} numberOfLines={2}>{product.name}</Text>
-        <Text style={styles.productCardPrice}>₹{product.price}</Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.productCardAddButton, (product.stock === 0) && styles.disabledButton]}
-        onPress={() => {
-          if (product.stock === 0) {
-            Alert.alert('Out of Stock', 'This product is currently out of stock');
-            return;
-          }
-          addToCart(product);
-        }}
-        disabled={product.stock === 0}
-      >
-        <MaterialIcons name={product.stock === 0 ? "block" : "add"} size={20} color="#ffffff" />
-      </TouchableOpacity>
-    </View>
-  );
+        </TouchableOpacity>
+        
+        {/* Add to Cart Button */}
+        <TouchableOpacity 
+          style={[styles.productCardAddButton, (product.stock === 0) && styles.disabledButton]}
+          onPress={() => {
+            if (product.stock === 0) {
+              Alert.alert('Out of Stock', 'This product is currently out of stock');
+              return;
+            }
+            addToCart(product);
+          }}
+          disabled={product.stock === 0}
+        >
+          <MaterialIcons name={product.stock === 0 ? "block" : "add"} size={20} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const CategorySection = ({ category, products }) => {
     if (products.length === 0) return null;
@@ -639,54 +693,85 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  // Product Card
+  // Product Card - UPDATED STYLES
   productCard: {
-    width: 150,
+    width: 170,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     overflow: 'hidden',
     position: 'relative',
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   productCardInner: {
-    padding: 10,
+    width: '100%',
   },
   productCardImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 8,
-    alignSelf: 'center',
+    width: '100%',
+    height: 160,
+    borderRadius: 10,
+    backgroundColor: '#f3f4f6',
   },
   productCardImagePlaceholder: {
-    width: 130,
-    height: 130,
-    borderRadius: 8,
+    width: '100%',
+    height: 160,
+    borderRadius: 10,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
   },
   productCardName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
+    fontSize: 14,
     color: '#1f2937',
-    marginTop: 8,
-    height: 36,
+    marginTop: 10,
+    minHeight: 38,
+    marginBottom: 4,
   },
-  productCardPrice: {
+  discountBadge: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  discountText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#059669',
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+    minHeight: 32,
+  },
+  originalPrice: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#9ca3af',
+    textDecorationLine: 'line-through',
+  },
+  discountedPrice: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
+    fontSize: 18,
     color: '#10b981',
-    marginTop: 4,
   },
   productCardAddButton: {
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    bottom: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
