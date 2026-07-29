@@ -1252,7 +1252,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
   },
   productPriceDiscounted: {
-    color: '#EF4444',
+    color: '#1feb10',
   },
   productOriginalPrice: {
     fontFamily: Fonts.Regular,

@@ -6,16 +6,20 @@ import { auth, db } from '../config/firebase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Fonts } from '../config/fonts';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('member');
   const [loading, setLoading] = useState(false);
 
+  // Check if coming from donation flow
+  const isDonationFlow = route?.params?.donationFlow || false;
+
   const roles = [
     { id: 'member', label: 'Member' },
     { id: 'workingMember', label: 'Working Member' },
-    { id: 'admin', label: 'Admin' }
+    { id: 'admin', label: 'Admin' },
+    { id: 'donor', label: 'Donor' }
   ];
 
   const handleLogin = async () => {
@@ -38,11 +42,19 @@ export default function LoginScreen({ navigation }) {
         console.log('User Data:', userData);
         console.log('Role from Firestore:', userData.role);
         
-        // Get the role from Firestore - it could be 'member', 'working', or 'admin'
         const role = userData.role || 'member';
         const userName = userData.fullName || userData.name || 'User';
         
         Alert.alert('Success', `Welcome ${userName}!`);
+        
+        // Check if this is donation flow
+        if (isDonationFlow) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'DonationTabs' }],
+          });
+          return;
+        }
         
         // Navigate based on role
         if (role === 'admin') {
@@ -57,6 +69,12 @@ export default function LoginScreen({ navigation }) {
             index: 0,
             routes: [{ name: 'WorkingMemberTabs' }],
           });
+        } else if (role === 'donor') {
+          console.log('Navigating to DonationTabs');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'DonationTabs' }],
+          });
         } else {
           console.log('Navigating to MemberTabs');
           navigation.reset({
@@ -65,6 +83,17 @@ export default function LoginScreen({ navigation }) {
           });
         }
       } else {
+        // Check if user exists in donors collection
+        const donorDoc = await getDoc(doc(db, 'donors', user.uid));
+        if (donorDoc.exists()) {
+          // Donor found - navigate to DonationTabs
+          Alert.alert('Success', 'Welcome donor!');
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'DonationTabs' }],
+          });
+          return;
+        }
         Alert.alert('Error', 'User data not found. Please contact support.');
       }
     } catch (error) {
@@ -177,6 +206,16 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Donation Register Link - Show when not in donation flow */}
+        {!isDonationFlow && (
+          <View style={styles.donationContainer}>
+            <Text style={styles.donationText}>Want to donate? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('DonationRegister')}>
+              <Text style={styles.donationLink}>Register as Donor</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -237,10 +276,11 @@ const styles = StyleSheet.create({
   },
   roleButtonsContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   roleButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
@@ -302,6 +342,21 @@ const styles = StyleSheet.create({
   signUpLink: {
     fontFamily: Fonts.SemiBold,
     color: '#3b82f6',
+    fontSize: 14,
+  },
+  donationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  donationText: {
+    fontFamily: Fonts.Regular,
+    color: '#6b7280',
+    fontSize: 14,
+  },
+  donationLink: {
+    fontFamily: Fonts.SemiBold,
+    color: '#10b981',
     fontSize: 14,
   },
 });

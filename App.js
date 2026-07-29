@@ -11,6 +11,8 @@ import CartScreen from './screens/member/CartScreen';
 import CheckoutScreen from './screens/member/CheckoutScreen';
 // Auth Screens
 import LoginScreen from './screens/LoginScreen';
+import DonorProfile from './screens/donation/DonorProfile';
+
 import RegisterScreen from './screens/RegisterScreen';
 import DonationScreen from './screens/member/DonationScreen';
 import CompanyManagement from './screens/admin/CompanyManagement';
@@ -56,8 +58,54 @@ import WorkingMemberRegisteredMembers from './screens/workingMember/WorkingMembe
 import WorkingMemberCommission from './screens/workingMember/WorkingMemberCommission';
 import WorkingMemberWallet from './screens/workingMember/WorkingMemberWallet';
 
+// Donation Screens
+
+import DonationDashboard from './screens/donation/DonationDashboard';
+import DonateScreen from './screens/donation/DonateScreen';
+import MyDonations from './screens/donation/MyDonations';
+import DonationCertificate from './screens/donation/DonationCertificate';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Donation Tabs
+function DonationTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Dashboard') iconName = 'dashboard';
+          else if (route.name === 'Donate') iconName = 'favorite';
+          else if (route.name === 'MyDonations') iconName = 'receipt';
+          else if (route.name === 'Certificate') iconName = 'card-membership';
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#10b981',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 75,
+          paddingBottom: 10,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          marginBottom: 5,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={DonationDashboard} />
+      <Tab.Screen name="Donate" component={DonateScreen} />
+      <Tab.Screen name="MyDonations" component={MyDonations} />
+      <Tab.Screen name="Certificate" component={DonationCertificate} />
+    </Tab.Navigator>
+  );
+}
 
 // Custom Tab Bar for Admin with Notification at Center
 function AdminTabs() {
@@ -687,10 +735,10 @@ export default function App() {
           {/* Welcome Screen */}
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen 
-  name="WorkingMemberMemberDetail" 
-  component={WorkingMemberMemberDetail} 
-  options={{ headerShown: false }} 
-/>
+            name="WorkingMemberMemberDetail" 
+            component={WorkingMemberMemberDetail} 
+            options={{ headerShown: false }} 
+          />
 
           {/* Auth Screens */}
           <Stack.Screen name="Login" component={LoginScreen} />
@@ -718,6 +766,10 @@ export default function App() {
           <Stack.Screen name="MemberComplaint" component={MemberComplaint} />
           <Stack.Screen name="MyOrders" component={MyOrders} />
           
+          {/* Donation Screens */}
+          
+          <Stack.Screen name="DonationTabs" component={DonationTabs} />
+          <Stack.Screen name="DonorProfile" component={DonorProfile} />
           {/* Working Member Screens */}
           <Stack.Screen name="WorkingMemberTabs" component={WorkingMemberTabs} />
           <Stack.Screen name="WorkingMemberProfile" component={WorkingMemberProfile} />

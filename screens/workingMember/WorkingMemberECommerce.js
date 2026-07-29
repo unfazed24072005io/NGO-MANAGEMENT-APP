@@ -5,7 +5,7 @@ import { db, auth } from '../../config/firebase';
 import { collection, getDocs, addDoc, doc, query, where, orderBy, onSnapshot, getDoc } from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Fonts } from '../../config/fonts';
-
+import Swiper from 'react-native-swiper';
 const { width } = Dimensions.get('window');
 
 export default function WorkingMemberECommerce({ navigation }) {
@@ -199,17 +199,48 @@ export default function WorkingMemberECommerce({ navigation }) {
   const ProductCard = ({ product }) => {
     const hasWholesalePrice = product.wholesalePrice && product.wholesalePrice > 0;
     
+    // Get quantity from cart for this product
+    const cartItem = cart.find(item => item.id === product.id);
+    const quantity = cartItem ? cartItem.quantity : 0;
+
+    const handleAddToCart = () => {
+      if (product.stock === 0) {
+        Alert.alert('Out of Stock', 'This product is currently out of stock');
+        return;
+      }
+      addToCart(product);
+    };
+
+    const handleIncrement = () => {
+      if (product.stock === 0) {
+        Alert.alert('Out of Stock', 'This product is currently out of stock');
+        return;
+      }
+      addToCart(product);
+    };
+
+    const handleDecrement = () => {
+      if (quantity > 0) {
+        if (quantity === 1) {
+          removeFromCart(product.id);
+        } else {
+          updateQuantity(product.id, -1);
+        }
+      }
+    };
+
     return (
       <View style={styles.productCard}>
         <TouchableOpacity 
           style={styles.productCardInner}
           onPress={() => Alert.alert('Product Details', product.name)}
+          activeOpacity={0.9}
         >
           {product.images && product.images.length > 0 ? (
             <Image source={{ uri: product.images[0] }} style={styles.productCardImage} />
           ) : (
             <View style={styles.productCardImagePlaceholder}>
-              <MaterialIcons name="image" size={30} color="#9ca3af" />
+              <MaterialIcons name="image" size={35} color="#9ca3af" />
             </View>
           )}
           {showWholesale && hasWholesalePrice && (
@@ -218,8 +249,11 @@ export default function WorkingMemberECommerce({ navigation }) {
             </View>
           )}
           <Text style={styles.productCardName} numberOfLines={2}>{product.name}</Text>
+          <Text style={styles.productCardDescription} numberOfLines={2}>
+            {product.shortDescription || product.category || 'Product'}
+          </Text>
           {showWholesale && hasWholesalePrice ? (
-            <View>
+            <View style={styles.priceWrapper}>
               <Text style={styles.productCardPrice}>₹{product.wholesalePrice}</Text>
               <Text style={styles.retailPriceStrikethrough}>₹{product.price}</Text>
             </View>
@@ -227,19 +261,38 @@ export default function WorkingMemberECommerce({ navigation }) {
             <Text style={styles.productCardPrice}>₹{product.price}</Text>
           )}
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.productCardAddButton, (product.stock === 0) && styles.disabledButton]}
-          onPress={() => {
-            if (product.stock === 0) {
-              Alert.alert('Out of Stock', 'This product is currently out of stock');
-              return;
-            }
-            addToCart(product);
-          }}
-          disabled={product.stock === 0}
-        >
-          <MaterialIcons name={product.stock === 0 ? "block" : "add"} size={20} color="#ffffff" />
-        </TouchableOpacity>
+        
+        {/* Add to Cart / Quantity Selector */}
+        {quantity > 0 ? (
+          <View style={styles.quantitySelectorContainer}>
+            <TouchableOpacity 
+              style={[styles.quantityControlButton, styles.quantityMinusButton]}
+              onPress={handleDecrement}
+            >
+              <MaterialIcons name="remove" size={16} color="#ffffff" />
+            </TouchableOpacity>
+            
+            <Text style={styles.quantityDisplay}>{quantity}</Text>
+            
+            <TouchableOpacity 
+              style={[styles.quantityControlButton, styles.quantityPlusButton]}
+              onPress={handleIncrement}
+              disabled={product.stock === 0}
+            >
+              <MaterialIcons name="add" size={16} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.addToCartButton, (product.stock === 0) && styles.disabledButton]}
+            onPress={handleAddToCart}
+            disabled={product.stock === 0}
+          >
+            <Text style={styles.addToCartButtonText}>
+              {product.stock === 0 ? 'Out of Stock' : 'Add'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -391,7 +444,7 @@ export default function WorkingMemberECommerce({ navigation }) {
         <MaterialIcons name="shopping-cart" size={24} color="#ffffff" />
         {cart.length > 0 && (
           <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>{cart.length}</Text>
+            <Text style={styles.cartBadgeText}>{cart.reduce((total, item) => total + item.quantity, 0)}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -611,29 +664,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  wholesaleToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  wholesaleToggleActive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#ffffff',
-  },
-  wholesaleToggleText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-    color: '#ffffff',
-  },
-  wholesaleToggleTextActive: {
-    color: '#3b82f6',
-  },
   ordersButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -733,43 +763,50 @@ const styles = StyleSheet.create({
 
   // Category Sections
   categorySection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   categorySectionTitle: {
     fontFamily: Fonts.SemiBold,
     fontSize: 18,
     color: '#1f2937',
     paddingHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   categorySectionContent: {
     paddingHorizontal: 12,
-    gap: 12,
+    gap: 14,
   },
 
-  // Product Card
+  // Product Card - Taller with more spacing
   productCard: {
-    width: 150,
+    width: 170,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     overflow: 'hidden',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    paddingBottom: 12,
   },
   productCardInner: {
-    padding: 10,
+    padding: 12,
   },
   productCardImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 8,
+    width: 146,
+    height: 150,
+    borderRadius: 10,
     alignSelf: 'center',
+    backgroundColor: '#f3f4f6',
   },
   productCardImagePlaceholder: {
-    width: 130,
-    height: 130,
-    borderRadius: 8,
+    width: 146,
+    height: 150,
+    borderRadius: 10,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -779,54 +816,101 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#1f2937',
-    marginTop: 8,
+    marginTop: 10,
     height: 36,
+    lineHeight: 18,
+  },
+  productCardDescription: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 4,
+    height: 30,
+    lineHeight: 15,
+  },
+  priceWrapper: {
+    marginTop: 6,
   },
   productCardPrice: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
+    fontSize: 17,
     color: '#10b981',
-    marginTop: 4,
+    marginTop: 6,
   },
   retailPriceStrikethrough: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
+    marginTop: 1,
   },
   wholesaleBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 10,
+    left: 10,
     backgroundColor: '#8b5cf6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     zIndex: 1,
   },
   wholesaleBadgeText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 8,
+    fontSize: 9,
     color: '#ffffff',
   },
-  productCardAddButton: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+
+  // Add to Cart Button
+  addToCartButton: {
     backgroundColor: '#3b82f6',
-    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: 'center',
+    marginHorizontal: 12,
+    minHeight: 36,
   },
   disabledButton: {
     backgroundColor: '#9ca3af',
+  },
+  addToCartButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#ffffff',
+  },
+
+  // Quantity Selector
+  quantitySelectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginHorizontal: 12,
+    minHeight: 36,
+    gap: 8,
+  },
+  quantityControlButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityMinusButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  quantityPlusButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  quantityDisplay: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#ffffff',
+    minWidth: 24,
+    textAlign: 'center',
   },
 
   // List Content

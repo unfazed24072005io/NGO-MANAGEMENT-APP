@@ -10,10 +10,17 @@ import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Fonts } from '../config/fonts';
 
-export default function RegisterScreen({ navigation }) {
+export default function RegisterScreen({ navigation, route }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('member');
+  
+  // Check if coming from donation flow
+  const isDonationFlow = route?.params?.donationFlow || false;
+  
+  // If donation flow, default to donor role
+  const defaultRole = isDonationFlow ? 'donor' : 'member';
+  
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -72,7 +79,7 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    if (!formData.phone.trim()) {
+    if (!isDonationFlow && !formData.phone.trim()) {
       Alert.alert('Error', 'Please enter your phone number');
       return;
     }
@@ -98,14 +105,17 @@ export default function RegisterScreen({ navigation }) {
       
       const userId = userCredential.user.uid;
 
+      // Determine final role
+      const finalRole = isDonationFlow ? 'donor' : role;
+
       // Base user data
       const userData = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
-        phone: formData.phone.trim(),
+        phone: formData.phone.trim() || '',
         address: formData.address.trim() || '',
-        role: role,
-        status: role === 'working' ? 'active' : 'pending',
+        role: finalRole,
+        status: finalRole === 'donor' ? 'active' : (finalRole === 'working' ? 'active' : 'pending'),
         profilePhoto: formData.profilePhoto || null,
         aadharFront: formData.aadharFront || null,
         aadharBack: formData.aadharBack || null,
@@ -115,10 +125,20 @@ export default function RegisterScreen({ navigation }) {
         updatedAt: new Date().toISOString(),
       };
 
-      await setDoc(doc(db, 'users', userId), userData);
+      // For donors, save to 'donors' collection
+      if (finalRole === 'donor') {
+        await setDoc(doc(db, 'donors', userId), {
+          ...userData,
+          totalDonations: 0,
+          donationCount: 0,
+          lastDonation: null,
+        });
+      } else {
+        await setDoc(doc(db, 'users', userId), userData);
+      }
 
       // Create wallet for working member
-      if (role === 'working') {
+      if (finalRole === 'working') {
         await setDoc(doc(db, 'wallets', userId), {
           balance: 0,
           totalDeposited: 0,
@@ -129,15 +149,33 @@ export default function RegisterScreen({ navigation }) {
         });
       }
 
+      // Show appropriate success message
+      let successMessage = 'Your registration has been submitted for approval. You will be notified once approved.';
+      let navigateTo = 'Login';
+
+      if (finalRole === 'donor') {
+        successMessage = 'Your donor account has been created successfully! You can now start donating.';
+        navigateTo = 'DonationTabs';
+      } else if (finalRole === 'working') {
+        successMessage = 'Your working member account has been created. You can now login and start earning commissions!';
+      }
+
       Alert.alert(
         'Registration Complete!', 
-        role === 'working' 
-          ? 'Your working member account has been created. You can now login and start earning commissions!'
-          : 'Your registration has been submitted for approval. You will be notified once approved.',
+        successMessage,
         [
           { 
             text: 'OK', 
-            onPress: () => navigation.navigate('Login') 
+            onPress: () => {
+              if (finalRole === 'donor') {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'DonationTabs' }],
+                });
+              } else {
+                navigation.navigate(navigateTo);
+              }
+            }
           }
         ]
       );
@@ -163,49 +201,76 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
-  // ============ STEP 1: Role Selection ============
-  const renderRoleSelection = () => (
-    <View>
-      <Text style={styles.stepTitle}>Select Registration Type</Text>
-      <Text style={styles.subStep}>Choose how you want to register</Text>
+  // ============ STEP 1: Role Selection (Hidden for Donation Flow) ============
+  const renderRoleSelection = () => {
+    if (isDonationFlow) {
+      // Skip role selection for donation flow
+      setStep(2);
+      return null;
+    }
 
-      <TouchableOpacity 
-        style={[styles.roleCard, role === 'member' && styles.roleCardActive]}
-        onPress={() => setRole('member')}
-      >
-        <View style={[styles.roleIcon, { backgroundColor: role === 'member' ? '#3b82f6' : '#e5e7eb' }]}>
-          <MaterialIcons name="person" size={24} color={role === 'member' ? '#ffffff' : '#6b7280'} />
-        </View>
-        <View style={styles.roleContent}>
-          <Text style={[styles.roleTitle, role === 'member' && styles.roleTitleActive]}>Member</Text>
-          <Text style={styles.roleDescription}>Register as a regular member</Text>
-        </View>
-        {role === 'member' && (
-          <MaterialIcons name="check-circle" size={20} color="#3b82f6" />
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Select Registration Type</Text>
+        <Text style={styles.subStep}>Choose how you want to register</Text>
+
+        <TouchableOpacity 
+          style={[styles.roleCard, role === 'member' && styles.roleCardActive]}
+          onPress={() => setRole('member')}
+        >
+          <View style={[styles.roleIcon, { backgroundColor: role === 'member' ? '#3b82f6' : '#e5e7eb' }]}>
+            <MaterialIcons name="person" size={24} color={role === 'member' ? '#ffffff' : '#6b7280'} />
+          </View>
+          <View style={styles.roleContent}>
+            <Text style={[styles.roleTitle, role === 'member' && styles.roleTitleActive]}>Member</Text>
+            <Text style={styles.roleDescription}>Register as a regular member</Text>
+          </View>
+          {role === 'member' && (
+            <MaterialIcons name="check-circle" size={20} color="#3b82f6" />
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.roleCard, role === 'working' && styles.roleCardActive]}
+          onPress={() => setRole('working')}
+        >
+          <View style={[styles.roleIcon, { backgroundColor: role === 'working' ? '#8b5cf6' : '#e5e7eb' }]}>
+            <MaterialIcons name="work" size={24} color={role === 'working' ? '#ffffff' : '#6b7280'} />
+          </View>
+          <View style={styles.roleContent}>
+            <Text style={[styles.roleTitle, role === 'working' && styles.roleTitleActive]}>Working Member</Text>
+            <Text style={styles.roleDescription}>Register as a working member to earn commissions</Text>
+          </View>
+          {role === 'working' && (
+            <MaterialIcons name="check-circle" size={20} color="#8b5cf6" />
+          )}
+        </TouchableOpacity>
+
+        {/* Donor option - only show when not in donation flow */}
+        {!isDonationFlow && (
+          <TouchableOpacity 
+            style={[styles.roleCard, role === 'donor' && styles.roleCardActive]}
+            onPress={() => setRole('donor')}
+          >
+            <View style={[styles.roleIcon, { backgroundColor: role === 'donor' ? '#10b981' : '#e5e7eb' }]}>
+              <MaterialIcons name="favorite" size={24} color={role === 'donor' ? '#ffffff' : '#6b7280'} />
+            </View>
+            <View style={styles.roleContent}>
+              <Text style={[styles.roleTitle, role === 'donor' && styles.roleTitleActive]}>Donor</Text>
+              <Text style={styles.roleDescription}>Register as a donor to support the cause</Text>
+            </View>
+            {role === 'donor' && (
+              <MaterialIcons name="check-circle" size={20} color="#10b981" />
+            )}
+          </TouchableOpacity>
         )}
-      </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.roleCard, role === 'working' && styles.roleCardActive]}
-        onPress={() => setRole('working')}
-      >
-        <View style={[styles.roleIcon, { backgroundColor: role === 'working' ? '#8b5cf6' : '#e5e7eb' }]}>
-          <MaterialIcons name="work" size={24} color={role === 'working' ? '#ffffff' : '#6b7280'} />
-        </View>
-        <View style={styles.roleContent}>
-          <Text style={[styles.roleTitle, role === 'working' && styles.roleTitleActive]}>Working Member</Text>
-          <Text style={styles.roleDescription}>Register as a working member to earn commissions</Text>
-        </View>
-        {role === 'working' && (
-          <MaterialIcons name="check-circle" size={20} color="#8b5cf6" />
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.nextButton} onPress={() => setStep(2)}>
-        <Text style={styles.buttonText}>Next →</Text>
-      </TouchableOpacity>
-    </View>
-  );
+        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(2)}>
+          <Text style={styles.buttonText}>Next →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   // ============ STEP 2: Personal Information ============
   const renderPersonalInfo = () => (
@@ -238,17 +303,19 @@ export default function RegisterScreen({ navigation }) {
         <View style={styles.bottomLine} />
       </View>
 
-      <View style={styles.fieldContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Phone Number *"
-          placeholderTextColor="#9ca3af"
-          value={formData.phone}
-          onChangeText={(text) => setFormData({...formData, phone: text})}
-          keyboardType="phone-pad"
-        />
-        <View style={styles.bottomLine} />
-      </View>
+      {!isDonationFlow && (
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Phone Number *"
+            placeholderTextColor="#9ca3af"
+            value={formData.phone}
+            onChangeText={(text) => setFormData({...formData, phone: text})}
+            keyboardType="phone-pad"
+          />
+          <View style={styles.bottomLine} />
+        </View>
+      )}
 
       <View style={styles.stepButtons}>
         <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)}>
@@ -327,8 +394,8 @@ export default function RegisterScreen({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('profilePhoto')}>
-          <MaterialIcons name="photo-camera" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-          <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+          <MaterialIcons name="photo-camera" size={24} color={isDonationFlow ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6')} />
+          <Text style={[styles.uploadButtonText, { color: isDonationFlow ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6') }]}>
             {formData.profilePhoto ? 'Change Photo' : 'Upload Profile Photo'}
           </Text>
         </TouchableOpacity>
@@ -350,109 +417,132 @@ export default function RegisterScreen({ navigation }) {
     </View>
   );
 
-  // ============ STEP 5: Aadhar Front ============
-  const renderAadharFront = () => (
-    <View>
-      <Text style={styles.stepTitle}>Aadhar Card (Front)</Text>
-      <Text style={styles.subStep}>Upload front side of Aadhar card</Text>
+  // ============ STEP 5: Aadhar Front (Skip for Donors) ============
+  const renderAadharFront = () => {
+    if (isDonationFlow) {
+      setStep(8);
+      return null;
+    }
 
-      <View style={styles.uploadContainer}>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharFront')}>
-          <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-          <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
-            {formData.aadharFront ? 'Change Aadhar Front' : 'Upload Aadhar Front'}
-          </Text>
-        </TouchableOpacity>
-        {formData.aadharFront && (
-          <Image source={{ uri: formData.aadharFront }} style={styles.previewImage} />
-        )}
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Aadhar Card (Front)</Text>
+        <Text style={styles.subStep}>Upload front side of Aadhar card</Text>
+
+        <View style={styles.uploadContainer}>
+          <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharFront')}>
+            <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
+            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+              {formData.aadharFront ? 'Change Aadhar Front' : 'Upload Aadhar Front'}
+            </Text>
+          </TouchableOpacity>
+          {formData.aadharFront && (
+            <Image source={{ uri: formData.aadharFront }} style={styles.previewImage} />
+          )}
+        </View>
+
+        <View style={styles.stepButtons}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+    );
+  };
 
-      <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
-          <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
-          <Text style={styles.buttonText}>Next →</Text>
-        </TouchableOpacity>
+  // ============ STEP 6: Aadhar Back (Skip for Donors) ============
+  const renderAadharBack = () => {
+    if (isDonationFlow) {
+      return null;
+    }
+
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Aadhar Card (Back)</Text>
+        <Text style={styles.subStep}>Upload back side of Aadhar card</Text>
+
+        <View style={styles.uploadContainer}>
+          <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharBack')}>
+            <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
+            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+              {formData.aadharBack ? 'Change Aadhar Back' : 'Upload Aadhar Back'}
+            </Text>
+          </TouchableOpacity>
+          {formData.aadharBack && (
+            <Image source={{ uri: formData.aadharBack }} style={styles.previewImage} />
+          )}
+        </View>
+
+        <View style={styles.stepButtons}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
-  // ============ STEP 6: Aadhar Back ============
-  const renderAadharBack = () => (
-    <View>
-      <Text style={styles.stepTitle}>Aadhar Card (Back)</Text>
-      <Text style={styles.subStep}>Upload back side of Aadhar card</Text>
+  // ============ STEP 7: PAN Card (Skip for Donors) ============
+  const renderPANCard = () => {
+    if (isDonationFlow) {
+      return null;
+    }
 
-      <View style={styles.uploadContainer}>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharBack')}>
-          <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-          <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
-            {formData.aadharBack ? 'Change Aadhar Back' : 'Upload Aadhar Back'}
-          </Text>
-        </TouchableOpacity>
-        {formData.aadharBack && (
-          <Image source={{ uri: formData.aadharBack }} style={styles.previewImage} />
-        )}
+    return (
+      <View>
+        <Text style={styles.stepTitle}>PAN Card</Text>
+        <Text style={styles.subStep}>Upload your PAN card</Text>
+
+        <View style={styles.uploadContainer}>
+          <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('panCard')}>
+            <MaterialIcons name="assignment" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
+            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+              {formData.panCard ? 'Change PAN Card' : 'Upload PAN Card'}
+            </Text>
+          </TouchableOpacity>
+          {formData.panCard && (
+            <Image source={{ uri: formData.panCard }} style={styles.previewImage} />
+          )}
+        </View>
+
+        <View style={styles.stepButtons}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(6)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
-          <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
-          <Text style={styles.buttonText}>Next →</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // ============ STEP 7: PAN Card ============
-  const renderPANCard = () => (
-    <View>
-      <Text style={styles.stepTitle}>PAN Card</Text>
-      <Text style={styles.subStep}>Upload your PAN card</Text>
-
-      <View style={styles.uploadContainer}>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('panCard')}>
-          <MaterialIcons name="assignment" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-          <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
-            {formData.panCard ? 'Change PAN Card' : 'Upload PAN Card'}
-          </Text>
-        </TouchableOpacity>
-        {formData.panCard && (
-          <Image source={{ uri: formData.panCard }} style={styles.previewImage} />
-        )}
-      </View>
-
-      <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(6)}>
-          <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
-          <Text style={styles.buttonText}>Next →</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   // ============ STEP 8: Signature & Submit ============
-  const renderSignature = () => (
+  const renderSignature = () => {
+  const isDonor = isDonationFlow || role === 'donor';
+  const buttonColor = isDonor ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6');
+
+  return (
     <View>
       <Text style={styles.stepTitle}>Signature</Text>
       <Text style={styles.subStep}>Upload your signature</Text>
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('signature')}>
-          <MaterialIcons name="edit" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-          <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+          <MaterialIcons name="edit" size={24} color={buttonColor} />
+          <Text style={[styles.uploadButtonText, { color: buttonColor }]}>
             {formData.signature ? 'Change Signature' : 'Upload Signature'}
           </Text>
         </TouchableOpacity>
@@ -462,13 +552,15 @@ export default function RegisterScreen({ navigation }) {
       </View>
 
       <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
-          <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
+        {!isDonationFlow && (
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+        )}
         
         <TouchableOpacity 
-          style={[styles.submitButton, { backgroundColor: role === 'working' ? '#8b5cf6' : '#10b981' }]} 
+          style={[styles.submitButton, { backgroundColor: buttonColor }]} 
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -477,16 +569,14 @@ export default function RegisterScreen({ navigation }) {
           ) : (
             <>
               <MaterialIcons name="check" size={20} color="#ffffff" />
-              <Text style={styles.buttonText}>
-                {role === 'working' ? 'Register' : 'Submit'}
-              </Text>
+              <Text style={styles.buttonText}>Register</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
     </View>
   );
-
+};
   // ============ STEP ROUTING ============
   const getStepContent = () => {
     if (step === 1) return renderRoleSelection();
@@ -501,8 +591,14 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const getTotalSteps = () => {
+    if (isDonationFlow) return 5; // Skip role selection and document uploads
     return 8;
   };
+
+  // If donation flow, skip to step 2
+  if (isDonationFlow && step === 1) {
+    setTimeout(() => setStep(2), 100);
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -520,7 +616,9 @@ export default function RegisterScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.title}>Create</Text>
-        <Text style={styles.subtitle}>your account</Text>
+        <Text style={styles.subtitle}>
+          {isDonationFlow ? 'donor account' : 'your account'}
+        </Text>
 
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>Step {step} of {getTotalSteps()}</Text>
