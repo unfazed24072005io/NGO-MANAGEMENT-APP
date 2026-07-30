@@ -418,6 +418,7 @@ export default function MemberCompany({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
+
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>

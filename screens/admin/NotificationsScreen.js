@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, RefreshControl, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
 
-const { width } = Dimensions.get('window');
-const FILTERS = ['All', 'Active', 'Pending', 'Resolved', 'Closed', 'Rejected'];
-
-export default function NoticeComplaintManagement({ navigation }) {
-  const [activeTab, setActiveTab] = useState('notices');
+export default function NoticesScreen({ navigation }) {
   const [notices, setNotices] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -27,7 +21,6 @@ export default function NoticeComplaintManagement({ navigation }) {
     category: '',
     priority: 'medium',
     status: 'active',
-    type: 'notice',
     targetAudience: 'all'
   });
 
@@ -36,7 +29,7 @@ export default function NoticeComplaintManagement({ navigation }) {
   }, []);
 
   const setupRealtimeListeners = () => {
-    const unsubscribeNotices = onSnapshot(
+    const unsubscribe = onSnapshot(
       query(collection(db, 'notices'), orderBy('createdAt', 'desc')),
       (snapshot) => {
         const noticesList = [];
@@ -48,33 +41,7 @@ export default function NoticeComplaintManagement({ navigation }) {
       }
     );
 
-    const unsubscribeComplaints = onSnapshot(
-      query(collection(db, 'complaints'), orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const complaintsList = [];
-        snapshot.forEach((doc) => {
-          complaintsList.push({ id: doc.id, ...doc.data() });
-        });
-        setComplaints(complaintsList);
-      }
-    );
-
-    const unsubscribeSuggestions = onSnapshot(
-      query(collection(db, 'suggestions'), orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const suggestionsList = [];
-        snapshot.forEach((doc) => {
-          suggestionsList.push({ id: doc.id, ...doc.data() });
-        });
-        setSuggestions(suggestionsList);
-      }
-    );
-
-    return () => {
-      unsubscribeNotices();
-      unsubscribeComplaints();
-      unsubscribeSuggestions();
-    };
+    return () => unsubscribe();
   };
 
   const handleSave = async () => {
@@ -85,9 +52,6 @@ export default function NoticeComplaintManagement({ navigation }) {
 
     setLoading(true);
     try {
-      const collectionName = formData.type === 'notice' ? 'notices' : 
-                            formData.type === 'complaint' ? 'complaints' : 'suggestions';
-      
       const data = {
         title: formData.title,
         description: formData.description,
@@ -95,19 +59,18 @@ export default function NoticeComplaintManagement({ navigation }) {
         priority: formData.priority || 'medium',
         status: formData.status || 'active',
         targetAudience: formData.targetAudience || 'all',
-        type: formData.type,
         updatedAt: new Date().toISOString()
       };
 
       if (editingItem) {
-        await updateDoc(doc(db, collectionName, editingItem.id), data);
-        Alert.alert('Success', `${formData.type} updated successfully`);
+        await updateDoc(doc(db, 'notices', editingItem.id), data);
+        Alert.alert('Success', 'Notice updated successfully');
       } else {
         data.createdAt = new Date().toISOString();
         data.createdBy = auth.currentUser?.uid || 'admin';
         data.createdByName = auth.currentUser?.displayName || 'Admin';
-        await addDoc(collection(db, collectionName), data);
-        Alert.alert('Success', `${formData.type} created successfully`);
+        await addDoc(collection(db, 'notices'), data);
+        Alert.alert('Success', 'Notice created successfully');
       }
 
       setModalVisible(false);
@@ -119,10 +82,10 @@ export default function NoticeComplaintManagement({ navigation }) {
     }
   };
 
-  const handleDelete = async (id, type) => {
+  const handleDelete = async (id) => {
     Alert.alert(
       'Delete',
-      `Are you sure you want to delete this ${type}?`,
+      'Are you sure you want to delete this notice?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -130,10 +93,8 @@ export default function NoticeComplaintManagement({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              const collectionName = type === 'notice' ? 'notices' : 
-                                    type === 'complaint' ? 'complaints' : 'suggestions';
-              await deleteDoc(doc(db, collectionName, id));
-              Alert.alert('Success', `${type} deleted successfully`);
+              await deleteDoc(doc(db, 'notices', id));
+              Alert.alert('Success', 'Notice deleted successfully');
             } catch (error) {
               Alert.alert('Error', error.message);
             }
@@ -143,11 +104,9 @@ export default function NoticeComplaintManagement({ navigation }) {
     );
   };
 
-  const handleStatusUpdate = async (id, type, status) => {
+  const handleStatusUpdate = async (id, status) => {
     try {
-      const collectionName = type === 'notice' ? 'notices' : 
-                            type === 'complaint' ? 'complaints' : 'suggestions';
-      await updateDoc(doc(db, collectionName, id), { 
+      await updateDoc(doc(db, 'notices', id), { 
         status, 
         updatedAt: new Date().toISOString() 
       });
@@ -164,7 +123,6 @@ export default function NoticeComplaintManagement({ navigation }) {
       category: '',
       priority: 'medium',
       status: 'active',
-      type: 'notice',
       targetAudience: 'all'
     });
     setEditingItem(null);
@@ -196,14 +154,8 @@ export default function NoticeComplaintManagement({ navigation }) {
     }
   };
 
-  const getFilterCount = (filter) => {
-    const items = activeTab === 'notices' ? notices : activeTab === 'complaints' ? complaints : suggestions;
-    if (filter === 'All') return items.length;
-    return items.filter(item => item.status === filter.toLowerCase()).length;
-  };
-
-  const getCurrentItems = () => {
-    let items = activeTab === 'notices' ? notices : activeTab === 'complaints' ? complaints : suggestions;
+  const getFilteredItems = () => {
+    let items = notices;
     if (filterStatus !== 'All') {
       items = items.filter(item => item.status === filterStatus.toLowerCase());
     }
@@ -230,10 +182,9 @@ export default function NoticeComplaintManagement({ navigation }) {
     </TouchableOpacity>
   );
 
-  const NoticeCard = ({ item, type }) => {
+  const NoticeCard = ({ item }) => {
     const statusColor = getStatusColor(item.status);
     const priorityColor = getPriorityColor(item.priority);
-    const canEdit = type === 'notice';
     
     return (
       <TouchableOpacity 
@@ -246,11 +197,7 @@ export default function NoticeComplaintManagement({ navigation }) {
         <View style={styles.itemHeader}>
           <View style={styles.itemTitleContainer}>
             <View style={[styles.itemIcon, { backgroundColor: statusColor + '15' }]}>
-              <MaterialIcons 
-                name={type === 'notice' ? 'announcement' : type === 'complaint' ? 'report-problem' : 'lightbulb'} 
-                size={20} 
-                color={statusColor} 
-              />
+              <MaterialIcons name="announcement" size={20} color={statusColor} />
             </View>
             <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
           </View>
@@ -281,74 +228,37 @@ export default function NoticeComplaintManagement({ navigation }) {
         </View>
 
         <View style={styles.itemActions}>
-          {canEdit && (
+          <TouchableOpacity 
+            style={[styles.itemActionButton, styles.itemEditButton]}
+            onPress={() => {
+              setEditingItem(item);
+              setFormData({...item});
+              setModalVisible(true);
+            }}
+          >
+            <MaterialIcons name="edit" size={14} color="#ffffff" />
+            <Text style={styles.itemActionText}>Edit</Text>
+          </TouchableOpacity>
+          {item.status === 'active' ? (
             <TouchableOpacity 
-              style={[styles.itemActionButton, styles.itemEditButton]}
-              onPress={() => {
-                setEditingItem(item);
-                setFormData({...item, type: type});
-                setModalVisible(true);
-              }}
+              style={[styles.itemActionButton, styles.itemCloseButton]}
+              onPress={() => handleStatusUpdate(item.id, 'closed')}
             >
-              <MaterialIcons name="edit" size={14} color="#ffffff" />
-              <Text style={styles.itemActionText}>Edit</Text>
+              <MaterialIcons name="lock" size={14} color="#ffffff" />
+              <Text style={styles.itemActionText}>Close</Text>
             </TouchableOpacity>
-          )}
-          {type === 'notice' && (
-            <>
-              {item.status === 'active' ? (
-                <TouchableOpacity 
-                  style={[styles.itemActionButton, styles.itemCloseButton]}
-                  onPress={() => handleStatusUpdate(item.id, 'notice', 'closed')}
-                >
-                  <MaterialIcons name="lock" size={14} color="#ffffff" />
-                  <Text style={styles.itemActionText}>Close</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
-                  style={[styles.itemActionButton, styles.itemReopenButton]}
-                  onPress={() => handleStatusUpdate(item.id, 'notice', 'active')}
-                >
-                  <MaterialIcons name="lock-open" size={14} color="#ffffff" />
-                  <Text style={styles.itemActionText}>Reopen</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-          {(type === 'complaint' || type === 'suggestion') && (
-            <>
-              {item.status === 'pending' && (
-                <TouchableOpacity 
-                  style={[styles.itemActionButton, styles.itemResolveButton]}
-                  onPress={() => handleStatusUpdate(item.id, type, 'resolved')}
-                >
-                  <MaterialIcons name="check-circle" size={14} color="#ffffff" />
-                  <Text style={styles.itemActionText}>Resolve</Text>
-                </TouchableOpacity>
-              )}
-              {item.status === 'resolved' && (
-                <TouchableOpacity 
-                  style={[styles.itemActionButton, styles.itemReopenButton]}
-                  onPress={() => handleStatusUpdate(item.id, type, 'pending')}
-                >
-                  <MaterialIcons name="refresh" size={14} color="#ffffff" />
-                  <Text style={styles.itemActionText}>Reopen</Text>
-                </TouchableOpacity>
-              )}
-              {item.status !== 'rejected' && (
-                <TouchableOpacity 
-                  style={[styles.itemActionButton, styles.itemRejectButton]}
-                  onPress={() => handleStatusUpdate(item.id, type, 'rejected')}
-                >
-                  <MaterialIcons name="block" size={14} color="#ffffff" />
-                  <Text style={styles.itemActionText}>Reject</Text>
-                </TouchableOpacity>
-              )}
-            </>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.itemActionButton, styles.itemReopenButton]}
+              onPress={() => handleStatusUpdate(item.id, 'active')}
+            >
+              <MaterialIcons name="lock-open" size={14} color="#ffffff" />
+              <Text style={styles.itemActionText}>Reopen</Text>
+            </TouchableOpacity>
           )}
           <TouchableOpacity 
             style={[styles.itemActionButton, styles.itemDeleteButton]}
-            onPress={() => handleDelete(item.id, type)}
+            onPress={() => handleDelete(item.id)}
           >
             <MaterialIcons name="delete" size={14} color="#ffffff" />
           </TouchableOpacity>
@@ -359,32 +269,31 @@ export default function NoticeComplaintManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Communications</Text>
+          <Text style={styles.headerTitle}>Notices</Text>
           <TouchableOpacity 
             style={styles.addButton} 
             onPress={() => {
               resetForm();
-              setFormData({...formData, type: 'notice'});
               setModalVisible(true);
             }}
           >
             <MaterialIcons name="add" size={20} color="#ffffff" />
-            <Text style={styles.addButtonText}>Notice</Text>
+            <Text style={styles.addButtonText}>New</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar inside header */}
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
           <MaterialIcons name="search" size={20} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search communications..."
+            placeholder="Search notices..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -396,43 +305,12 @@ export default function NoticeComplaintManagement({ navigation }) {
           )}
         </View>
 
-        {/* Tabs inside header */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'notices' && styles.activeTab]} 
-            onPress={() => { setActiveTab('notices'); setFilterStatus('All'); }}
-          >
-            <MaterialIcons name="announcement" size={16} color={activeTab === 'notices' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.tabText, activeTab === 'notices' && styles.activeTabText]}>
-              Notices ({notices.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'complaints' && styles.activeTab]} 
-            onPress={() => { setActiveTab('complaints'); setFilterStatus('All'); }}
-          >
-            <MaterialIcons name="report-problem" size={16} color={activeTab === 'complaints' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.tabText, activeTab === 'complaints' && styles.activeTabText]}>
-              Complaints ({complaints.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'suggestions' && styles.activeTab]} 
-            onPress={() => { setActiveTab('suggestions'); setFilterStatus('All'); }}
-          >
-            <MaterialIcons name="lightbulb" size={16} color={activeTab === 'suggestions' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.tabText, activeTab === 'suggestions' && styles.activeTabText]}>
-              Suggestions ({suggestions.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stat Cards inside header */}
+        {/* Stats */}
         <View style={styles.statsWrapper}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScrollContent}>
             <StatCard 
               label="Total" 
-              count={getCurrentItems().length} 
+              count={notices.length} 
               icon="list" 
               color="#ffffff" 
               active={filterStatus === 'All'}
@@ -440,43 +318,19 @@ export default function NoticeComplaintManagement({ navigation }) {
             />
             <StatCard 
               label="Active" 
-              count={getCurrentItems().filter(i => i.status === 'active').length} 
+              count={notices.filter(i => i.status === 'active').length} 
               icon="check-circle" 
               color="#ffffff"
               active={filterStatus === 'Active'}
               onPress={() => setFilterStatus('Active')}
             />
             <StatCard 
-              label="Pending" 
-              count={getCurrentItems().filter(i => i.status === 'pending').length} 
-              icon="pending" 
-              color="#ffffff"
-              active={filterStatus === 'Pending'}
-              onPress={() => setFilterStatus('Pending')}
-            />
-            <StatCard 
-              label="Resolved" 
-              count={getCurrentItems().filter(i => i.status === 'resolved').length} 
-              icon="done" 
-              color="#ffffff"
-              active={filterStatus === 'Resolved'}
-              onPress={() => setFilterStatus('Resolved')}
-            />
-            <StatCard 
               label="Closed" 
-              count={getCurrentItems().filter(i => i.status === 'closed').length} 
+              count={notices.filter(i => i.status === 'closed').length} 
               icon="lock" 
               color="#ffffff"
               active={filterStatus === 'Closed'}
               onPress={() => setFilterStatus('Closed')}
-            />
-            <StatCard 
-              label="Rejected" 
-              count={getCurrentItems().filter(i => i.status === 'rejected').length} 
-              icon="block" 
-              color="#ffffff"
-              active={filterStatus === 'Rejected'}
-              onPress={() => setFilterStatus('Rejected')}
             />
           </ScrollView>
         </View>
@@ -484,31 +338,24 @@ export default function NoticeComplaintManagement({ navigation }) {
 
       {/* Content */}
       <FlatList
-        data={getCurrentItems()}
+        data={getFilteredItems()}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <NoticeCard item={item} type={activeTab === 'notices' ? 'notice' : activeTab === 'complaints' ? 'complaint' : 'suggestion'} />}
+        renderItem={({ item }) => <NoticeCard item={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <MaterialIcons name={activeTab === 'notices' ? 'announcement' : activeTab === 'complaints' ? 'report-problem' : 'lightbulb'} size={44} color="#d1d5db" />
-            <Text style={styles.emptyStateText}>
-              {activeTab === 'notices' ? 'No notices' : 
-               activeTab === 'complaints' ? 'No complaints' : 'No suggestions'}
-            </Text>
-            <Text style={styles.emptyStateSubtext}>
-              {activeTab === 'notices' ? 'Create a notice to inform members' : 
-               activeTab === 'complaints' ? 'Complaints from members will appear here' : 
-               'Suggestions from members will appear here'}
-            </Text>
+            <MaterialIcons name="announcement" size={44} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No notices</Text>
+            <Text style={styles.emptyStateSubtext}>Create a notice to inform members</Text>
           </View>
         }
         contentContainerStyle={styles.listContent}
       />
 
-      {/* Add/Edit Modal - Only for Notices */}
+      {/* Add/Edit Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -579,7 +426,7 @@ export default function NoticeComplaintManagement({ navigation }) {
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Status</Text>
               <View style={styles.statusContainer}>
-                {['active', 'pending', 'closed'].map((status) => (
+                {['active', 'closed'].map((status) => (
                   <TouchableOpacity
                     key={status}
                     style={[styles.statusButton, formData.status === status && styles.statusButtonActive]}
@@ -587,25 +434,6 @@ export default function NoticeComplaintManagement({ navigation }) {
                   >
                     <Text style={[styles.statusButtonText, formData.status === status && styles.statusButtonTextActive]}>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Target Audience</Text>
-              <View style={styles.audienceContainer}>
-                {['all', 'members', 'workingMembers', 'admin'].map((audience) => (
-                  <TouchableOpacity
-                    key={audience}
-                    style={[styles.audienceButton, formData.targetAudience === audience && styles.audienceButtonActive]}
-                    onPress={() => setFormData({...formData, targetAudience: audience})}
-                  >
-                    <Text style={[styles.audienceButtonText, formData.targetAudience === audience && styles.audienceButtonTextActive]}>
-                      {audience === 'all' ? 'All' : 
-                       audience === 'workingMembers' ? 'Working' : 
-                       audience.charAt(0).toUpperCase() + audience.slice(1)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -631,7 +459,7 @@ export default function NoticeComplaintManagement({ navigation }) {
         <View style={styles.modalContainer}>
           <View style={styles.detailModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Communication Details</Text>
+              <Text style={styles.modalTitle}>Notice Details</Text>
               <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
@@ -673,43 +501,24 @@ export default function NoticeComplaintManagement({ navigation }) {
                   </Text>
                 </View>
 
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Created By</Text>
-                  <Text style={styles.detailValue}>{selectedItem.createdByName || 'Admin'}</Text>
-                </View>
-
-                {selectedItem.targetAudience && (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailLabel}>Target Audience</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedItem.targetAudience === 'all' ? 'All Members' :
-                       selectedItem.targetAudience === 'workingMembers' ? 'Working Members' :
-                       selectedItem.targetAudience.charAt(0).toUpperCase() + selectedItem.targetAudience.slice(1)}
-                    </Text>
-                  </View>
-                )}
-
                 <View style={styles.detailActions}>
-                  {(activeTab === 'notices') && (
-                    <TouchableOpacity 
-                      style={[styles.detailActionButton, styles.detailEditButton]}
-                      onPress={() => {
-                        setDetailModalVisible(false);
-                        setEditingItem(selectedItem);
-                        setFormData({...selectedItem, type: 'notice'});
-                        setModalVisible(true);
-                      }}
-                    >
-                      <MaterialIcons name="edit" size={16} color="#ffffff" />
-                      <Text style={styles.detailActionText}>Edit</Text>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity 
+                    style={[styles.detailActionButton, styles.detailEditButton]}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      setEditingItem(selectedItem);
+                      setFormData({...selectedItem});
+                      setModalVisible(true);
+                    }}
+                  >
+                    <MaterialIcons name="edit" size={16} color="#ffffff" />
+                    <Text style={styles.detailActionText}>Edit</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.detailActionButton, styles.detailDeleteButton]}
                     onPress={() => {
                       setDetailModalVisible(false);
-                      handleDelete(selectedItem.id, activeTab === 'notices' ? 'notice' : 
-                                                         activeTab === 'complaints' ? 'complaint' : 'suggestion');
+                      handleDelete(selectedItem.id);
                     }}
                   >
                     <MaterialIcons name="delete" size={16} color="#ffffff" />
@@ -730,8 +539,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-
-  // Blue Header
   headerCard: {
     backgroundColor: '#3b82f6',
     paddingHorizontal: 20,
@@ -772,8 +579,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
   },
-
-  // Search inside header
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -790,38 +595,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
   },
-
-  // Tabs inside header
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    gap: 6,
-  },
-  activeTab: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-  tabText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  activeTabText: {
-    color: '#ffffff',
-  },
-
-  // Stats inside header
   statsWrapper: {
     marginBottom: 4,
   },
@@ -865,14 +638,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
   },
-
-  // List Content
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-
-  // Item Card
   itemCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -992,12 +761,6 @@ const styles = StyleSheet.create({
   itemReopenButton: {
     backgroundColor: '#06b6d4',
   },
-  itemResolveButton: {
-    backgroundColor: '#10b981',
-  },
-  itemRejectButton: {
-    backgroundColor: '#ef4444',
-  },
   itemDeleteButton: {
     backgroundColor: '#ef4444',
   },
@@ -1006,8 +769,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 10,
   },
-
-  // Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1025,8 +786,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
   },
-
-  // Modal
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1132,30 +891,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   statusButtonTextActive: {
-    color: '#ffffff',
-  },
-  audienceContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  audienceButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  audienceButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
-  },
-  audienceButtonText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 11,
-    color: '#6b7280',
-  },
-  audienceButtonTextActive: {
     color: '#ffffff',
   },
   submitButton: {

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList, Dimensions, ActivityIndicator, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList, Dimensions, ActivityIndicator, Image, TextInput, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, query, where, getDocs, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
 
 const { width } = Dimensions.get('window');
@@ -14,15 +14,46 @@ export default function WorkingMemberCommission({ navigation }) {
   const [paidCommission, setPaidCommission] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterType, setFilterType] = useState('All');
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCommission, setSelectedCommission] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [commissionSettings, setCommissionSettings] = useState({
+    levels: [
+      { id: 'I', name: 'ग्राहक', nameEn: 'Customer', percentage: 25 },
+      { id: 'II', name: 'सेवक', nameEn: 'Servant / Worker', percentage: 35 },
+      { id: 'III', name: 'प्रचारक', nameEn: 'Promoter', percentage: 40 },
+      { id: 'IV', name: 'संयोजक', nameEn: 'Coordinator / Organizer', percentage: 42.5 },
+      { id: 'V', name: 'मार्गदर्शक', nameEn: 'Guide / Mentor', percentage: 43.75 },
+      { id: 'VI', name: 'संरक्षक', nameEn: 'Guardian / Protector', percentage: 44.5 },
+      { id: 'VII', name: 'स्वामी', nameEn: 'Owner / Master', percentage: 45 }
+    ],
+    generalCommission: 10,
+    starCommission: 5
+  });
 
   useEffect(() => {
+    fetchCommissionSettings();
     setupRealtimeListener();
-    fetchTotalStats();
     fetchUserProfile();
   }, []);
+
+  const fetchCommissionSettings = async () => {
+    try {
+      const docRef = doc(db, 'settings', 'commission');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setCommissionSettings({
+          levels: data.levels || commissionSettings.levels,
+          generalCommission: data.generalCommission || 10,
+          starCommission: data.starCommission || 5
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching commission settings:', error);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -99,6 +130,7 @@ export default function WorkingMemberCommission({ navigation }) {
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchTotalStats();
+    await fetchCommissionSettings();
     setRefreshing(false);
   };
 
@@ -112,6 +144,8 @@ export default function WorkingMemberCommission({ navigation }) {
       case 'referral': return '#10b981';
       case 'bonus': return '#f59e0b';
       case 'performance': return '#8b5cf6';
+      case 'general': return '#6b7280';
+      case 'star': return '#ec4899';
       default: return '#6b7280';
     }
   };
@@ -122,16 +156,14 @@ export default function WorkingMemberCommission({ navigation }) {
       case 'referral': return 'share';
       case 'bonus': return 'star';
       case 'performance': return 'trending-up';
+      case 'general': return 'stars';
+      case 'star': return 'star-border';
       default: return 'attach-money';
     }
   };
 
   const getFilteredCommissions = () => {
     let filtered = commissions;
-    
-    if (filterType !== 'All') {
-      filtered = filtered.filter(c => c.status?.toLowerCase() === filterType.toLowerCase());
-    }
     
     if (searchQuery) {
       filtered = filtered.filter(c => 
@@ -144,8 +176,33 @@ export default function WorkingMemberCommission({ navigation }) {
     return filtered;
   };
 
+  // Calculate commission based on membership level
+  const calculateCommission = (amount, levelId, hasGeneralBonus = false, hasStarBonus = false) => {
+    const level = commissionSettings.levels.find(l => l.id === levelId);
+    if (!level) return { base: 0, generalBonus: 0, starBonus: 0, total: 0 };
+
+    // Calculate base commission
+    const baseCommission = (amount * level.percentage) / 100;
+    
+    // Calculate bonuses
+    const generalBonus = hasGeneralBonus ? (amount * commissionSettings.generalCommission) / 100 : 0;
+    const starBonus = hasStarBonus ? (amount * commissionSettings.starCommission) / 100 : 0;
+    
+    const total = baseCommission + generalBonus + starBonus;
+
+    return {
+      base: baseCommission,
+      generalBonus: generalBonus,
+      starBonus: starBonus,
+      total: total,
+      percentage: level.percentage,
+      levelName: level.nameEn,
+      levelId: level.id
+    };
+  };
+
   const StatCard = ({ label, count, icon, color }) => (
-    <View style={[styles.statCard,]}>
+    <View style={[styles.statCard]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
         <MaterialIcons name={icon} size={18} color={color} />
       </View>
@@ -156,28 +213,192 @@ export default function WorkingMemberCommission({ navigation }) {
     </View>
   );
 
-  const CommissionCard = ({ item }) => (
-    <View style={styles.commissionCard}>
-      <View style={styles.commissionHeader}>
-        <View style={[styles.commissionIcon, { backgroundColor: getCommissionTypeColor(item.type) + '15' }]}>
-          <MaterialIcons name={getCommissionTypeIcon(item.type)} size={20} color={getCommissionTypeColor(item.type)} />
+  const CommissionCard = ({ item }) => {
+    const color = getCommissionTypeColor(item.type);
+    const icon = getCommissionTypeIcon(item.type);
+    
+    // Calculate commission details for display
+    let commissionDetails = null;
+    if (item.levelId) {
+      commissionDetails = calculateCommission(
+        item.baseAmount || item.amount, 
+        item.levelId, 
+        item.hasGeneralBonus, 
+        item.hasStarBonus
+      );
+    }
+
+    return (
+      <TouchableOpacity 
+        style={styles.commissionCard}
+        onPress={() => {
+          setSelectedCommission(item);
+          setDetailModalVisible(true);
+        }}
+      >
+        <View style={styles.commissionHeader}>
+          <View style={[styles.commissionIcon, { backgroundColor: color + '15' }]}>
+            <MaterialIcons name={icon} size={20} color={color} />
+          </View>
+          <View style={styles.commissionInfo}>
+            <Text style={styles.commissionTitle}>{item.title || item.type || 'Commission'}</Text>
+            <Text style={styles.commissionDescription} numberOfLines={1}>
+              {item.description || 'No description'}
+            </Text>
+          </View>
+          <View style={[styles.commissionStatus, { backgroundColor: item.status === 'paid' ? '#10b981' : '#f59e0b' }]}>
+            <Text style={styles.commissionStatusText}>{item.status || 'pending'}</Text>
+          </View>
         </View>
-        <View style={styles.commissionInfo}>
-          <Text style={styles.commissionTitle}>{item.title || item.type || 'Commission'}</Text>
-          <Text style={styles.commissionDescription}>{item.description || 'No description'}</Text>
+        
+        <View style={styles.commissionFooter}>
+          <View>
+            <Text style={styles.commissionAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
+            {item.levelId && (
+              <Text style={styles.commissionLevel}>
+                {item.levelId} - {commissionSettings.levels.find(l => l.id === item.levelId)?.nameEn || ''}
+              </Text>
+            )}
+          </View>
+          <Text style={styles.commissionDate}>
+            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+          </Text>
         </View>
-        <View style={[styles.commissionStatus, { backgroundColor: item.status === 'paid' ? '#10b981' : '#f59e0b' }]}>
-          <Text style={styles.commissionStatusText}>{item.status || 'pending'}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // Commission Detail Modal
+  const CommissionDetailModal = () => {
+    if (!selectedCommission) return null;
+    
+    const color = getCommissionTypeColor(selectedCommission.type);
+    const icon = getCommissionTypeIcon(selectedCommission.type);
+    
+    let commissionDetails = null;
+    if (selectedCommission.levelId) {
+      commissionDetails = calculateCommission(
+        selectedCommission.baseAmount || selectedCommission.amount,
+        selectedCommission.levelId,
+        selectedCommission.hasGeneralBonus,
+        selectedCommission.hasStarBonus
+      );
+    }
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={detailModalVisible}
+        onRequestClose={() => setDetailModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Commission Details</Text>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Header Info */}
+              <View style={styles.detailHeader}>
+                <View style={[styles.detailIcon, { backgroundColor: color + '15' }]}>
+                  <MaterialIcons name={icon} size={30} color={color} />
+                </View>
+                <View style={styles.detailTitleContainer}>
+                  <Text style={styles.detailTitle}>{selectedCommission.title || selectedCommission.type}</Text>
+                  <View style={[styles.detailStatus, { backgroundColor: selectedCommission.status === 'paid' ? '#10b981' : '#f59e0b' }]}>
+                    <Text style={styles.detailStatusText}>{selectedCommission.status || 'pending'}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Commission Breakdown */}
+              {commissionDetails && (
+                <View style={styles.breakdownCard}>
+                  <Text style={styles.breakdownTitle}>Commission Breakdown</Text>
+                  
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Level</Text>
+                    <Text style={styles.breakdownValue}>
+                      {commissionDetails.levelId} - {commissionDetails.levelName}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Base Amount</Text>
+                    <Text style={styles.breakdownValue}>₹{selectedCommission.baseAmount?.toLocaleString() || selectedCommission.amount?.toLocaleString()}</Text>
+                  </View>
+                  
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Commission Rate</Text>
+                    <Text style={styles.breakdownValue}>{commissionDetails.percentage}%</Text>
+                  </View>
+                  
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Base Commission</Text>
+                    <Text style={styles.breakdownValue}>₹{commissionDetails.base.toLocaleString()}</Text>
+                  </View>
+
+                  {commissionDetails.generalBonus > 0 && (
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>General Bonus (10%)</Text>
+                      <Text style={[styles.breakdownValue, { color: '#f59e0b' }]}>₹{commissionDetails.generalBonus.toLocaleString()}</Text>
+                    </View>
+                  )}
+
+                  {commissionDetails.starBonus > 0 && (
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>Star Bonus (5%)</Text>
+                      <Text style={[styles.breakdownValue, { color: '#ec4899' }]}>₹{commissionDetails.starBonus.toLocaleString()}</Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.breakdownRow, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>Total Commission</Text>
+                    <Text style={styles.totalValue}>₹{commissionDetails.total.toLocaleString()}</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Description */}
+              {selectedCommission.description && (
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Description</Text>
+                  <Text style={styles.detailSectionText}>{selectedCommission.description}</Text>
+                </View>
+              )}
+
+              {/* Metadata */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailSectionTitle}>Metadata</Text>
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metadataLabel}>Commission ID</Text>
+                  <Text style={styles.metadataValue}>{selectedCommission.id}</Text>
+                </View>
+                <View style={styles.metadataRow}>
+                  <Text style={styles.metadataLabel}>Created</Text>
+                  <Text style={styles.metadataValue}>
+                    {selectedCommission.createdAt ? new Date(selectedCommission.createdAt).toLocaleString() : 'N/A'}
+                  </Text>
+                </View>
+                {selectedCommission.updatedAt && (
+                  <View style={styles.metadataRow}>
+                    <Text style={styles.metadataLabel}>Updated</Text>
+                    <Text style={styles.metadataValue}>
+                      {new Date(selectedCommission.updatedAt).toLocaleString()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+          </View>
         </View>
-      </View>
-      <View style={styles.commissionFooter}>
-        <Text style={styles.commissionAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
-        <Text style={styles.commissionDate}>
-          {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
-        </Text>
-      </View>
-    </View>
-  );
+      </Modal>
+    );
+  };
 
   if (loading) {
     return (
@@ -257,6 +478,9 @@ export default function WorkingMemberCommission({ navigation }) {
         }
         contentContainerStyle={styles.listContent}
       />
+
+      {/* Detail Modal */}
+      <CommissionDetailModal />
     </View>
   );
 }
@@ -382,36 +606,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Filter Chips
-  filterContainer: {
-    maxHeight: 40,
-    marginVertical: 12,
-  },
-  filterContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  filterChipActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
-  },
-  filterChipText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  filterChipTextActive: {
-    color: '#ffffff',
-  },
-
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
@@ -463,6 +657,7 @@ const styles = StyleSheet.create({
   commissionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
@@ -473,10 +668,158 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#10b981',
   },
+  commissionLevel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#6b7280',
+  },
   commissionDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+  },
+
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+  },
+
+  // Detail View
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  detailIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  detailTitleContainer: {
+    flex: 1,
+  },
+  detailTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+  },
+  detailStatus: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  detailStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#ffffff',
+  },
+
+  // Breakdown Card
+  breakdownCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  breakdownTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+    marginBottom: 10,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  breakdownLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  breakdownValue: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    marginTop: 4,
+    paddingTop: 8,
+  },
+  totalLabel: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  totalValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#10b981',
+  },
+
+  // Detail Sections
+  detailSection: {
+    marginBottom: 14,
+  },
+  detailSectionTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  detailSectionText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#1f2937',
+    lineHeight: 22,
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  metadataLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  metadataValue: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#1f2937',
   },
 
   emptyState: {
@@ -494,17 +837,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
-  },
-  inviteButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  inviteButtonText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 14,
   },
 
   loadingContainer: {

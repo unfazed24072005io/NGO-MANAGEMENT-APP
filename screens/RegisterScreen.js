@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Fonts } from '../config/fonts';
@@ -14,6 +14,11 @@ export default function RegisterScreen({ navigation, route }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('member');
+  const [registrationMethod, setRegistrationMethod] = useState('email'); // 'email' or 'phone'
+  const [verificationId, setVerificationId] = useState('');
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [recaptchaVerifier, setRecaptchaVerifier] = useState(null);
   
   // Check if coming from donation flow
   const isDonationFlow = route?.params?.donationFlow || false;
@@ -35,30 +40,154 @@ export default function RegisterScreen({ navigation, route }) {
     signature: null,
   });
 
-  const pickImage = async (field) => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your gallery');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.5,
-        base64: true,
+  // Setup Recaptcha for Phone Auth
+  const setupRecaptcha = () => {
+    if (!recaptchaVerifier) {
+      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => {
+          console.log('Recaptcha verified');
+        },
+        'expired-callback': () => {
+          console.log('Recaptcha expired');
+        }
       });
+      setRecaptchaVerifier(verifier);
+      return verifier;
+    }
+    return recaptchaVerifier;
+  };
 
-      if (!result.canceled) {
-        const asset = result.assets[0];
-        const base64Url = `data:image/jpeg;base64,${asset.base64}`;
-        setFormData({ ...formData, [field]: base64Url });
+  const handleSendOtp = async () => {
+    if (!formData.phone || formData.phone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid phone number');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Format phone number with country code
+      let formattedNumber = formData.phone;
+      if (!formattedNumber.startsWith('+')) {
+        formattedNumber = `+91${formattedNumber}`;
       }
+
+      const verifier = setupRecaptcha();
+      const confirmation = await signInWithPhoneNumber(auth, formattedNumber, verifier);
+      setVerificationId(confirmation.verificationId);
+      setShowOtpInput(true);
+      Alert.alert('OTP Sent', 'Please check your phone for the OTP');
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      console.error('Error sending OTP:', error);
+      let errorMessage = 'Failed to send OTP. Please try again.';
+      if (error.code === 'auth/invalid-phone-number') {
+        errorMessage = 'Invalid phone number. Please enter a valid number.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many requests. Please try again later.';
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneRegister = async () => {
+    if (!otp || otp.length < 6) {
+      Alert.alert('Error', 'Please enter a valid OTP');
+      return;
+    }
+
+    // Validate other required fields
+    if (!formData.fullName.trim()) {
+      Alert.alert('Error', 'Please enter your full name');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const credential = auth.PhoneAuthProvider.credential(verificationId, otp);
+      const userCredential = await auth.signInWithCredential(credential);
+      const user = userCredential.user;
+
+      const userId = user.uid;
+      const finalRole = isDonationFlow ? 'donor' : role;
+
+      // Base user data
+      const userData = {
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase() || '',
+        phone: formData.phone.trim(),
+        address: formData.address.trim() || '',
+        role: finalRole,
+        status: finalRole === 'donor' ? 'active' : (finalRole === 'working' ? 'active' : 'pending'),
+        profilePhoto: formData.profilePhoto || null,
+        aadharFront: formData.aadharFront || null,
+        aadharBack: formData.aadharBack || null,
+        panCard: formData.panCard || null,
+        signature: formData.signature || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Save to Firestore
+      if (finalRole === 'donor') {
+        await setDoc(doc(db, 'donors', userId), {
+          ...userData,
+          totalDonations: 0,
+          donationCount: 0,
+          lastDonation: null,
+        });
+      } else {
+        await setDoc(doc(db, 'users', userId), userData);
+      }
+
+      // Create wallet for working member
+      if (finalRole === 'working') {
+        await setDoc(doc(db, 'wallets', userId), {
+          balance: 0,
+          totalDeposited: 0,
+          totalWithdrawn: 0,
+          pendingWithdrawals: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // Show success message
+      let successMessage = 'Your registration has been submitted for approval. You will be notified once approved.';
+      let navigateTo = 'Login';
+
+      if (finalRole === 'donor') {
+        successMessage = 'Your donor account has been created successfully! You can now start donating.';
+        navigateTo = 'DonationTabs';
+      } else if (finalRole === 'working') {
+        successMessage = 'Your working member account has been created. You can now login and start earning commissions!';
+      }
+
+      Alert.alert(
+        'Registration Complete!', 
+        successMessage,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              if (finalRole === 'donor') {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'DonationTabs' }],
+                });
+              } else {
+                navigation.navigate(navigateTo);
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Phone registration error:', error);
+      Alert.alert('Error', 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,7 +196,7 @@ export default function RegisterScreen({ navigation, route }) {
     return re.test(email);
   };
 
-  const handleSubmit = async () => {
+  const handleEmailRegister = async () => {
     // Validate all required fields
     if (!formData.fullName.trim()) {
       Alert.alert('Error', 'Please enter your full name');
@@ -96,7 +225,6 @@ export default function RegisterScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // Create user with email and password
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
         formData.email.trim(), 
@@ -104,11 +232,8 @@ export default function RegisterScreen({ navigation, route }) {
       );
       
       const userId = userCredential.user.uid;
-
-      // Determine final role
       const finalRole = isDonationFlow ? 'donor' : role;
 
-      // Base user data
       const userData = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
@@ -125,7 +250,6 @@ export default function RegisterScreen({ navigation, route }) {
         updatedAt: new Date().toISOString(),
       };
 
-      // For donors, save to 'donors' collection
       if (finalRole === 'donor') {
         await setDoc(doc(db, 'donors', userId), {
           ...userData,
@@ -137,7 +261,6 @@ export default function RegisterScreen({ navigation, route }) {
         await setDoc(doc(db, 'users', userId), userData);
       }
 
-      // Create wallet for working member
       if (finalRole === 'working') {
         await setDoc(doc(db, 'wallets', userId), {
           balance: 0,
@@ -149,7 +272,6 @@ export default function RegisterScreen({ navigation, route }) {
         });
       }
 
-      // Show appropriate success message
       let successMessage = 'Your registration has been submitted for approval. You will be notified once approved.';
       let navigateTo = 'Login';
 
@@ -191,8 +313,6 @@ export default function RegisterScreen({ navigation, route }) {
         errorMessage = 'Password is too weak. Please use at least 6 characters.';
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = 'Network error. Please check your internet connection.';
-      } else if (error.message) {
-        errorMessage = error.message;
       }
       
       Alert.alert('Registration Failed', errorMessage);
@@ -201,11 +321,37 @@ export default function RegisterScreen({ navigation, route }) {
     }
   };
 
+  const pickImage = async (field) => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your gallery');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        const asset = result.assets[0];
+        const base64Url = `data:image/jpeg;base64,${asset.base64}`;
+        setFormData({ ...formData, [field]: base64Url });
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
   // ============ STEP 1: Role Selection (Hidden for Donation Flow) ============
   const renderRoleSelection = () => {
     if (isDonationFlow) {
-      // Skip role selection for donation flow
-      setStep(2);
+      setTimeout(() => setStep(2), 100);
       return null;
     }
 
@@ -246,7 +392,6 @@ export default function RegisterScreen({ navigation, route }) {
           )}
         </TouchableOpacity>
 
-        {/* Donor option - only show when not in donation flow */}
         {!isDonationFlow && (
           <TouchableOpacity 
             style={[styles.roleCard, role === 'donor' && styles.roleCardActive]}
@@ -272,7 +417,51 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 2: Personal Information ============
+  // ============ STEP 2: Registration Method ============
+  const renderRegistrationMethod = () => (
+    <View>
+      <Text style={styles.stepTitle}>Choose Registration Method</Text>
+      <Text style={styles.subStep}>How would you like to register?</Text>
+
+      <TouchableOpacity 
+        style={[styles.methodCard, registrationMethod === 'email' && styles.methodCardActive]}
+        onPress={() => setRegistrationMethod('email')}
+      >
+        <View style={[styles.methodIcon, { backgroundColor: registrationMethod === 'email' ? '#3b82f6' : '#e5e7eb' }]}>
+          <MaterialIcons name="email" size={24} color={registrationMethod === 'email' ? '#ffffff' : '#6b7280'} />
+        </View>
+        <View style={styles.methodContent}>
+          <Text style={[styles.methodTitle, registrationMethod === 'email' && styles.methodTitleActive]}>Email Registration</Text>
+          <Text style={styles.methodDescription}>Register using your email and password</Text>
+        </View>
+        {registrationMethod === 'email' && (
+          <MaterialIcons name="check-circle" size={20} color="#3b82f6" />
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.methodCard, registrationMethod === 'phone' && styles.methodCardActive]}
+        onPress={() => setRegistrationMethod('phone')}
+      >
+        <View style={[styles.methodIcon, { backgroundColor: registrationMethod === 'phone' ? '#10b981' : '#e5e7eb' }]}>
+          <MaterialIcons name="phone" size={24} color={registrationMethod === 'phone' ? '#ffffff' : '#6b7280'} />
+        </View>
+        <View style={styles.methodContent}>
+          <Text style={[styles.methodTitle, registrationMethod === 'phone' && styles.methodTitleActive]}>Phone Registration</Text>
+          <Text style={styles.methodDescription}>Register using your phone number and OTP</Text>
+        </View>
+        {registrationMethod === 'phone' && (
+          <MaterialIcons name="check-circle" size={20} color="#10b981" />
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.nextButton} onPress={() => setStep(3)}>
+        <Text style={styles.buttonText}>Next →</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // ============ STEP 3: Personal Information ============
   const renderPersonalInfo = () => (
     <View>
       <Text style={styles.stepTitle}>Personal Information</Text>
@@ -289,48 +478,82 @@ export default function RegisterScreen({ navigation, route }) {
         <View style={styles.bottomLine} />
       </View>
 
-      <View style={styles.fieldContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email *"
-          placeholderTextColor="#9ca3af"
-          value={formData.email}
-          onChangeText={(text) => setFormData({...formData, email: text})}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <View style={styles.bottomLine} />
-      </View>
-
-      {!isDonationFlow && (
+      {registrationMethod === 'email' && (
         <View style={styles.fieldContainer}>
           <TextInput
             style={styles.input}
-            placeholder="Phone Number *"
+            placeholder="Email *"
             placeholderTextColor="#9ca3af"
-            value={formData.phone}
-            onChangeText={(text) => setFormData({...formData, phone: text})}
-            keyboardType="phone-pad"
+            value={formData.email}
+            onChangeText={(text) => setFormData({...formData, email: text})}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <View style={styles.bottomLine} />
         </View>
       )}
 
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Phone Number *"
+          placeholderTextColor="#9ca3af"
+          value={formData.phone}
+          onChangeText={(text) => setFormData({...formData, phone: text})}
+          keyboardType="phone-pad"
+          maxLength={10}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      {registrationMethod === 'phone' && showOtpInput && (
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter OTP *"
+            placeholderTextColor="#9ca3af"
+            value={otp}
+            onChangeText={setOtp}
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          <View style={styles.bottomLine} />
+        </View>
+      )}
+
+      {registrationMethod === 'phone' && (
+        <TouchableOpacity
+          style={[styles.sendOtpButton, loading && styles.disabledButton]}
+          onPress={showOtpInput ? handlePhoneRegister : handleSendOtp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.sendOtpText}>
+              {showOtpInput ? 'Verify OTP & Register' : 'Send OTP'}
+            </Text>
+          )}
+        </TouchableOpacity>
+      )}
+
       <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(2)}>
           <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(3)}>
-          <Text style={styles.buttonText}>Next →</Text>
-        </TouchableOpacity>
+        {registrationMethod === 'email' && (
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(4)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 
-  // ============ STEP 3: Address & Password ============
+  // ============ STEP 4: Address & Password (Email only) ============
   const renderAddressAndPassword = () => (
     <View>
       <Text style={styles.stepTitle}>Address & Security</Text>
@@ -374,19 +597,19 @@ export default function RegisterScreen({ navigation, route }) {
       </View>
 
       <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(2)}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(3)}>
           <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(4)}>
+        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(5)}>
           <Text style={styles.buttonText}>Next →</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ============ STEP 4: Profile Photo ============
+  // ============ STEP 5: Profile Photo ============
   const renderProfilePhoto = () => (
     <View>
       <Text style={styles.stepTitle}>Profile Photo</Text>
@@ -405,22 +628,22 @@ export default function RegisterScreen({ navigation, route }) {
       </View>
 
       <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(3)}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
           <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(5)}>
+        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
           <Text style={styles.buttonText}>Next →</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ============ STEP 5: Aadhar Front (Skip for Donors) ============
+  // ============ STEP 6: Aadhar Front ============
   const renderAadharFront = () => {
     if (isDonationFlow) {
-      setStep(8);
+      setStep(9);
       return null;
     }
 
@@ -442,12 +665,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -455,11 +678,9 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 6: Aadhar Back (Skip for Donors) ============
+  // ============ STEP 7: Aadhar Back ============
   const renderAadharBack = () => {
-    if (isDonationFlow) {
-      return null;
-    }
+    if (isDonationFlow) return null;
 
     return (
       <View>
@@ -479,12 +700,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(6)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -492,11 +713,9 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 7: PAN Card (Skip for Donors) ============
+  // ============ STEP 8: PAN Card ============
   const renderPANCard = () => {
-    if (isDonationFlow) {
-      return null;
-    }
+    if (isDonationFlow) return null;
 
     return (
       <View>
@@ -516,12 +735,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(6)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(9)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -529,70 +748,75 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 8: Signature & Submit ============
+  // ============ STEP 9: Signature & Submit ============
   const renderSignature = () => {
-  const isDonor = isDonationFlow || role === 'donor';
-  const buttonColor = isDonor ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6');
+    const isDonor = isDonationFlow || role === 'donor';
+    const buttonColor = isDonor ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6');
 
-  return (
-    <View>
-      <Text style={styles.stepTitle}>Signature</Text>
-      <Text style={styles.subStep}>Upload your signature</Text>
+    // If phone registration, use handlePhoneRegister
+    const handleSubmit = registrationMethod === 'phone' ? handlePhoneRegister : handleEmailRegister;
 
-      <View style={styles.uploadContainer}>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('signature')}>
-          <MaterialIcons name="edit" size={24} color={buttonColor} />
-          <Text style={[styles.uploadButtonText, { color: buttonColor }]}>
-            {formData.signature ? 'Change Signature' : 'Upload Signature'}
-          </Text>
-        </TouchableOpacity>
-        {formData.signature && (
-          <Image source={{ uri: formData.signature }} style={styles.previewImage} />
-        )}
-      </View>
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Signature</Text>
+        <Text style={styles.subStep}>Upload your signature</Text>
 
-      <View style={styles.stepButtons}>
-        {!isDonationFlow && (
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
-            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
-            <Text style={styles.buttonText}>Back</Text>
+        <View style={styles.uploadContainer}>
+          <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('signature')}>
+            <MaterialIcons name="edit" size={24} color={buttonColor} />
+            <Text style={[styles.uploadButtonText, { color: buttonColor }]}>
+              {formData.signature ? 'Change Signature' : 'Upload Signature'}
+            </Text>
           </TouchableOpacity>
-        )}
-        
-        <TouchableOpacity 
-          style={[styles.submitButton, { backgroundColor: buttonColor }]} 
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <>
-              <MaterialIcons name="check" size={20} color="#ffffff" />
-              <Text style={styles.buttonText}>Register</Text>
-            </>
+          {formData.signature && (
+            <Image source={{ uri: formData.signature }} style={styles.previewImage} />
           )}
-        </TouchableOpacity>
+        </View>
+
+        <View style={styles.stepButtons}>
+          {!isDonationFlow && (
+            <TouchableOpacity style={styles.backButton} onPress={() => setStep(8)}>
+              <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+              <Text style={styles.buttonText}>Back</Text>
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity 
+            style={[styles.submitButton, { backgroundColor: buttonColor }]} 
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <MaterialIcons name="check" size={20} color="#ffffff" />
+                <Text style={styles.buttonText}>Register</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
-};
+    );
+  };
+
   // ============ STEP ROUTING ============
   const getStepContent = () => {
     if (step === 1) return renderRoleSelection();
-    if (step === 2) return renderPersonalInfo();
-    if (step === 3) return renderAddressAndPassword();
-    if (step === 4) return renderProfilePhoto();
-    if (step === 5) return renderAadharFront();
-    if (step === 6) return renderAadharBack();
-    if (step === 7) return renderPANCard();
-    if (step === 8) return renderSignature();
+    if (step === 2) return renderRegistrationMethod();
+    if (step === 3) return renderPersonalInfo();
+    if (step === 4) return renderAddressAndPassword();
+    if (step === 5) return renderProfilePhoto();
+    if (step === 6) return renderAadharFront();
+    if (step === 7) return renderAadharBack();
+    if (step === 8) return renderPANCard();
+    if (step === 9) return renderSignature();
     return null;
   };
 
   const getTotalSteps = () => {
     if (isDonationFlow) return 5; // Skip role selection and document uploads
-    return 8;
+    return 9;
   };
 
   // If donation flow, skip to step 2
@@ -600,11 +824,18 @@ export default function RegisterScreen({ navigation, route }) {
     setTimeout(() => setStep(2), 100);
   }
 
+  // If registration method is phone, skip step 4 (password)
+  if (registrationMethod === 'phone' && step === 4) {
+    setTimeout(() => setStep(5), 100);
+  }
+
   return (
     <KeyboardAvoidingView 
       style={{ flex: 1, backgroundColor: '#ffffff' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <View id="recaptcha-container" style={styles.recaptchaContainer} />
+      
       <ScrollView 
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
@@ -686,6 +917,14 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#3b82f6',
     borderRadius: 2,
+  },
+  recaptchaContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    opacity: 0,
+    zIndex: -1,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -803,6 +1042,23 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
+  sendOtpButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 14,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  sendOtpText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
   buttonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
@@ -824,6 +1080,7 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontSize: 14,
   },
+  // Role Cards
   roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -858,6 +1115,45 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
   },
   roleDescription: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  // Method Cards
+  methodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+  },
+  methodCardActive: {
+    borderColor: '#3b82f6',
+    backgroundColor: '#f0f7ff',
+  },
+  methodIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  methodContent: {
+    flex: 1,
+  },
+  methodTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  methodTitleActive: {
+    color: '#3b82f6',
+  },
+  methodDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',

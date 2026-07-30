@@ -351,12 +351,6 @@ export default function AdminProfile({ navigation }) {
           </View>
         </View>
 
-        {/* Company Profile Button */}
-        <TouchableOpacity style={styles.companyButton} onPress={() => navigation.navigate('CompanyManagement')}>
-          <MaterialIcons name="business" size={20} color="#ffffff" />
-          <Text style={styles.companyButtonText}>Manage Company Profile</Text>
-        </TouchableOpacity>
-
         {/* Settings */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Settings</Text>

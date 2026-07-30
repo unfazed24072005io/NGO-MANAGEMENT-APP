@@ -25,7 +25,8 @@ import WorkingMemberManagement from './screens/admin/WorkingMemberManagement';
 import ECommerceManagement from './screens/admin/ECommerceManagement';
 import FinancesManagement from './screens/admin/FinancesManagement';
 import EventsManagement from './screens/admin/EventsManagement';
-import NoticeComplaintManagement from './screens/admin/NoticeComplaintManagement';
+import CommissionManagement from './screens/admin/CommissionManagement';
+
 import CompanyProfileManagement from './screens/admin/CompanyProfileManagement';
 
 // Member Screens
@@ -59,11 +60,16 @@ import WorkingMemberCommission from './screens/workingMember/WorkingMemberCommis
 import WorkingMemberWallet from './screens/workingMember/WorkingMemberWallet';
 
 // Donation Screens
-
 import DonationDashboard from './screens/donation/DonationDashboard';
 import DonateScreen from './screens/donation/DonateScreen';
 import MyDonations from './screens/donation/MyDonations';
 import DonationCertificate from './screens/donation/DonationCertificate';
+import DonorCompany from './screens/donation/DonorCompany';
+
+// Notification Tab Screens
+import NotificationsScreen from './screens/admin/NotificationsScreen';
+import SuggestionsScreen from './screens/admin/SuggestionsScreen';
+import ComplaintsScreen from './screens/admin/ComplaintsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -79,6 +85,8 @@ function DonationTabs() {
           else if (route.name === 'Donate') iconName = 'favorite';
           else if (route.name === 'MyDonations') iconName = 'receipt';
           else if (route.name === 'Certificate') iconName = 'card-membership';
+          else if (route.name === 'Company') iconName = 'business';
+          else if (route.name === 'Profile') iconName = 'person';
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#10b981',
@@ -87,22 +95,119 @@ function DonationTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 10,
-          paddingTop: 8,
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
         },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-          marginBottom: 5,
-        },
+        tabBarLabel: () => null, // Hide labels
         headerShown: false,
       })}
     >
       <Tab.Screen name="Dashboard" component={DonationDashboard} />
       <Tab.Screen name="Donate" component={DonateScreen} />
       <Tab.Screen name="MyDonations" component={MyDonations} />
+      <Tab.Screen name="Company" component={DonorCompany} />
       <Tab.Screen name="Certificate" component={DonationCertificate} />
+      <Tab.Screen name="Profile" component={DonorProfile} />
+    </Tab.Navigator>
+  );
+}
+
+// Admin Notification Tabs
+function AdminNotificationTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Notifications') iconName = 'notifications';
+          else if (route.name === 'Suggestions') iconName = 'lightbulb';
+          else if (route.name === 'Complaints') iconName = 'report-problem';
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#4a90e2',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
+      <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
+      <Tab.Screen name="Complaints" component={ComplaintsScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// Member Notification Tabs
+function MemberNotificationTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Notifications') iconName = 'notifications';
+          else if (route.name === 'Suggestions') iconName = 'lightbulb';
+          else if (route.name === 'Complaints') iconName = 'report-problem';
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
+      <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
+      <Tab.Screen name="Complaints" component={ComplaintsScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// Working Member Notification Tabs
+function WorkingMemberNotificationTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Notifications') iconName = 'notifications';
+          else if (route.name === 'Suggestions') iconName = 'lightbulb';
+          else if (route.name === 'Complaints') iconName = 'report-problem';
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#8b5cf6',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
+      <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
+      <Tab.Screen name="Complaints" component={ComplaintsScreen} />
     </Tab.Navigator>
   );
 }
@@ -110,7 +215,6 @@ function DonationTabs() {
 // Custom Tab Bar for Admin with Notification at Center
 function AdminTabs() {
   const [fabModalVisible, setFabModalVisible] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3);
 
   let navigationRef = null;
 
@@ -126,6 +230,8 @@ function AdminTabs() {
             else if (route.name === 'Finance') iconName = 'attach-money';
             else if (route.name === 'Events') iconName = 'event';
             else if (route.name === 'Profile') iconName = 'person';
+            else if (route.name === 'Company') iconName = 'business';
+            else if (route.name === 'Commission') iconName = 'workspace-premium';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: '#4a90e2',
@@ -134,15 +240,11 @@ function AdminTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 10,
-            paddingTop: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 6,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-            marginBottom: 5,
-          },
+          tabBarLabel: () => null,
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -150,12 +252,14 @@ function AdminTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Dashboard' },
-            { name: 'Members', icon: 'people', label: 'Members' },
-            { name: 'E-Commerce', icon: 'shopping-cart', label: 'E-Commerce' },
-            { name: 'Finance', icon: 'attach-money', label: 'Finance' },
-            { name: 'Events', icon: 'event', label: 'Events' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
+            { name: 'Dashboard', icon: 'dashboard' },
+            { name: 'Members', icon: 'people' },
+            { name: 'E-Commerce', icon: 'shopping-cart' },
+            { name: 'Finance', icon: 'attach-money' },
+            { name: 'Events', icon: 'event' },
+            { name: 'Company', icon: 'business' },
+            { name: 'Commission', icon: 'workspace-premium' },
+            { name: 'Profile', icon: 'person' },
           ];
 
           return (
@@ -184,15 +288,9 @@ function AdminTabs() {
                   >
                     <MaterialIcons 
                       name={tab.icon} 
-                      size={24} 
+                      size={26} 
                       color={isFocused ? '#4a90e2' : '#7f8c8d'} 
                     />
-                    <Text style={[
-                      styles.tabLabel, 
-                      { color: isFocused ? '#4a90e2' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -200,7 +298,11 @@ function AdminTabs() {
               <View style={styles.notificationWrapper}>
                 <TouchableOpacity
                   style={styles.adminNotificationButton}
-                  onPress={() => setFabModalVisible(true)}
+                  onPress={() => {
+                    if (navigationRef) {
+                      navigationRef.navigate('AdminNotificationTabs');
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
@@ -215,88 +317,10 @@ function AdminTabs() {
         <Tab.Screen name="E-Commerce" component={ECommerceManagement} />
         <Tab.Screen name="Finance" component={FinancesManagement} />
         <Tab.Screen name="Events" component={EventsManagement} />
+        <Tab.Screen name="Company" component={CompanyManagement} />
+        <Tab.Screen name="Commission" component={CommissionManagement} />
         <Tab.Screen name="Profile" component={AdminProfile} />
       </Tab.Navigator>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={fabModalVisible}
-        onRequestClose={() => setFabModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setFabModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Quick Actions</Text>
-              
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('NoticeComplaint');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#4a90e2' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>View Notices & Complaints</Text>
-                  <Text style={styles.modalItemSubtitle}>Manage notices and complaints</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('CompanyProfile');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="business" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Company Profile</Text>
-                  <Text style={styles.modalItemSubtitle}>Manage company details</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('WorkingMemberList');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="work" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Working Members</Text>
-                  <Text style={styles.modalItemSubtitle}>Manage working members</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
-                onPress={() => setFabModalVisible(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </>
   );
 }
@@ -304,7 +328,6 @@ function AdminTabs() {
 // Custom Tab Bar for Member with Notification at Center
 function MemberTabs() {
   const [fabModalVisible, setFabModalVisible] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3);
 
   let navigationRef = null;
 
@@ -319,6 +342,7 @@ function MemberTabs() {
             else if (route.name === 'Shop') iconName = 'shopping-cart';
             else if (route.name === 'Donate') iconName = 'favorite';
             else if (route.name === 'Profile') iconName = 'person';
+            else if (route.name === 'Company') iconName = 'business';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: '#3b82f6',
@@ -327,15 +351,11 @@ function MemberTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 10,
-            paddingTop: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 6,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-            marginBottom: 5,
-          },
+          tabBarLabel: () => null,
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -343,11 +363,12 @@ function MemberTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Dashboard' },
-            { name: 'Events', icon: 'event', label: 'Events' },
-            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
-            { name: 'Donate', icon: 'favorite', label: 'Donate' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
+            { name: 'Dashboard', icon: 'dashboard' },
+            { name: 'Events', icon: 'event' },
+            { name: 'Shop', icon: 'shopping-cart' },
+            { name: 'Company', icon: 'business' },
+            { name: 'Donate', icon: 'favorite' },
+            { name: 'Profile', icon: 'person' },
           ];
 
           return (
@@ -379,12 +400,6 @@ function MemberTabs() {
                       size={26} 
                       color={isFocused ? '#3b82f6' : '#7f8c8d'} 
                     />
-                    <Text style={[
-                      styles.tabLabel, 
-                      { color: isFocused ? '#3b82f6' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -392,7 +407,11 @@ function MemberTabs() {
               <View style={styles.notificationWrapper}>
                 <TouchableOpacity
                   style={styles.notificationButton}
-                  onPress={() => setFabModalVisible(true)}
+                  onPress={() => {
+                    if (navigationRef) {
+                      navigationRef.navigate('MemberNotificationTabs');
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
@@ -405,89 +424,10 @@ function MemberTabs() {
         <Tab.Screen name="Dashboard" component={MemberDashboard} />
         <Tab.Screen name="Events" component={MemberEvents} />
         <Tab.Screen name="Shop" component={MemberECommerce} />
+        <Tab.Screen name="Company" component={MemberCompany} />
         <Tab.Screen name="Donate" component={DonationScreen} />
         <Tab.Screen name="Profile" component={MemberProfile} />
       </Tab.Navigator>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={fabModalVisible}
-        onRequestClose={() => setFabModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setFabModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Quick Actions</Text>
-              
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('MemberNotice');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>View Notices</Text>
-                  <Text style={styles.modalItemSubtitle}>Check latest updates</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('MemberComplaint');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
-                  <MaterialIcons name="report-problem" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Submit Complaint</Text>
-                  <Text style={styles.modalItemSubtitle}>Report an issue</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('MemberCompany');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="business" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Company Info</Text>
-                  <Text style={styles.modalItemSubtitle}>View company details</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
-                onPress={() => setFabModalVisible(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </>
   );
 }
@@ -495,7 +435,6 @@ function MemberTabs() {
 // Custom Tab Bar for Working Member with Notification at Center
 function WorkingMemberTabs() {
   const [fabModalVisible, setFabModalVisible] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3);
 
   let navigationRef = null;
 
@@ -510,6 +449,7 @@ function WorkingMemberTabs() {
             else if (route.name === 'Shop') iconName = 'shopping-cart';
             else if (route.name === 'Commission') iconName = 'attach-money';
             else if (route.name === 'Profile') iconName = 'person';
+            else if (route.name === 'Company') iconName = 'business';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: '#8b5cf6',
@@ -518,15 +458,11 @@ function WorkingMemberTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 10,
-            paddingTop: 8,
+            height: 65,
+            paddingBottom: 8,
+            paddingTop: 6,
           },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-            marginBottom: 5,
-          },
+          tabBarLabel: () => null,
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -534,11 +470,12 @@ function WorkingMemberTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Dashboard' },
-            { name: 'Members', icon: 'people', label: 'Members' },
-            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
-            { name: 'Commission', icon: 'attach-money', label: 'Commission' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
+            { name: 'Dashboard', icon: 'dashboard' },
+            { name: 'Members', icon: 'people' },
+            { name: 'Shop', icon: 'shopping-cart' },
+            { name: 'Company', icon: 'business' },
+            { name: 'Commission', icon: 'attach-money' },
+            { name: 'Profile', icon: 'person' },
           ];
 
           return (
@@ -570,12 +507,6 @@ function WorkingMemberTabs() {
                       size={26} 
                       color={isFocused ? '#8b5cf6' : '#7f8c8d'} 
                     />
-                    <Text style={[
-                      styles.tabLabel, 
-                      { color: isFocused ? '#8b5cf6' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -583,7 +514,11 @@ function WorkingMemberTabs() {
               <View style={styles.notificationWrapper}>
                 <TouchableOpacity
                   style={styles.workingNotificationButton}
-                  onPress={() => setFabModalVisible(true)}
+                  onPress={() => {
+                    if (navigationRef) {
+                      navigationRef.navigate('WorkingMemberNotificationTabs');
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
@@ -596,107 +531,10 @@ function WorkingMemberTabs() {
         <Tab.Screen name="Dashboard" component={WorkingMemberDashboard} />
         <Tab.Screen name="Members" component={WorkingMemberRegisteredMembers} />
         <Tab.Screen name="Shop" component={WorkingMemberECommerce} />
+        <Tab.Screen name="Company" component={WorkingMemberCompany} />
         <Tab.Screen name="Commission" component={WorkingMemberCommission} />
         <Tab.Screen name="Profile" component={WorkingMemberProfile} />
       </Tab.Navigator>
-
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={fabModalVisible}
-        onRequestClose={() => setFabModalVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setFabModalVisible(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Quick Actions</Text>
-              
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('WorkingMemberNotice');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>View Notices</Text>
-                  <Text style={styles.modalItemSubtitle}>Check latest updates</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('WorkingMemberComplaint');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
-                  <MaterialIcons name="report-problem" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Submit Complaint</Text>
-                  <Text style={styles.modalItemSubtitle}>Report an issue</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('WorkingMemberSuggestion');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#f59e0b' }]}>
-                  <MaterialIcons name="lightbulb" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Submit Suggestion</Text>
-                  <Text style={styles.modalItemSubtitle}>Share your ideas</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalItem}
-                onPress={() => {
-                  setFabModalVisible(false);
-                  if (navigationRef) {
-                    navigationRef.navigate('WorkingMemberCompany');
-                  }
-                }}
-              >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="business" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.modalItemTextContainer}>
-                  <Text style={styles.modalItemTitle}>Company Info</Text>
-                  <Text style={styles.modalItemSubtitle}>View company details</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
-                onPress={() => setFabModalVisible(false)}
-              >
-                <Text style={styles.modalCloseButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </>
   );
 }
@@ -747,9 +585,12 @@ export default function App() {
           {/* Admin Screens */}
           <Stack.Screen name="AdminTabs" component={AdminTabs} />
           <Stack.Screen name="WorkingMemberList" component={WorkingMemberManagement} />
-          <Stack.Screen name="NoticeComplaint" component={NoticeComplaintManagement} />
           <Stack.Screen name="CompanyProfile" component={CompanyProfileManagement} />
           <Stack.Screen name="CompanyManagement" component={CompanyManagement} />
+          <Stack.Screen name="AdminProfile" component={AdminProfile} />
+          
+          {/* Admin Notification Screens */}
+          <Stack.Screen name="AdminNotificationTabs" component={AdminNotificationTabs} />
           
           {/* Member Screens */}
           <Stack.Screen name="MemberTabs" component={MemberTabs} />
@@ -766,10 +607,14 @@ export default function App() {
           <Stack.Screen name="MemberComplaint" component={MemberComplaint} />
           <Stack.Screen name="MyOrders" component={MyOrders} />
           
-          {/* Donation Screens */}
+          {/* Member Notification Screens */}
+          <Stack.Screen name="MemberNotificationTabs" component={MemberNotificationTabs} />
           
+          {/* Donation Screens */}
           <Stack.Screen name="DonationTabs" component={DonationTabs} />
           <Stack.Screen name="DonorProfile" component={DonorProfile} />
+          <Stack.Screen name="DonorCompany" component={DonorCompany} />
+          
           {/* Working Member Screens */}
           <Stack.Screen name="WorkingMemberTabs" component={WorkingMemberTabs} />
           <Stack.Screen name="WorkingMemberProfile" component={WorkingMemberProfile} />
@@ -788,6 +633,9 @@ export default function App() {
           <Stack.Screen name="WorkingMemberRegisteredMembers" component={WorkingMemberRegisteredMembers} />
           <Stack.Screen name="WorkingMemberCommission" component={WorkingMemberCommission} />
           <Stack.Screen name="WorkingMemberWallet" component={WorkingMemberWallet} />
+          
+          {/* Working Member Notification Screens */}
+          <Stack.Screen name="WorkingMemberNotificationTabs" component={WorkingMemberNotificationTabs} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaView>
@@ -800,9 +648,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e8ecf1',
-    height: 75,
-    paddingBottom: 10,
-    paddingTop: 8,
+    height: 65,
+    paddingBottom: 8,
+    paddingTop: 6,
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 5,
@@ -812,6 +660,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 4,
   },
   notificationWrapper: {
     position: 'absolute',
@@ -858,90 +707,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#ef4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 5,
-  },
-  badgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalContent: {
-    width: '100%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#f9fafb',
-  },
-  modalItemIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  modalItemTextContainer: {
-    flex: 1,
-  },
-  modalItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  modalItemSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  modalCloseButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
-    marginTop: 8,
-  },
-  modalCloseButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
   },
 });
