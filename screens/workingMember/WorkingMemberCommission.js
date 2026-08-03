@@ -140,7 +140,7 @@ export default function WorkingMemberCommission({ navigation }) {
 
   const getCommissionTypeColor = (type) => {
     switch(type?.toLowerCase()) {
-      case 'registration': return '#3b82f6';
+      case 'registration': return '#8b5cf6';
       case 'referral': return '#10b981';
       case 'bonus': return '#f59e0b';
       case 'performance': return '#8b5cf6';
@@ -403,7 +403,7 @@ export default function WorkingMemberCommission({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading commissions...</Text>
       </View>
     );
@@ -427,7 +427,7 @@ export default function WorkingMemberCommission({ navigation }) {
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#3b82f6" />
+              <MaterialIcons name="person" size={28} color="#8b5cf6" />
             )}
           </TouchableOpacity>
         </View>
@@ -458,7 +458,7 @@ export default function WorkingMemberCommission({ navigation }) {
         >
           <StatCard label="Total Earned" count={totalEarned} icon="attach-money" color="#10b981" />
           <StatCard label="Pending" count={pendingCommission} icon="pending" color="#f59e0b" />
-          <StatCard label="Paid" count={paidCommission} icon="check-circle" color="#3b82f6" />
+          <StatCard label="Paid" count={paidCommission} icon="check-circle" color="#8b5cf6" />
         </ScrollView>
       </View>
 
@@ -468,7 +468,7 @@ export default function WorkingMemberCommission({ navigation }) {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <CommissionCard item={item} />}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialIcons name="attach-money" size={44} color="#d1d5db" />
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
 
   // Blue Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,

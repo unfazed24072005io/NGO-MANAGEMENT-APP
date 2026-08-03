@@ -475,7 +475,7 @@ export default function WorkingMemberManagement() {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -589,7 +589,7 @@ export default function WorkingMemberManagement() {
         renderItem={({ item }) => <WorkingMemberCard member={item} />}
         showsVerticalScrollIndicator={true}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -925,12 +925,12 @@ export default function WorkingMemberManagement() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -996,7 +996,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   activeStatusChipText: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
 
   // Stats inside header
@@ -1085,14 +1085,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   memberName: {
     fontFamily: Fonts.SemiBold,
@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
   },
   viewButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
   },
   actionButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -1287,14 +1287,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   detailAvatarText: {
     fontFamily: Fonts.Bold,
     fontSize: 32,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   detailName: {
     fontFamily: Fonts.Bold,
@@ -1471,8 +1471,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   levelOptionActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   levelOptionText: {
     fontFamily: Fonts.SemiBold,
@@ -1519,8 +1519,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   statusButtonText: {
     fontFamily: Fonts.SemiBold,

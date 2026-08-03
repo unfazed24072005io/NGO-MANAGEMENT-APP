@@ -249,7 +249,7 @@ export default function WorkingMemberEvents({ navigation }) {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'upcoming': return '#3b82f6';
+      case 'upcoming': return '#8b5cf6';
       case 'ongoing': return '#10b981';
       case 'completed': return '#6b7280';
       case 'cancelled': return '#ef4444';
@@ -382,7 +382,7 @@ export default function WorkingMemberEvents({ navigation }) {
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#3b82f6" />
+              <MaterialIcons name="person" size={28} color="#8b5cf6" />
             )}
           </TouchableOpacity>
         </View>
@@ -424,7 +424,7 @@ export default function WorkingMemberEvents({ navigation }) {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EventCard event={item} />}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialIcons name="event-busy" size={44} color="#d1d5db" />
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   
   // Blue Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -914,7 +914,7 @@ const styles = StyleSheet.create({
   },
   detailActions: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   detailActionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 8 },
-  registerButton: { backgroundColor: '#3b82f6' },
+  registerButton: { backgroundColor: '#8b5cf6' },
   unregisterButton: { backgroundColor: '#ef4444' },
   disabledButton: { backgroundColor: '#9ca3af' },
   detailActionText: { 

@@ -35,7 +35,7 @@ export default function ECommerceManagement({ navigation }) {
     discount: '',
     status: 'active',
     sizes: [],
-    discountType: 'percentage', // percentage or fixed
+    discountType: 'percentage',
     shortDescription: '',
     material: '',
     weight: '',
@@ -457,7 +457,7 @@ export default function ECommerceManagement({ navigation }) {
         <View style={[styles.orderStatusBadge, { 
           backgroundColor: order.status === 'completed' ? '#10b981' :
                           order.status === 'processing' ? '#f59e0b' :
-                          order.status === 'cancelled' ? '#ef4444' : '#3b82f6'
+                          order.status === 'cancelled' ? '#ef4444' : '#FF7722'
         }]}>
           <Text style={styles.orderStatusText}>{order.status || 'pending'}</Text>
         </View>
@@ -509,7 +509,7 @@ export default function ECommerceManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -653,7 +653,7 @@ export default function ECommerceManagement({ navigation }) {
         }
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -866,7 +866,7 @@ export default function ECommerceManagement({ navigation }) {
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Images</Text>
               <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
-                <MaterialIcons name="photo-library" size={20} color="#3B82F6" />
+                <MaterialIcons name="photo-library" size={20} color="#FF7722" />
                 <Text style={styles.uploadButtonText}>Upload Images</Text>
               </TouchableOpacity>
               <View style={styles.imagePreviewContainer}>
@@ -911,7 +911,7 @@ export default function ECommerceManagement({ navigation }) {
                 <Switch
                   value={formData.featured}
                   onValueChange={(value) => setFormData({...formData, featured: value})}
-                  trackColor={{ false: '#767577', true: '#3B82F6' }}
+                  trackColor={{ false: '#767577', true: '#FF7722' }}
                   thumbColor={formData.featured ? '#ffffff' : '#f4f3f4'}
                 />
               </View>
@@ -969,7 +969,7 @@ export default function ECommerceManagement({ navigation }) {
                   <View style={[styles.orderStatusBadge, { 
                     backgroundColor: selectedOrder.status === 'completed' ? '#10b981' :
                                     selectedOrder.status === 'processing' ? '#f59e0b' :
-                                    selectedOrder.status === 'cancelled' ? '#ef4444' : '#3b82f6',
+                                    selectedOrder.status === 'cancelled' ? '#ef4444' : '#FF7722',
                     alignSelf: 'flex-start'
                   }]}>
                     <Text style={styles.orderStatusText}>{selectedOrder.status || 'pending'}</Text>
@@ -1028,12 +1028,12 @@ export default function ECommerceManagement({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -1183,7 +1183,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   filterChipTextActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
 
   // List Content
@@ -1311,14 +1311,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   sizesBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF5EB',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
   },
   sizesText: {
     fontFamily: Fonts.Regular,
-    color: '#3B82F6',
+    color: '#FF7722',
     fontSize: 10,
   },
   productActions: {
@@ -1336,7 +1336,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   editButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#FF7722',
   },
   deleteButton: {
     backgroundColor: '#EF4444',
@@ -1489,7 +1489,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#FF7722',
   },
   emptyBtnText: {
     fontFamily: Fonts.SemiBold,
@@ -1554,17 +1554,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF5EB',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#FFD4B3',
     borderStyle: 'dashed',
     gap: 8,
   },
   uploadButtonText: {
     fontFamily: Fonts.SemiBold,
-    color: '#3B82F6',
+    color: '#FF7722',
     fontSize: 14,
   },
   imagePreviewContainer: {
@@ -1605,8 +1605,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   statusOptionActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   statusOptionText: {
     fontFamily: Fonts.SemiBold,
@@ -1630,8 +1630,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   sizeOptionActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   sizeOptionText: {
     fontFamily: Fonts.SemiBold,
@@ -1654,8 +1654,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   discountTypeActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   discountTypeText: {
     fontFamily: Fonts.SemiBold,

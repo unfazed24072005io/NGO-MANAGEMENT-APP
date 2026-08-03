@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, Image, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, addDoc, onSnapshot } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { Fonts } from '../../config/fonts';
 
@@ -13,6 +13,36 @@ export default function CompanyManagement({ navigation }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isFirstRun, setIsFirstRun] = useState(false);
+  const [activeTab, setActiveTab] = useState('services');
+  const [applications, setApplications] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedApplication, setSelectedApplication] = useState(null);
+  const [applicationModalVisible, setApplicationModalVisible] = useState(false);
+  const [competitionModalVisible, setCompetitionModalVisible] = useState(false);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [competitionDetailModalVisible, setCompetitionDetailModalVisible] = useState(false);
+  const [createCompetitionModalVisible, setCreateCompetitionModalVisible] = useState(false);
+  const [fundReleaseModalVisible, setFundReleaseModalVisible] = useState(false);
+  const [selectedFundApplication, setSelectedFundApplication] = useState(null);
+  const [fundAmount, setFundAmount] = useState('');
+  const [fundRemarks, setFundRemarks] = useState('');
+  const [verifyConfirmModalVisible, setVerifyConfirmModalVisible] = useState(false);
+  const [selectedVerifyApplication, setSelectedVerifyApplication] = useState(null);
+  const [fundConfirmModalVisible, setFundConfirmModalVisible] = useState(false);
+  const [selectedFundConfirm, setSelectedFundConfirm] = useState(null);
+  const [competitionForm, setCompetitionForm] = useState({
+    title: '',
+    description: '',
+    category: '',
+    startDate: '',
+    endDate: '',
+    prize: '',
+    venue: '',
+    maxParticipants: '',
+    image: '',
+    status: 'upcoming'
+  });
+
   const [formData, setFormData] = useState({
     organizationName: 'Kabir Ban Bhandari Foundation (Trust)',
     cin: 'U85300BR2024NPL067466',
@@ -37,7 +67,6 @@ export default function CompanyManagement({ navigation }) {
     establishedYear: '2024',
     employeeCount: '',
     registrationNumber: 'U85300BR2024NPL067466',
-    // Services
     oldAgeAssistance: {
       below20: '25000',
       between20to40: '15000',
@@ -55,7 +84,32 @@ export default function CompanyManagement({ navigation }) {
 
   useEffect(() => {
     fetchOrSeedCompanyData();
+    setupApplicationsListener();
+    setupCompetitionsListener();
   }, []);
+
+  const setupApplicationsListener = () => {
+    const q = query(collection(db, 'serviceApplications'), where('status', 'in', ['pending', 'verified', 'funded']));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const apps = [];
+      snapshot.forEach((doc) => {
+        apps.push({ id: doc.id, ...doc.data() });
+      });
+      setApplications(apps);
+    });
+    return () => unsubscribe();
+  };
+
+  const setupCompetitionsListener = () => {
+    const unsubscribe = onSnapshot(collection(db, 'competitions'), (snapshot) => {
+      const comps = [];
+      snapshot.forEach((doc) => {
+        comps.push({ id: doc.id, ...doc.data() });
+      });
+      setCompetitions(comps);
+    });
+    return () => unsubscribe();
+  };
 
   const fetchOrSeedCompanyData = async () => {
     setLoading(true);
@@ -65,7 +119,6 @@ export default function CompanyManagement({ navigation }) {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('✅ Company data found, loading...');
         setCompanyData(data);
         setFormData({
           organizationName: data.organizationName || data.companyName || 'Kabir Ban Bhandari Foundation (Trust)',
@@ -106,7 +159,6 @@ export default function CompanyManagement({ navigation }) {
           selfEmploymentAssistance: data.selfEmploymentAssistance || 'Available for unemployed elderly people.'
         });
       } else {
-        console.log('🆕 No company data found. Seeding default data...');
         setIsFirstRun(true);
         await seedDefaultData();
       }
@@ -130,9 +182,9 @@ export default function CompanyManagement({ navigation }) {
         secretaryName: 'Shri Ajit Kumar Bhandari',
         tagline: 'Empowering Communities, Changing Lives',
         description: 'Kabir Ban Bhandari Foundation is a non-profit organization dedicated to empowering underprivileged communities through education, healthcare, and social welfare programs.',
-        about: 'Kabir Ban Bhandari Foundation (Trust) was established with the vision of creating a better world for everyone. We believe in the power of community and the importance of giving back. Our organization works tirelessly to uplift the underprivileged and provide them with opportunities for a better life.',
+        about: 'Kabir Ban Bhandari Foundation (Trust) was established with the vision of creating a better world for everyone.',
         mission: 'To empower communities and create sustainable change through education, healthcare, and social welfare programs.',
-        vision: 'A world where every individual has access to quality education, healthcare, and opportunities for a better life.',
+        vision: 'A world where every individual has access to quality education, healthcare, and opportunities.',
         website: 'https://www.kabirbanbhandari.org',
         establishedYear: '2024',
         employeeCount: '10-20',
@@ -163,231 +215,296 @@ export default function CompanyManagement({ navigation }) {
       };
 
       await setDoc(doc(db, 'company', 'profile'), defaultData);
-      console.log('✅ Default data seeded successfully!');
-      
       setCompanyData(defaultData);
-      setFormData({
-        organizationName: defaultData.organizationName,
-        cin: defaultData.cin,
-        address: defaultData.address,
-        contactNo: defaultData.contactNo,
-        email: defaultData.email,
-        presidentName: defaultData.presidentName,
-        secretaryName: defaultData.secretaryName,
-        tagline: defaultData.tagline,
-        description: defaultData.description,
-        about: defaultData.about,
-        mission: defaultData.mission,
-        vision: defaultData.vision,
-        website: defaultData.website,
-        logo: defaultData.logo || null,
-        coverImage: defaultData.coverImage || null,
-        facebook: defaultData.socialMedia?.facebook || '',
-        instagram: defaultData.socialMedia?.instagram || '',
-        twitter: defaultData.socialMedia?.twitter || '',
-        linkedin: defaultData.socialMedia?.linkedin || '',
-        youtube: defaultData.socialMedia?.youtube || '',
-        establishedYear: defaultData.establishedYear,
-        employeeCount: defaultData.employeeCount,
-        registrationNumber: defaultData.registrationNumber,
-        oldAgeAssistance: defaultData.oldAgeAssistance,
-        kanyaMarriageAssistance: defaultData.kanyaMarriageAssistance,
-        selfEmploymentAssistance: defaultData.selfEmploymentAssistance
-      });
-
-      Alert.alert(
-        '✅ Organization Profile Created',
-        'Default organization data has been set up successfully. You can now edit it if needed.',
-        [{ text: 'OK' }]
-      );
+      setFormData(defaultData);
     } catch (error) {
       console.error('Error seeding default data:', error);
-      Alert.alert('Error', 'Failed to seed default data: ' + error.message);
+      Alert.alert('Error', 'Failed to seed default data');
     }
   };
 
-  const pickImage = async (type) => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please allow access to your gallery');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: type === 'logo' ? [1, 1] : [16, 9],
-      quality: 0.5,
-      base64: true,
-    });
-
-    if (!result.canceled) {
-      const asset = result.assets[0];
-      const base64Url = `data:image/jpeg;base64,${asset.base64}`;
-      if (type === 'logo') {
-        setFormData({ ...formData, logo: base64Url });
-      } else {
-        setFormData({ ...formData, coverImage: base64Url });
-      }
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formData.organizationName) {
-      Alert.alert('Error', 'Organization name is required');
-      return;
-    }
-
-    setSaving(true);
+  const handleVerifyApplication = async () => {
+    if (!selectedVerifyApplication) return;
+    
     try {
-      const data = {
-        organizationName: formData.organizationName,
-        cin: formData.cin,
-        address: formData.address,
-        contactNo: formData.contactNo,
-        email: formData.email,
-        presidentName: formData.presidentName,
-        secretaryName: formData.secretaryName,
-        tagline: formData.tagline,
-        description: formData.description,
-        about: formData.about,
-        mission: formData.mission,
-        vision: formData.vision,
-        website: formData.website,
-        logo: formData.logo,
-        coverImage: formData.coverImage,
-        establishedYear: formData.establishedYear,
-        employeeCount: formData.employeeCount,
-        registrationNumber: formData.registrationNumber,
-        socialMedia: {
-          facebook: formData.facebook,
-          instagram: formData.instagram,
-          twitter: formData.twitter,
-          linkedin: formData.linkedin,
-          youtube: formData.youtube
-        },
-        oldAgeAssistance: formData.oldAgeAssistance,
-        kanyaMarriageAssistance: formData.kanyaMarriageAssistance,
-        selfEmploymentAssistance: formData.selfEmploymentAssistance,
-        updatedAt: new Date().toISOString()
-      };
-
-      if (!companyData) {
-        data.createdAt = new Date().toISOString();
-        data.createdBy = auth.currentUser?.uid || 'admin';
-      }
-
-      await setDoc(doc(db, 'company', 'profile'), data);
-      Alert.alert('Success', 'Company profile updated successfully');
-      setEditing(false);
-      await fetchOrSeedCompanyData();
+      await updateDoc(doc(db, 'serviceApplications', selectedVerifyApplication.id), {
+        status: 'verified',
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: auth.currentUser?.uid
+      });
+      setVerifyConfirmModalVisible(false);
+      setSelectedVerifyApplication(null);
+      Alert.alert('Success', 'Application verified successfully');
     } catch (error) {
       Alert.alert('Error', error.message);
-    } finally {
-      setSaving(false);
     }
   };
 
-  const handleDeleteCompany = async () => {
-    Alert.alert(
-      'Delete Company',
-      'Are you sure you want to delete the company profile? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, 'company', 'profile'));
-              Alert.alert('Success', 'Company profile deleted successfully');
-              navigation.goBack();
-            } catch (error) {
-              Alert.alert('Error', error.message);
-            }
-          }
-        }
-      ]
-    );
+  const handleReleaseFund = async () => {
+    if (!selectedFundConfirm) return;
+    
+    try {
+      await updateDoc(doc(db, 'serviceApplications', selectedFundConfirm.id), {
+        status: 'funded',
+        fundAmount: parseFloat(fundAmount) || 0,
+        fundRemarks: fundRemarks || 'Fund released',
+        fundReleasedAt: new Date().toISOString(),
+        fundReleasedBy: auth.currentUser?.uid
+      });
+      
+      setFundConfirmModalVisible(false);
+      setFundReleaseModalVisible(false);
+      setSelectedFundConfirm(null);
+      setFundAmount('');
+      setFundRemarks('');
+      Alert.alert('Success', 'Fund released successfully');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchOrSeedCompanyData();
-    setRefreshing(false);
+  const handleCreateCompetition = async () => {
+    if (!competitionForm.title) {
+      Alert.alert('Error', 'Competition title is required');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'competitions'), {
+        ...competitionForm,
+        participants: [],
+        winners: [],
+        createdAt: new Date().toISOString(),
+        createdBy: auth.currentUser?.uid,
+        status: competitionForm.status || 'upcoming'
+      });
+      
+      setCreateCompetitionModalVisible(false);
+      setCompetitionForm({
+        title: '',
+        description: '',
+        category: '',
+        startDate: '',
+        endDate: '',
+        prize: '',
+        venue: '',
+        maxParticipants: '',
+        image: '',
+        status: 'upcoming'
+      });
+      Alert.alert('Success', 'Competition created successfully');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
   };
 
-  const ServiceCard = ({ title, icon, children }) => (
-    <View style={styles.serviceCard}>
-      <View style={styles.serviceHeader}>
-        <MaterialIcons name={icon} size={20} color="#3b82f6" />
-        <Text style={styles.serviceTitle}>{title}</Text>
+  const handleCompetitionAction = async (competitionId, action, data = {}) => {
+    try {
+      const competitionRef = doc(db, 'competitions', competitionId);
+      
+      if (action === 'makeLive') {
+        await updateDoc(competitionRef, { status: 'live' });
+        Alert.alert('Success', 'Competition is now live!');
+      } else if (action === 'end') {
+        await updateDoc(competitionRef, { status: 'completed' });
+        Alert.alert('Success', 'Competition ended successfully');
+      } else if (action === 'sendPass') {
+        await updateDoc(competitionRef, { 
+          passSent: true,
+          passSentAt: new Date().toISOString()
+        });
+        Alert.alert('Success', 'Pass/Ticket sent successfully to all participants');
+      } else if (action === 'sendCertificate') {
+        await updateDoc(competitionRef, { 
+          certificateSent: true,
+          certificateSentAt: new Date().toISOString()
+        });
+        Alert.alert('Success', 'Certificate sent successfully to all participants');
+      }
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const openVerifyModal = (application) => {
+    setSelectedVerifyApplication(application);
+    setVerifyConfirmModalVisible(true);
+  };
+
+  const openFundReleaseModal = (application) => {
+    setSelectedFundConfirm(application);
+    setFundReleaseModalVisible(true);
+  };
+
+  const confirmFundRelease = () => {
+    if (!fundAmount || parseFloat(fundAmount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+    setFundConfirmModalVisible(true);
+  };
+
+  const getServiceTypeLabel = (type) => {
+    switch(type) {
+      case 'oldAge': return 'Old Age Assistance';
+      case 'kanya': return 'Kanya Marriage Assistance';
+      case 'selfEmployment': return 'Self Employment Assistance';
+      default: return type;
+    }
+  };
+
+  const ApplicationCard = ({ application }) => (
+    <TouchableOpacity 
+      style={styles.applicationCard}
+      onPress={() => {
+        setSelectedApplication(application);
+        setApplicationModalVisible(true);
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.applicationHeader}>
+        <View style={styles.applicationUser}>
+          <View style={styles.applicationAvatar}>
+            <Text style={styles.applicationAvatarText}>
+              {application.userName?.charAt(0) || 'U'}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.applicationUserName}>{application.userName || 'Unknown User'}</Text>
+            <Text style={styles.applicationService}>{getServiceTypeLabel(application.serviceType)}</Text>
+          </View>
+        </View>
+        <View style={[styles.applicationStatus, { backgroundColor: 
+          application.status === 'pending' ? '#fef3c7' : 
+          application.status === 'verified' ? '#dbeafe' : '#d1fae5'
+        }]}>
+          <Text style={[styles.applicationStatusText, { color:
+            application.status === 'pending' ? '#d97706' : 
+            application.status === 'verified' ? '#2563eb' : '#059669'
+          }]}>
+            {application.status.charAt(0).toUpperCase() + application.status.slice(1)}
+          </Text>
+        </View>
       </View>
-      {children}
-    </View>
+      
+      <View style={application.status === 'pending' ? styles.applicationActions : null}>
+        {application.status === 'pending' && (
+          <TouchableOpacity 
+            style={[styles.applicationButton, styles.verifyButton]}
+            onPress={() => openVerifyModal(application)}
+          >
+            <MaterialIcons name="check-circle" size={16} color="#ffffff" />
+            <Text style={styles.applicationButtonText}>Verify</Text>
+          </TouchableOpacity>
+        )}
+
+        {application.status === 'verified' && (
+          <TouchableOpacity 
+            style={[styles.applicationButton, styles.fundButton]}
+            onPress={() => openFundReleaseModal(application)}
+          >
+            <MaterialIcons name="payments" size={16} color="#ffffff" />
+            <Text style={styles.applicationButtonText}>Release Fund</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </TouchableOpacity>
   );
 
-  const ServiceRow = ({ label, value, field, type }) => (
-    <View style={styles.serviceRow}>
-      <Text style={styles.serviceLabel}>{label}</Text>
-      {editing ? (
-        <TextInput
-          style={styles.serviceInput}
-          value={value}
-          onChangeText={(text) => {
-            if (type === 'oldAge') {
-              setFormData({
-                ...formData,
-                oldAgeAssistance: { ...formData.oldAgeAssistance, [field]: text }
-              });
-            } else if (type === 'kanya') {
-              setFormData({
-                ...formData,
-                kanyaMarriageAssistance: { ...formData.kanyaMarriageAssistance, [field]: text }
-              });
-            }
-          }}
-          keyboardType="numeric"
-          placeholder="Enter amount"
-        />
-      ) : (
-        <Text style={styles.serviceValue}>₹ {value}</Text>
+  const CompetitionCard = ({ competition }) => (
+    <TouchableOpacity 
+      style={styles.competitionCard}
+      onPress={() => {
+        setSelectedCompetition(competition);
+        setCompetitionDetailModalVisible(true);
+      }}
+      activeOpacity={0.7}
+    >
+      <View style={styles.competitionHeader}>
+        <Text style={styles.competitionTitle} numberOfLines={1}>{competition.title}</Text>
+        <View style={[styles.competitionStatus, { backgroundColor:
+          competition.status === 'upcoming' ? '#fef3c7' :
+          competition.status === 'live' ? '#dbeafe' : '#d1fae5'
+        }]}>
+          <Text style={[styles.competitionStatusText, { color:
+            competition.status === 'upcoming' ? '#d97706' :
+            competition.status === 'live' ? '#2563eb' : '#059669'
+          }]}>
+            {competition.status?.toUpperCase() || 'UPCOMING'}
+          </Text>
+        </View>
+      </View>
+      
+      <Text style={styles.competitionDescription} numberOfLines={2}>
+        {competition.description || 'No description'}
+      </Text>
+      
+      <View style={styles.competitionDetails}>
+        <View style={styles.competitionDetail}>
+          <MaterialIcons name="people" size={16} color="#6b7280" />
+          <Text style={styles.competitionDetailText}>
+            {competition.participants?.length || 0} participants
+          </Text>
+        </View>
+        <View style={styles.competitionDetail}>
+          <MaterialIcons name="emoji-events" size={16} color="#6b7280" />
+          <Text style={styles.competitionDetailText}>₹{competition.prize || '0'}</Text>
+        </View>
+      </View>
+      
+      {competition.winner && (
+        <View style={styles.winnerBadge}>
+          <MaterialIcons name="stars" size={14} color="#f59e0b" />
+          <Text style={styles.winnerText}>Winner: {competition.winnerName}</Text>
+        </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
-        <Text style={styles.loadingText}>
-          {isFirstRun ? 'Setting up organization profile...' : 'Loading Company Profile...'}
-        </Text>
+        <ActivityIndicator size="large" color="#FF7722" />
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Organization Profile</Text>
+          <Text style={styles.headerTitle}>Organization Dashboard</Text>
           <TouchableOpacity onPress={() => setEditing(!editing)}>
             <Text style={styles.editButton}>{editing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
         </View>
-        {isFirstRun && (
-          <View style={styles.seedNotice}>
-            <MaterialIcons name="info" size={16} color="#ffffff" />
-            <Text style={styles.seedNoticeText}>
-              Default data loaded successfully! You can now edit it.
+      </View>
+
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        {['services', 'applications', 'competitions'].map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <MaterialIcons 
+              name={
+                tab === 'services' ? 'handshake' :
+                tab === 'applications' ? 'people' : 'emoji-events'
+              } 
+              size={20} 
+              color={activeTab === tab ? '#FF7722' : '#6b7280'} 
+            />
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </Text>
-          </View>
-        )}
+          </TouchableOpacity>
+        ))}
       </View>
 
       <ScrollView 
@@ -395,510 +512,659 @@ export default function CompanyManagement({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={fetchOrSeedCompanyData} colors={['#FF7722']} />
         }
       >
-        {/* Cover Image */}
-        <View style={styles.coverSection}>
-          <TouchableOpacity onPress={() => pickImage('cover')} disabled={!editing}>
-            <View style={styles.coverImageContainer}>
-              {formData.coverImage ? (
-                <Image source={{ uri: formData.coverImage }} style={styles.coverImage} />
-              ) : (
-                <View style={styles.coverPlaceholder}>
-                  <MaterialIcons name="image" size={40} color="#9ca3af" />
-                  <Text style={styles.coverPlaceholderText}>Add Cover Image</Text>
-                </View>
-              )}
-              {editing && (
-                <View style={styles.coverCameraIcon}>
-                  <MaterialIcons name="photo-camera" size={16} color="#ffffff" />
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Logo & Organization Name */}
-        <View style={styles.companyHeader}>
-          <TouchableOpacity onPress={() => pickImage('logo')} disabled={!editing}>
-            <View style={styles.logoContainer}>
-              {formData.logo ? (
-                <Image source={{ uri: formData.logo }} style={styles.logoImage} />
-              ) : (
-                <View style={styles.logoPlaceholder}>
-                  <MaterialIcons name="business" size={30} color="#3b82f6" />
-                </View>
-              )}
-              {editing && (
-                <View style={styles.logoCameraIcon}>
-                  <MaterialIcons name="photo-camera" size={12} color="#ffffff" />
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
-          <View style={styles.companyNameContainer}>
-            {editing ? (
-              <TextInput
-                style={styles.companyNameInput}
-                value={formData.organizationName}
-                onChangeText={(text) => setFormData({...formData, organizationName: text})}
-                placeholder="Enter organization name"
-                placeholderTextColor="#9ca3af"
-              />
-            ) : (
-              <Text style={styles.companyName}>{formData.organizationName}</Text>
-            )}
-            {editing ? (
-              <TextInput
-                style={styles.taglineInput}
-                value={formData.tagline}
-                onChangeText={(text) => setFormData({...formData, tagline: text})}
-                placeholder="Enter tagline"
-                placeholderTextColor="#9ca3af"
-              />
-            ) : (
-              <Text style={styles.companyTagline}>{formData.tagline || 'Add a tagline'}</Text>
-            )}
-          </View>
-        </View>
-
-        {/* Status Badge */}
-        {!editing && (
-          <View style={styles.statusContainer}>
-            <View style={styles.statusBadge}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Active</Text>
-            </View>
-            {companyData && (
-              <Text style={styles.lastUpdated}>
-                Last updated: {companyData.updatedAt ? new Date(companyData.updatedAt).toLocaleDateString() : 'N/A'}
+        {activeTab === 'services' && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Services Offered</Text>
+            <ServiceCard title="Old Age Assistance" icon="elderly">
+              <ServiceRow label="Below 20 years" value={formData.oldAgeAssistance?.below20 || '0'} />
+              <ServiceRow label="20 - 40 years" value={formData.oldAgeAssistance?.between20to40 || '0'} />
+              <ServiceRow label="40 - 60 years" value={formData.oldAgeAssistance?.between40to60 || '0'} />
+              <ServiceRow label="60 years & above" value={formData.oldAgeAssistance?.above60 || '0'} />
+            </ServiceCard>
+            <ServiceCard title="Kanya Marriage Assistance" icon="child-care">
+              <ServiceRow label="Below 4 years" value={formData.kanyaMarriageAssistance?.below4 || '0'} />
+              <ServiceRow label="4 - 8 years" value={formData.kanyaMarriageAssistance?.between4to8 || '0'} />
+              <ServiceRow label="8 - 12 years" value={formData.kanyaMarriageAssistance?.between8to12 || '0'} />
+              <ServiceRow label="12 years & above" value={formData.kanyaMarriageAssistance?.above12 || '0'} />
+            </ServiceCard>
+            <ServiceCard title="Self Employment Assistance" icon="work">
+              <Text style={styles.serviceValue}>
+                {formData.selfEmploymentAssistance || 'Available for unemployed elderly people.'}
               </Text>
+            </ServiceCard>
+          </View>
+        )}
+
+        {activeTab === 'applications' && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="people" size={20} color="#FF7722" />
+              <Text style={styles.sectionTitle}>Service Applications</Text>
+              <View style={styles.badgeContainer}>
+                <Text style={styles.badgeText}>
+                  {applications.filter(a => a.status === 'pending').length} Pending
+                </Text>
+              </View>
+            </View>
+            
+            {applications.length === 0 ? (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="inbox" size={40} color="#d1d5db" />
+                <Text style={styles.emptyStateText}>No applications yet</Text>
+              </View>
+            ) : (
+              applications.map((app) => (
+                <ApplicationCard key={app.id} application={app} />
+              ))
             )}
           </View>
         )}
 
-        {/* Organization Details */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Organization Details</Text>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>CIN (Corporate Identification Number)</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.cin}
-                onChangeText={(text) => setFormData({...formData, cin: text})}
-                placeholder="Enter CIN"
-              />
+        {activeTab === 'competitions' && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="emoji-events" size={20} color="#FF7722" />
+              <Text style={styles.sectionTitle}>Competitions</Text>
+              <TouchableOpacity 
+                style={styles.createButton}
+                onPress={() => setCreateCompetitionModalVisible(true)}
+              >
+                <MaterialIcons name="add" size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+            
+            {competitions.length === 0 ? (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="emoji-events" size={40} color="#d1d5db" />
+                <Text style={styles.emptyStateText}>No competitions created</Text>
+                <TouchableOpacity 
+                  style={styles.createCompetitionButton}
+                  onPress={() => setCreateCompetitionModalVisible(true)}
+                >
+                  <Text style={styles.createCompetitionButtonText}>Create Competition</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <Text style={styles.value}>{formData.cin}</Text>
+              competitions.map((comp) => (
+                <CompetitionCard key={comp.id} competition={comp} />
+              ))
             )}
           </View>
+        )}
+      </ScrollView>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Registration Number</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.registrationNumber}
-                onChangeText={(text) => setFormData({...formData, registrationNumber: text})}
-                placeholder="Enter registration number"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.registrationNumber}</Text>
-            )}
-          </View>
+      {/* Application Detail Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={applicationModalVisible}
+        onRequestClose={() => setApplicationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView style={styles.modalContent}>
+            {selectedApplication && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Application Details</Text>
+                  <TouchableOpacity onPress={() => setApplicationModalVisible(false)}>
+                    <MaterialIcons name="close" size={24} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Established Year</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.establishedYear}
-                onChangeText={(text) => setFormData({...formData, establishedYear: text})}
-                placeholder="e.g., 2024"
-                keyboardType="numeric"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.establishedYear}</Text>
-            )}
-          </View>
+                <View style={styles.detailStatusBar}>
+                  <View style={[styles.detailStatusBadge, { backgroundColor: 
+                    selectedApplication.status === 'pending' ? '#fef3c7' : 
+                    selectedApplication.status === 'verified' ? '#dbeafe' : '#d1fae5'
+                  }]}>
+                    <Text style={[styles.detailStatusText, { color:
+                      selectedApplication.status === 'pending' ? '#d97706' : 
+                      selectedApplication.status === 'verified' ? '#2563eb' : '#059669'
+                    }]}>
+                      {selectedApplication.status.charAt(0).toUpperCase() + selectedApplication.status.slice(1)}
+                    </Text>
+                  </View>
+                  <Text style={styles.detailDate}>
+                    {new Date(selectedApplication.createdAt?.toDate?.() || selectedApplication.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Employee Count</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.employeeCount}
-                onChangeText={(text) => setFormData({...formData, employeeCount: text})}
-                placeholder="e.g., 50-100"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.employeeCount || 'Not provided'}</Text>
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Service Type</Text>
+                  <Text style={styles.detailValue}>{getServiceTypeLabel(selectedApplication.serviceType)}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Applicant Name</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.userName || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Email</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.userEmail || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Full Name</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.fullName || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Age</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.age || 'N/A'}</Text>
+                  </View>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Gender</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.gender || 'N/A'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Phone</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.phone || 'N/A'}</Text>
+                  </View>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Email</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.email || 'N/A'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Address</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.address || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Occupation</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.occupation || 'N/A'}</Text>
+                  </View>
+                  <View style={[styles.detailSection, { flex: 1 }]}>
+                    <Text style={styles.detailLabel}>Annual Income</Text>
+                    <Text style={styles.detailValue}>₹{selectedApplication.annualIncome || 'N/A'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>ID Proof</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.idProof || 'N/A'}</Text>
+                </View>
+
+                {selectedApplication.ageGroup && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Age Group</Text>
+                    <Text style={styles.detailValue}>{selectedApplication.ageGroup}</Text>
+                  </View>
+                )}
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Details / Reason</Text>
+                  <Text style={styles.detailValue}>{selectedApplication.details || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailLabel}>Expected Amount</Text>
+                  <Text style={[styles.detailValue, { color: '#10b981', fontFamily: Fonts.Bold }]}>
+                    ₹{selectedApplication.amount || '0'}
+                  </Text>
+                </View>
+
+                {selectedApplication.status === 'funded' && (
+                  <View style={styles.fundDetailCard}>
+                    <Text style={styles.fundDetailTitle}>Fund Details</Text>
+                    <View style={styles.fundDetailRow}>
+                      <Text style={styles.fundDetailLabel}>Amount Released</Text>
+                      <Text style={styles.fundDetailValue}>₹{selectedApplication.fundAmount || selectedApplication.amount || '0'}</Text>
+                    </View>
+                    {selectedApplication.fundRemarks && (
+                      <View style={styles.fundDetailRow}>
+                        <Text style={styles.fundDetailLabel}>Remarks</Text>
+                        <Text style={styles.fundDetailValue}>{selectedApplication.fundRemarks}</Text>
+                      </View>
+                    )}
+                    <View style={styles.fundDetailRow}>
+                      <Text style={styles.fundDetailLabel}>Released Date</Text>
+                      <Text style={styles.fundDetailValue}>
+                        {selectedApplication.fundReleasedAt ? new Date(selectedApplication.fundReleasedAt).toLocaleDateString() : 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {selectedApplication.status === 'pending' && (
+                  <TouchableOpacity 
+                    style={[styles.detailActionButton, styles.verifyButton]}
+                    onPress={() => {
+                      setApplicationModalVisible(false);
+                      openVerifyModal(selectedApplication);
+                    }}
+                  >
+                    <MaterialIcons name="check-circle" size={16} color="#ffffff" />
+                    <Text style={styles.detailActionText}>Verify Application</Text>
+                  </TouchableOpacity>
+                )}
+
+                {selectedApplication.status === 'verified' && (
+                  <TouchableOpacity 
+                    style={[styles.detailActionButton, styles.fundButton]}
+                    onPress={() => {
+                      setApplicationModalVisible(false);
+                      openFundReleaseModal(selectedApplication);
+                    }}
+                  >
+                    <MaterialIcons name="payments" size={16} color="#ffffff" />
+                    <Text style={styles.detailActionText}>Release Fund</Text>
+                  </TouchableOpacity>
+                )}
+              </>
             )}
-          </View>
+          </ScrollView>
         </View>
+      </Modal>
 
-        {/* Services Offered Section */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="handshake" size={20} color="#3b82f6" />
-            <Text style={styles.sectionTitle}>Services Offered</Text>
-          </View>
-
-          {/* Old Age Assistance */}
-          <ServiceCard title="Kabir Old Age Assistance Program" icon="elderly">
-            <ServiceRow 
-              label="Below 20 years" 
-              value={formData.oldAgeAssistance?.below20 || '0'} 
-              field="below20" 
-              type="oldAge" 
-            />
-            <ServiceRow 
-              label="20 - 40 years" 
-              value={formData.oldAgeAssistance?.between20to40 || '0'} 
-              field="between20to40" 
-              type="oldAge" 
-            />
-            <ServiceRow 
-              label="40 - 60 years" 
-              value={formData.oldAgeAssistance?.between40to60 || '0'} 
-              field="between40to60" 
-              type="oldAge" 
-            />
-            <ServiceRow 
-              label="60 years & above" 
-              value={formData.oldAgeAssistance?.above60 || '0'} 
-              field="above60" 
-              type="oldAge" 
-            />
-          </ServiceCard>
-
-          {/* Kanya Marriage Assistance */}
-          <ServiceCard title="Kanya (Girl Child) Marriage Assistance Program" icon="child-care">
-            <ServiceRow 
-              label="Below 4 years" 
-              value={formData.kanyaMarriageAssistance?.below4 || '0'} 
-              field="below4" 
-              type="kanya" 
-            />
-            <ServiceRow 
-              label="4 - 8 years" 
-              value={formData.kanyaMarriageAssistance?.between4to8 || '0'} 
-              field="between4to8" 
-              type="kanya" 
-            />
-            <ServiceRow 
-              label="8 - 12 years" 
-              value={formData.kanyaMarriageAssistance?.between8to12 || '0'} 
-              field="between8to12" 
-              type="kanya" 
-            />
-            <ServiceRow 
-              label="12 years & above" 
-              value={formData.kanyaMarriageAssistance?.above12 || '0'} 
-              field="above12" 
-              type="kanya" 
-            />
-          </ServiceCard>
-
-          {/* Self Employment Assistance */}
-          <ServiceCard title="Self-Employment Assistance Scheme" icon="work">
-            <View style={styles.serviceRow}>
-              <Text style={styles.serviceLabel}>Description</Text>
-              {editing ? (
-                <TextInput
-                  style={[styles.serviceInput, styles.serviceTextArea]}
-                  value={formData.selfEmploymentAssistance || ''}
-                  onChangeText={(text) => setFormData({...formData, selfEmploymentAssistance: text})}
-                  placeholder="Enter description"
-                  multiline
-                  numberOfLines={2}
-                />
-              ) : (
-                <Text style={styles.serviceValue}>
-                  {formData.selfEmploymentAssistance || 'Available for unemployed elderly people.'}
+      {/* Verify Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={verifyConfirmModalVisible}
+        onRequestClose={() => setVerifyConfirmModalVisible(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <View style={styles.confirmModalIcon}>
+              <MaterialIcons name="check-circle" size={50} color="#FF7722" />
+            </View>
+            <Text style={styles.confirmModalTitle}>Verify Application</Text>
+            <Text style={styles.confirmModalMessage}>
+              Are you sure you want to verify this application?
+              {selectedVerifyApplication && (
+                <Text style={styles.confirmModalDetail}>
+                  \n\nApplicant: {selectedVerifyApplication.userName || 'Unknown'}\n
+                  Service: {getServiceTypeLabel(selectedVerifyApplication.serviceType)}\n
+                  Amount: ₹{selectedVerifyApplication.amount || '0'}
                 </Text>
               )}
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmCancelButton]}
+                onPress={() => setVerifyConfirmModalVisible(false)}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmVerifyButton]}
+                onPress={handleVerifyApplication}
+              >
+                <Text style={styles.confirmVerifyText}>Verify</Text>
+              </TouchableOpacity>
             </View>
-          </ServiceCard>
+          </View>
         </View>
+      </Modal>
 
-        {/* Contact Information */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
+      {/* Fund Release Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={fundReleaseModalVisible}
+        onRequestClose={() => setFundReleaseModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Release Fund</Text>
+            
+            <View style={styles.field}>
+              <Text style={styles.label}>Amount (₹) *</Text>
+              <TextInput
+                style={styles.input}
+                value={fundAmount}
+                onChangeText={setFundAmount}
+                keyboardType="numeric"
+                placeholder="Enter amount"
+              />
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Address</Text>
-            {editing ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Remarks</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={formData.address}
-                onChangeText={(text) => setFormData({...formData, address: text})}
-                placeholder="Enter address"
+                value={fundRemarks}
+                onChangeText={setFundRemarks}
+                placeholder="Add remarks"
                 multiline
                 numberOfLines={3}
               />
-            ) : (
-              <Text style={styles.value}>{formData.address}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contact Number</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.contactNo}
-                onChangeText={(text) => setFormData({...formData, contactNo: text})}
-                placeholder="Enter contact number"
-                keyboardType="phone-pad"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.contactNo}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.email}
-                onChangeText={(text) => setFormData({...formData, email: text})}
-                placeholder="Enter email"
-                keyboardType="email-address"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Website</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.website}
-                onChangeText={(text) => setFormData({...formData, website: text})}
-                placeholder="Enter website URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.website || 'Not provided'}</Text>
-            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setFundReleaseModalVisible(false);
+                  setFundAmount('');
+                  setFundRemarks('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={confirmFundRelease}
+                disabled={!fundAmount}
+              >
+                <Text style={styles.modalConfirmText}>Release Fund</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+      </Modal>
 
-        {/* Leadership */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Leadership</Text>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>President</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.presidentName}
-                onChangeText={(text) => setFormData({...formData, presidentName: text})}
-                placeholder="Enter president name"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.presidentName}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Secretary</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.secretaryName}
-                onChangeText={(text) => setFormData({...formData, secretaryName: text})}
-                placeholder="Enter secretary name"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.secretaryName}</Text>
-            )}
+      {/* Fund Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={fundConfirmModalVisible}
+        onRequestClose={() => setFundConfirmModalVisible(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalContent}>
+            <View style={styles.confirmModalIcon}>
+              <MaterialIcons name="payments" size={50} color="#10b981" />
+            </View>
+            <Text style={styles.confirmModalTitle}>Confirm Fund Release</Text>
+            <Text style={styles.confirmModalMessage}>
+              Are you sure you want to release the fund?
+              {selectedFundConfirm && (
+                <Text style={styles.confirmModalDetail}>
+                  \n\nApplicant: {selectedFundConfirm.userName || 'Unknown'}\n
+                  Service: {getServiceTypeLabel(selectedFundConfirm.serviceType)}\n
+                  Amount: ₹{fundAmount || selectedFundConfirm.amount || '0'}
+                  {fundRemarks ? `\nRemarks: ${fundRemarks}` : ''}
+                </Text>
+              )}
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmCancelButton]}
+                onPress={() => {
+                  setFundConfirmModalVisible(false);
+                }}
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.confirmModalButton, styles.confirmFundButton]}
+                onPress={handleReleaseFund}
+              >
+                <Text style={styles.confirmFundText}>Release Fund</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+      </Modal>
 
-        {/* Description */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>About Organization</Text>
+      {/* Create Competition Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={createCompetitionModalVisible}
+        onRequestClose={() => setCreateCompetitionModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Create Competition</Text>
+            
+            <View style={styles.field}>
+              <Text style={styles.label}>Title *</Text>
+              <TextInput
+                style={styles.input}
+                value={competitionForm.title}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, title: text})}
+                placeholder="Enter competition title"
+              />
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Short Description</Text>
-            {editing ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Description</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={formData.description}
-                onChangeText={(text) => setFormData({...formData, description: text})}
-                placeholder="Enter short description"
+                value={competitionForm.description}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, description: text})}
+                placeholder="Enter description"
                 multiline
                 numberOfLines={3}
               />
-            ) : (
-              <Text style={styles.value}>{formData.description || 'Not provided'}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>About Us</Text>
-            {editing ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Category</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.about}
-                onChangeText={(text) => setFormData({...formData, about: text})}
-                placeholder="Tell your organization story"
-                multiline
-                numberOfLines={4}
+                style={styles.input}
+                value={competitionForm.category}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, category: text})}
+                placeholder="e.g., Essay, Quiz, Art"
               />
-            ) : (
-              <Text style={styles.value}>{formData.about || 'Not provided'}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Mission</Text>
-            {editing ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Prize (₹)</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.mission}
-                onChangeText={(text) => setFormData({...formData, mission: text})}
-                placeholder="Enter mission statement"
-                multiline
-                numberOfLines={2}
+                style={styles.input}
+                value={competitionForm.prize}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, prize: text})}
+                placeholder="Enter prize amount"
+                keyboardType="numeric"
               />
-            ) : (
-              <Text style={styles.value}>{formData.mission || 'Not provided'}</Text>
-            )}
-          </View>
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Vision</Text>
-            {editing ? (
+            <View style={styles.field}>
+              <Text style={styles.label}>Venue</Text>
               <TextInput
-                style={[styles.input, styles.textArea]}
-                value={formData.vision}
-                onChangeText={(text) => setFormData({...formData, vision: text})}
-                placeholder="Enter vision statement"
-                multiline
-                numberOfLines={2}
+                style={styles.input}
+                value={competitionForm.venue}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, venue: text})}
+                placeholder="Enter venue"
               />
-            ) : (
-              <Text style={styles.value}>{formData.vision || 'Not provided'}</Text>
-            )}
-          </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Max Participants</Text>
+              <TextInput
+                style={styles.input}
+                value={competitionForm.maxParticipants}
+                onChangeText={(text) => setCompetitionForm({...competitionForm, maxParticipants: text})}
+                placeholder="Enter max participants"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Status</Text>
+              <View style={styles.statusPicker}>
+                {['upcoming', 'live', 'completed'].map((status) => (
+                  <TouchableOpacity
+                    key={status}
+                    style={[styles.statusOption, competitionForm.status === status && styles.statusOptionActive]}
+                    onPress={() => setCompetitionForm({...competitionForm, status})}
+                  >
+                    <Text style={[styles.statusOptionText, competitionForm.status === status && styles.statusOptionTextActive]}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setCreateCompetitionModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={handleCreateCompetition}
+              >
+                <Text style={styles.modalConfirmText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
+      </Modal>
 
-        {/* Social Media */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Social Media</Text>
+      {/* Competition Detail Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={competitionDetailModalVisible}
+        onRequestClose={() => setCompetitionDetailModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <ScrollView style={styles.modalContent}>
+            {selectedCompetition && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>{selectedCompetition.title}</Text>
+                  <TouchableOpacity onPress={() => setCompetitionDetailModalVisible(false)}>
+                    <MaterialIcons name="close" size={24} color="#6b7280" />
+                  </TouchableOpacity>
+                </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Facebook</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.facebook}
-                onChangeText={(text) => setFormData({...formData, facebook: text})}
-                placeholder="Enter Facebook URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.facebook || 'Not provided'}</Text>
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Status</Text>
+                  <View style={[styles.competitionStatus, { backgroundColor:
+                    selectedCompetition.status === 'upcoming' ? '#fef3c7' :
+                    selectedCompetition.status === 'live' ? '#dbeafe' : '#d1fae5',
+                    alignSelf: 'flex-start'
+                  }]}>
+                    <Text style={[styles.competitionStatusText, { color:
+                      selectedCompetition.status === 'upcoming' ? '#d97706' :
+                      selectedCompetition.status === 'live' ? '#2563eb' : '#059669'
+                    }]}>
+                      {selectedCompetition.status?.toUpperCase() || 'UPCOMING'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Description</Text>
+                  <Text style={styles.competitionDetailValue}>{selectedCompetition.description || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Category</Text>
+                  <Text style={styles.competitionDetailValue}>{selectedCompetition.category || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Prize</Text>
+                  <Text style={styles.competitionDetailValue}>₹{selectedCompetition.prize || '0'}</Text>
+                </View>
+
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Venue</Text>
+                  <Text style={styles.competitionDetailValue}>{selectedCompetition.venue || 'N/A'}</Text>
+                </View>
+
+                <View style={styles.competitionDetailSection}>
+                  <Text style={styles.competitionDetailLabel}>Participants</Text>
+                  <Text style={styles.competitionDetailValue}>
+                    {selectedCompetition.participants?.length || 0} / {selectedCompetition.maxParticipants || '∞'}
+                  </Text>
+                </View>
+
+                {selectedCompetition.winner && (
+                  <View style={styles.competitionDetailSection}>
+                    <Text style={styles.competitionDetailLabel}>Winner</Text>
+                    <View style={styles.winnerBadge}>
+                      <MaterialIcons name="stars" size={14} color="#f59e0b" />
+                      <Text style={styles.winnerText}>{selectedCompetition.winnerName}</Text>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.competitionActions}>
+                  {selectedCompetition.status === 'upcoming' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.liveButton]}
+                      onPress={() => handleCompetitionAction(selectedCompetition.id, 'makeLive')}
+                    >
+                      <MaterialIcons name="play-arrow" size={20} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Make Live</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {selectedCompetition.status === 'live' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.endButton]}
+                      onPress={() => handleCompetitionAction(selectedCompetition.id, 'end')}
+                    >
+                      <MaterialIcons name="stop" size={20} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>End Competition</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {selectedCompetition.status === 'completed' && !selectedCompetition.passSent && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.passButton]}
+                      onPress={() => handleCompetitionAction(selectedCompetition.id, 'sendPass')}
+                    >
+                      <MaterialIcons name="confirmation-number" size={20} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Send Pass/Ticket</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {selectedCompetition.status === 'completed' && !selectedCompetition.certificateSent && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.certificateButton]}
+                      onPress={() => handleCompetitionAction(selectedCompetition.id, 'sendCertificate')}
+                    >
+                      <MaterialIcons name="verified" size={20} color="#ffffff" />
+                      <Text style={styles.actionButtonText}>Send Certificate</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </>
             )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Instagram</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.instagram}
-                onChangeText={(text) => setFormData({...formData, instagram: text})}
-                placeholder="Enter Instagram URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.instagram || 'Not provided'}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Twitter</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.twitter}
-                onChangeText={(text) => setFormData({...formData, twitter: text})}
-                placeholder="Enter Twitter URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.twitter || 'Not provided'}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>LinkedIn</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.linkedin}
-                onChangeText={(text) => setFormData({...formData, linkedin: text})}
-                placeholder="Enter LinkedIn URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.linkedin || 'Not provided'}</Text>
-            )}
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>YouTube</Text>
-            {editing ? (
-              <TextInput
-                style={styles.input}
-                value={formData.youtube}
-                onChangeText={(text) => setFormData({...formData, youtube: text})}
-                placeholder="Enter YouTube URL"
-              />
-            ) : (
-              <Text style={styles.value}>{formData.youtube || 'Not provided'}</Text>
-            )}
-          </View>
+          </ScrollView>
         </View>
-
-        {/* Action Buttons */}
-        {editing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-            <MaterialIcons name="save" size={20} color="#ffffff" />
-            <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
-          </TouchableOpacity>
-        )}
-
-        {!editing && (
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteCompany}>
-            <MaterialIcons name="delete" size={20} color="#ffffff" />
-            <Text style={styles.deleteButtonText}>Delete Organization Profile</Text>
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>NGO App v1.0.0</Text>
-        </View>
-      </ScrollView>
+      </Modal>
     </View>
   );
 }
 
+// Helper Components
+const ServiceCard = ({ title, icon, children }) => (
+  <View style={styles.serviceCard}>
+    <View style={styles.serviceHeader}>
+      <MaterialIcons name={icon} size={20} color="#FF7722" />
+      <Text style={styles.serviceTitle}>{title}</Text>
+    </View>
+    {children}
+  </View>
+);
+
+const ServiceRow = ({ label, value }) => (
+  <View style={styles.serviceRow}>
+    <Text style={styles.serviceLabel}>{label}</Text>
+    <Text style={styles.serviceValue}>₹ {value}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -925,21 +1191,34 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
   },
-  seedNotice: {
+
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  tabButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 8,
+    justifyContent: 'center',
+    paddingVertical: 8,
     gap: 6,
+    borderRadius: 8,
   },
-  seedNoticeText: {
-    fontFamily: Fonts.Regular,
+  tabButtonActive: {
+    backgroundColor: '#FFF5EB',
+  },
+  tabText: {
+    fontFamily: Fonts.SemiBold,
     fontSize: 12,
-    color: '#ffffff',
-    flex: 1,
+    color: '#6b7280',
+  },
+  tabTextActive: {
+    color: '#FF7722',
   },
 
   scrollView: {
@@ -954,7 +1233,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -963,157 +1242,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Cover Image
-  coverSection: {
-    marginTop: 16,
-    marginBottom: 12,
-  },
-  coverImageContainer: {
-    position: 'relative',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  coverImage: {
-    width: '100%',
-    height: 150,
-    resizeMode: 'cover',
-  },
-  coverPlaceholder: {
-    width: '100%',
-    height: 150,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    gap: 8,
-  },
-  coverPlaceholderText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-  coverCameraIcon: {
-    position: 'absolute',
-    bottom: 10,
-    right: 10,
-    backgroundColor: '#3b82f6',
-    borderRadius: 20,
-    padding: 8,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-
-  // Company Header
-  companyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 12,
-  },
-  logoContainer: {
-    position: 'relative',
-  },
-  logoImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#3b82f6',
-  },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#eff6ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#3b82f6',
-  },
-  logoCameraIcon: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#3b82f6',
-    borderRadius: 15,
-    padding: 5,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  companyNameContainer: {
-    flex: 1,
-  },
-  companyName: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#1f2937',
-  },
-  companyNameInput: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#1f2937',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3b82f6',
-    paddingBottom: 2,
-  },
-  companyTagline: {
-    fontFamily: Fonts.Italic,
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  taglineInput: {
-    fontFamily: Fonts.Italic,
-    fontSize: 14,
-    color: '#6b7280',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3b82f6',
-    paddingBottom: 2,
-    marginTop: 2,
-  },
-
-  // Status
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
-    marginRight: 6,
-  },
-  statusText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#10b981',
-    fontSize: 14,
-  },
-  lastUpdated: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#9ca3af',
-  },
-
-  // Card
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginVertical: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     shadowColor: '#000',
@@ -1125,7 +1258,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 12,
   },
   sectionTitle: {
@@ -1133,36 +1266,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
   },
-  field: {
-    marginBottom: 12,
+  badgeContainer: {
+    backgroundColor: '#FFF5EB',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  label: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  value: {
+  badgeText: {
     fontFamily: Fonts.Regular,
-    fontSize: 15,
-    color: '#1f2937',
+    fontSize: 11,
+    color: '#FF7722',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-    backgroundColor: '#f9fafb',
-    fontFamily: Fonts.Regular,
-    color: '#1f2937',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
+  createButton: {
+    backgroundColor: '#FF7722',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  // Service Styles
   serviceCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 10,
@@ -1186,7 +1309,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
@@ -1194,74 +1317,506 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
-    flex: 1,
   },
   serviceValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
   },
-  serviceInput: {
+
+  // Application Styles
+  applicationCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  applicationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  applicationUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  applicationAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF5EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applicationAvatarText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#FF7722',
+  },
+  applicationUserName: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  applicationService: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  applicationStatus: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  applicationStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+  },
+  applicationDetails: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  applicationMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  applicationDate: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#9ca3af',
+  },
+  applicationAmount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#10b981',
+  },
+  applicationActions: {
+    marginTop: 8,
+  },
+  applicationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  verifyButton: {
+    backgroundColor: '#FF7722',
+  },
+  fundButton: {
+    backgroundColor: '#10b981',
+    marginTop: 4,
+  },
+  applicationButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#ffffff',
+  },
+
+  // Competition Styles
+  competitionCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  competitionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  competitionTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#1f2937',
+    flex: 1,
+  },
+  competitionStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  competitionStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 10,
+  },
+  competitionDescription: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 6,
+  },
+  competitionDetails: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 4,
+  },
+  competitionDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  competitionDetailText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  winnerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 6,
+    gap: 4,
+  },
+  winnerText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#d97706',
+  },
+
+  // Competition Detail Modal
+  competitionDetailSection: {
+    marginBottom: 12,
+  },
+  competitionDetailLabel: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  competitionDetailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+  },
+  competitionActions: {
+    marginTop: 12,
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  liveButton: {
+    backgroundColor: '#FF7722',
+  },
+  endButton: {
+    backgroundColor: '#ef4444',
+  },
+  passButton: {
+    backgroundColor: '#8b5cf6',
+  },
+  certificateButton: {
+    backgroundColor: '#10b981',
+  },
+  actionButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#ffffff',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalContent: {
     backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#1f2937',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  modalCancelText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#6b7280',
+  },
+  modalConfirmButton: {
+    backgroundColor: '#FF7722',
+  },
+  modalConfirmText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+
+  field: {
+    marginBottom: 12,
+  },
+  label: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  input: {
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 6,
-    padding: 6,
-    paddingHorizontal: 10,
-    minWidth: 80,
-    textAlign: 'right',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: '#f9fafb',
+    fontFamily: Fonts.Regular,
+    color: '#1f2937',
   },
-  serviceTextArea: {
-    minWidth: '100%',
-    textAlign: 'left',
-    height: 60,
+  textArea: {
+    height: 80,
     textAlignVertical: 'top',
   },
 
-  // Save Button
-  saveButton: {
+  statusPicker: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10b981',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginBottom: 12,
     gap: 8,
   },
-  saveButtonText: {
+  statusOption: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+  },
+  statusOptionActive: {
+    backgroundColor: '#FF7722',
+  },
+  statusOptionText: {
     fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  statusOptionTextActive: {
     color: '#ffffff',
-    fontSize: 16,
   },
 
-  // Delete Button
-  deleteButton: {
-    flexDirection: 'row',
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#ef4444',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
+    paddingVertical: 40,
+    gap: 12,
   },
-  deleteButtonText: {
+  emptyStateText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#9ca3af',
+  },
+  createCompetitionButton: {
+    backgroundColor: '#FF7722',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  createCompetitionButtonText: {
     fontFamily: Fonts.SemiBold,
+    fontSize: 14,
     color: '#ffffff',
-    fontSize: 16,
   },
 
-  versionContainer: {
+  // Application Detail Modal
+  detailStatusBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  versionText: {
+  detailStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  detailStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+  },
+  detailDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
-    color: '#9ca3af',
+    color: '#6b7280',
+  },
+  detailSection: {
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  detailLabel: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  detailActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 12,
+  },
+  detailActionText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#ffffff',
+  },
+
+  fundDetailCard: {
+    backgroundColor: '#d1fae5',
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 8,
+  },
+  fundDetailTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#059669',
+    marginBottom: 8,
+  },
+  fundDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+  },
+  fundDetailLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#047857',
+  },
+  fundDetailValue: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#047857',
+  },
+
+  // Confirm Modal
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 380,
+    alignItems: 'center',
+  },
+  confirmModalIcon: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#FFF5EB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  confirmModalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#1f2937',
+    marginBottom: 8,
+  },
+  confirmModalMessage: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  confirmModalDetail: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#4b5563',
+    lineHeight: 20,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  confirmCancelButton: {
+    backgroundColor: '#f3f4f6',
+  },
+  confirmCancelText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#6b7280',
+  },
+  confirmVerifyButton: {
+    backgroundColor: '#FF7722',
+  },
+  confirmVerifyText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#ffffff',
+  },
+  confirmFundButton: {
+    backgroundColor: '#10b981',
+  },
+  confirmFundText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#ffffff',
   },
 });

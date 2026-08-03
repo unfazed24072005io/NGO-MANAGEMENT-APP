@@ -516,7 +516,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('profilePhoto')}>
-          <MaterialIcons name="photo-camera" size={24} color="#3b82f6" />
+          <MaterialIcons name="photo-camera" size={24} color="#8b5cf6" />
           <Text style={styles.uploadButtonText}>
             {formData.profilePhoto ? 'Change Photo' : 'Upload Profile Photo'}
           </Text>
@@ -547,7 +547,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharFront')}>
-          <MaterialIcons name="credit-card" size={24} color="#3b82f6" />
+          <MaterialIcons name="credit-card" size={24} color="#8b5cf6" />
           <Text style={styles.uploadButtonText}>
             {formData.aadharFront ? 'Change Aadhar Front' : 'Upload Aadhar Front'}
           </Text>
@@ -578,7 +578,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharBack')}>
-          <MaterialIcons name="credit-card" size={24} color="#3b82f6" />
+          <MaterialIcons name="credit-card" size={24} color="#8b5cf6" />
           <Text style={styles.uploadButtonText}>
             {formData.aadharBack ? 'Change Aadhar Back' : 'Upload Aadhar Back'}
           </Text>
@@ -609,7 +609,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('panCard')}>
-          <MaterialIcons name="assignment" size={24} color="#3b82f6" />
+          <MaterialIcons name="assignment" size={24} color="#8b5cf6" />
           <Text style={styles.uploadButtonText}>
             {formData.panCard ? 'Change PAN Card' : 'Upload PAN Card'}
           </Text>
@@ -640,7 +640,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('signature')}>
-          <MaterialIcons name="edit" size={24} color="#3b82f6" />
+          <MaterialIcons name="edit" size={24} color="#8b5cf6" />
           <Text style={styles.uploadButtonText}>
             {formData.signature ? 'Change Signature' : 'Upload Signature'}
           </Text>
@@ -710,7 +710,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           {item.profilePhoto ? (
             <Image source={{ uri: item.profilePhoto }} style={styles.memberImage} />
           ) : (
-            <MaterialIcons name="person" size={30} color="#3b82f6" />
+            <MaterialIcons name="person" size={30} color="#8b5cf6" />
           )}
         </View>
         <View style={styles.memberInfo}>
@@ -749,7 +749,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading members...</Text>
       </View>
     );
@@ -784,7 +784,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#3b82f6" />
+                <MaterialIcons name="person" size={28} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -828,7 +828,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <MemberCard item={item} />}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialIcons name="people" size={44} color="#d1d5db" />
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
 
   // Blue Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -1166,7 +1166,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   inviteButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -1231,7 +1231,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     borderRadius: 2,
   },
   modalStepTitle: {
@@ -1289,8 +1289,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   genderOptionActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
   },
   genderText: {
     fontFamily: Fonts.Regular,
@@ -1325,7 +1325,7 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#8b5cf6',
     fontSize: 14,
   },
   previewImage: {
@@ -1345,11 +1345,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingVertical: 14,
     borderRadius: 50,
     flex: 0.5,
-    shadowColor: '#3b82f6',
+    shadowColor: '#8b5cf6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

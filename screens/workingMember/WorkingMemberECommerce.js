@@ -342,7 +342,7 @@ export default function WorkingMemberECommerce({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading products...</Text>
       </View>
     );
@@ -374,7 +374,7 @@ export default function WorkingMemberECommerce({ navigation }) {
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#3b82f6" />
+                <MaterialIcons name="person" size={28} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -424,7 +424,7 @@ export default function WorkingMemberECommerce({ navigation }) {
         )}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
 
   // Blue Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   categoryChipLabelActive: {
-    color: '#3b82f6',
+    color: '#8b5cf6',
   },
   categoryChipCount: {
     fontFamily: Fonts.SemiBold,
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   categoryChipCountActive: {
-    color: '#3b82f6',
+    color: '#8b5cf6',
   },
 
   // Category Sections
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
 
   // Add to Cart Button
   addToCartButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 6,
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   continueShoppingButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1176,7 +1176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
@@ -1208,7 +1208,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   orderSuccessButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,

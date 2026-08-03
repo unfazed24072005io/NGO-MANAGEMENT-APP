@@ -78,7 +78,7 @@ export default function ComplaintsScreen({ navigation }) {
     switch(status) {
       case 'active': return '#10b981';
       case 'pending': return '#f59e0b';
-      case 'resolved': return '#3b82f6';
+      case 'resolved': return '#FF7722';
       case 'closed': return '#6b7280';
       case 'rejected': return '#ef4444';
       default: return '#6b7280';
@@ -208,7 +208,7 @@ export default function ComplaintsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -281,7 +281,7 @@ export default function ComplaintsScreen({ navigation }) {
         renderItem={({ item }) => <ComplaintCard item={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -383,14 +383,13 @@ export default function ComplaintsScreen({ navigation }) {
   );
 }
 
-// Styles (same as SuggestionsScreen with minor changes)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   headerCard: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -590,7 +589,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   itemResolveButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#FF7722',
   },
   itemReopenButton: {
     backgroundColor: '#06b6d4',
@@ -713,7 +712,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailResolveButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#FF7722',
   },
   detailDeleteButton: {
     backgroundColor: '#ef4444',

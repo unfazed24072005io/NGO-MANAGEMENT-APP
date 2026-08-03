@@ -92,14 +92,14 @@ export default function AdminProfile({ navigation }) {
         const data = docSnap.data();
         setCompanyData(data);
         setCompanyFormData({
-          companyName: data.companyName || '',
+          companyName: data.companyName || data.organizationName || '',
           tagline: data.tagline || '',
           description: data.description || '',
           about: data.about || '',
           mission: data.mission || '',
           vision: data.vision || '',
           email: data.email || '',
-          phone: data.phone || '',
+          phone: data.phone || data.contactNo || '',
           address: data.address || '',
           website: data.website || '',
           facebook: data.socialMedia?.facebook || '',
@@ -165,6 +165,7 @@ export default function AdminProfile({ navigation }) {
     setSavingCompany(true);
     try {
       await setDoc(doc(db, 'company', 'profile'), {
+        organizationName: companyFormData.companyName,
         companyName: companyFormData.companyName,
         tagline: companyFormData.tagline,
         description: companyFormData.description,
@@ -172,6 +173,7 @@ export default function AdminProfile({ navigation }) {
         mission: companyFormData.mission,
         vision: companyFormData.vision,
         email: companyFormData.email,
+        contactNo: companyFormData.phone,
         phone: companyFormData.phone,
         address: companyFormData.address,
         website: companyFormData.website,
@@ -208,10 +210,11 @@ export default function AdminProfile({ navigation }) {
     }
   };
 
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#FF7722" />
         <Text style={styles.loadingText}>Loading Profile...</Text>
       </View>
     );
@@ -219,7 +222,7 @@ export default function AdminProfile({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -245,7 +248,7 @@ export default function AdminProfile({ navigation }) {
                 <Image source={{ uri: formData.profilePhoto }} style={styles.profileImage} />
               ) : (
                 <View style={styles.placeholderImage}>
-                  <MaterialIcons name="person" size={50} color="#3b82f6" />
+                  <MaterialIcons name="person" size={50} color="#FF7722" />
                 </View>
               )}
               {editing && (
@@ -329,7 +332,7 @@ export default function AdminProfile({ navigation }) {
           <View style={styles.field}>
             <Text style={styles.label}>Designation</Text>
             <View style={styles.designationBadge}>
-              <MaterialIcons name="work" size={14} color="#3b82f6" />
+              <MaterialIcons name="work" size={14} color="#FF7722" />
               <Text style={styles.designationText}>{formData.designation}</Text>
             </View>
           </View>
@@ -351,6 +354,22 @@ export default function AdminProfile({ navigation }) {
           </View>
         </View>
 
+        {/* Organization Settings Button */}
+        <TouchableOpacity 
+          style={styles.orgSettingsButton}
+          onPress={() => navigation.navigate('OrganizationSettingsTabs')}
+        >
+          <View style={styles.orgSettingsLeft}>
+            <View style={styles.orgSettingsIcon}>
+              <MaterialIcons name="settings" size={24} color="#ffffff" />
+            </View>
+            <View>
+              <Text style={styles.orgSettingsTitle}>Organization Settings</Text>
+              <Text style={styles.orgSettingsSubtitle}>Manage finances, dashboard & commission</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#ffffff" />
+        </TouchableOpacity>
         {/* Settings */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Settings</Text>
@@ -363,7 +382,7 @@ export default function AdminProfile({ navigation }) {
             <Switch
               value={notifications}
               onValueChange={setNotifications}
-              trackColor={{ false: '#767577', true: '#3b82f6' }}
+              trackColor={{ false: '#767577', true: '#FF7722' }}
               thumbColor={notifications ? '#ffffff' : '#f4f3f4'}
             />
           </View>
@@ -376,7 +395,7 @@ export default function AdminProfile({ navigation }) {
             <Switch
               value={darkMode}
               onValueChange={setDarkMode}
-              trackColor={{ false: '#767577', true: '#3b82f6' }}
+              trackColor={{ false: '#767577', true: '#FF7722' }}
               thumbColor={darkMode ? '#ffffff' : '#f4f3f4'}
             />
           </View>
@@ -399,6 +418,269 @@ export default function AdminProfile({ navigation }) {
           <Text style={styles.versionText}>NGO App v1.0.0</Text>
         </View>
       </ScrollView>
+
+      {/* Company Profile Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={companyModalVisible}
+        onRequestClose={() => setCompanyModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Company Profile</Text>
+              <View style={styles.modalHeaderRight}>
+                <TouchableOpacity 
+                  onPress={() => setEditingCompany(!editingCompany)}
+                  style={styles.modalEditButton}
+                >
+                  <Text style={styles.modalEditButtonText}>
+                    {editingCompany ? 'Cancel' : 'Edit'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setCompanyModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Company Name</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.companyName}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, companyName: text})}
+                  placeholder="Enter company name"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.companyName || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Tagline</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.tagline}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, tagline: text})}
+                  placeholder="Enter tagline"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.tagline || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Description</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={companyFormData.description}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, description: text})}
+                  placeholder="Enter description"
+                  multiline
+                  numberOfLines={3}
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.description || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>About</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={companyFormData.about}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, about: text})}
+                  placeholder="Tell about the company"
+                  multiline
+                  numberOfLines={4}
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.about || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Mission</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={companyFormData.mission}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, mission: text})}
+                  placeholder="Enter mission statement"
+                  multiline
+                  numberOfLines={2}
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.mission || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Vision</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={companyFormData.vision}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, vision: text})}
+                  placeholder="Enter vision statement"
+                  multiline
+                  numberOfLines={2}
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.vision || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Email</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.email}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, email: text})}
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.email || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Phone</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.phone}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, phone: text})}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.phone || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Address</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={companyFormData.address}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, address: text})}
+                  placeholder="Enter address"
+                  multiline
+                  numberOfLines={3}
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.address || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Website</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.website}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, website: text})}
+                  placeholder="Enter website URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.website || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Facebook</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.facebook}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, facebook: text})}
+                  placeholder="Enter Facebook URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.facebook || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Instagram</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.instagram}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, instagram: text})}
+                  placeholder="Enter Instagram URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.instagram || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Twitter</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.twitter}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, twitter: text})}
+                  placeholder="Enter Twitter URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.twitter || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>LinkedIn</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.linkedin}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, linkedin: text})}
+                  placeholder="Enter LinkedIn URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.linkedin || 'N/A'}</Text>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>YouTube</Text>
+              {editingCompany ? (
+                <TextInput
+                  style={styles.input}
+                  value={companyFormData.youtube}
+                  onChangeText={(text) => setCompanyFormData({...companyFormData, youtube: text})}
+                  placeholder="Enter YouTube URL"
+                />
+              ) : (
+                <Text style={styles.value}>{companyFormData.youtube || 'N/A'}</Text>
+              )}
+            </View>
+
+            {editingCompany && (
+              <TouchableOpacity 
+                style={styles.saveCompanyButton} 
+                onPress={handleSaveCompany} 
+                disabled={savingCompany}
+              >
+                <Text style={styles.saveCompanyButtonText}>
+                  {savingCompany ? 'Saving...' : 'Save Company Profile'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -406,12 +688,12 @@ export default function AdminProfile({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -451,7 +733,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -473,23 +755,23 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#3b82f6',
+    borderColor: '#FF7722',
   },
   placeholderImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#3b82f6',
+    borderColor: '#FF7722',
   },
   cameraIcon: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     borderRadius: 20,
     padding: 8,
     borderWidth: 2,
@@ -498,7 +780,7 @@ const styles = StyleSheet.create({
   changePhotoText: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
-    color: '#3b82f6',
+    color: '#FF7722',
     marginTop: 8,
   },
 
@@ -546,7 +828,7 @@ const styles = StyleSheet.create({
   designationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -555,7 +837,7 @@ const styles = StyleSheet.create({
   },
   designationText: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#FF7722',
     fontSize: 14,
   },
   dateBadge: {
@@ -615,6 +897,47 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
 
+  // Organization Settings Button
+  orgSettingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FF7722',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  orgSettingsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  orgSettingsIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  orgSettingsTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  orgSettingsSubtitle: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -659,13 +982,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingVertical: 14,
     borderRadius: 8,
     marginBottom: 16,
     gap: 8,
   },
   companyButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 16,
+  },
+
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalEditButton: {
+    padding: 4,
+  },
+  modalEditButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#FF7722',
+    fontSize: 14,
+  },
+  modalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#1f2937',
+  },
+  saveCompanyButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  saveCompanyButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,

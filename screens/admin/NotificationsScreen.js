@@ -138,7 +138,7 @@ export default function NoticesScreen({ navigation }) {
     switch(status) {
       case 'active': return '#10b981';
       case 'pending': return '#f59e0b';
-      case 'resolved': return '#3b82f6';
+      case 'resolved': return '#FF7722';
       case 'closed': return '#6b7280';
       case 'rejected': return '#ef4444';
       default: return '#6b7280';
@@ -269,7 +269,7 @@ export default function NoticesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -343,7 +343,7 @@ export default function NoticesScreen({ navigation }) {
         renderItem={({ item }) => <NoticeCard item={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -537,10 +537,10 @@ export default function NoticesScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   itemEditButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
   },
   itemCloseButton: {
     backgroundColor: '#6b7280',
@@ -853,8 +853,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   priorityButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   priorityDot: {
     width: 8,
@@ -882,8 +882,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   statusButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   statusButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailEditButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
   },
   detailDeleteButton: {
     backgroundColor: '#ef4444',

@@ -113,7 +113,7 @@ export default function CommissionManagement({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#FF7722" />
         <Text style={styles.loadingText}>Loading Commission Settings...</Text>
       </View>
     );
@@ -121,7 +121,7 @@ export default function CommissionManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -139,13 +139,13 @@ export default function CommissionManagement({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
       >
         {/* Membership Levels Table */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
-            <MaterialIcons name="workspace-premium" size={20} color="#3b82f6" />
+            <MaterialIcons name="workspace-premium" size={20} color="#FF7722" />
             <Text style={styles.sectionTitle}>Membership Levels & Commission</Text>
           </View>
 
@@ -299,12 +299,12 @@ export default function CommissionManagement({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
   // Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   },
   levelBadge: {
     fontFamily: Fonts.Bold,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   marathiText: {
     fontFamily: Fonts.Regular,
@@ -430,12 +430,12 @@ const styles = StyleSheet.create({
   percentageText: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   percentageInput: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
-    color: '#3b82f6',
+    color: '#FF7722',
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 4,
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   reverseLevel: {
     fontFamily: Fonts.Bold,
     fontSize: 12,
-    color: '#3b82f6',
+    color: '#FF7722',
     width: 20,
   },
   reverseName: {

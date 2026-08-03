@@ -309,7 +309,7 @@ export default function FinancesManagement({ navigation }) {
 
   const TransactionCard = ({ transaction }) => {
     const isDonation = transaction.type === 'donation';
-    const color = isDonation ? '#3b82f6' : '#f97316';
+    const color = isDonation ? '#FF7722' : '#f97316';
     const icon = isDonation ? 'volunteer-activism' : 'attach-money';
     const name = isDonation ? transaction.donorName : transaction.memberName;
     const purpose = isDonation ? transaction.purpose : transaction.description;
@@ -346,7 +346,7 @@ export default function FinancesManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -449,12 +449,12 @@ export default function FinancesManagement({ navigation }) {
 
       {/* Content Area */}
       {activeTab === 'overview' && (
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}>
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}>
           <View style={styles.summaryGrid}>
             <View style={[styles.summaryCard, styles.donationCard]}>
               <Text style={styles.summaryLabel}>Total Donations</Text>
               <Text style={styles.summaryValue}>{formatCurrency(stats.totalDonations)}</Text>
-              <MaterialIcons name="volunteer-activism" size={18} color="#3b82f6" style={styles.cardIcon} />
+              <MaterialIcons name="volunteer-activism" size={18} color="#FF7722" style={styles.cardIcon} />
             </View>
             <View style={[styles.summaryCard, styles.commissionCard]}>
               <Text style={styles.summaryLabel}>Total Commission</Text>
@@ -482,7 +482,7 @@ export default function FinancesManagement({ navigation }) {
                   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
                   datasets: [{ 
                     data: stats.monthlyDonations,
-                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                    color: (opacity = 1) => `rgba(255, 119, 34, ${opacity})`,
                     strokeWidth: 3
                   }]
                 }}
@@ -494,13 +494,13 @@ export default function FinancesManagement({ navigation }) {
                   backgroundGradientFrom: '#ffffff',
                   backgroundGradientTo: '#ffffff',
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  color: (opacity = 1) => `rgba(255, 119, 34, ${opacity})`,
                   labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
                   style: { borderRadius: 12 },
                   propsForDots: {
                     r: '4',
                     strokeWidth: '2',
-                    stroke: '#3b82f6'
+                    stroke: '#FF7722'
                   },
                   propsForBackgroundLines: {
                     strokeDasharray: '5, 5',
@@ -549,7 +549,7 @@ export default function FinancesManagement({ navigation }) {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <TransactionCard transaction={item} />}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <MaterialIcons name="receipt" size={44} color="#d1d5db" />
@@ -563,7 +563,7 @@ export default function FinancesManagement({ navigation }) {
 
       {/* Reports Tab */}
       {activeTab === 'reports' && (
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}>
+        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}>
           <View style={styles.reportCard}>
             <Text style={styles.reportTitle}>Financial Summary Report</Text>
             
@@ -849,12 +849,12 @@ export default function FinancesManagement({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -1250,8 +1250,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   statusButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -1274,8 +1274,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   paymentButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   paymentButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -1298,7 +1298,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f3f4f6',
   },
   memberItemActive: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     borderRadius: 6,
   },
   memberItemText: {
@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   memberItemTextActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   noMembersText: {
     textAlign: 'center',
@@ -1386,7 +1386,7 @@ const styles = StyleSheet.create({
   reportValueIncome: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   reportValueExpense: {
     fontFamily: Fonts.Bold,

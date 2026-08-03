@@ -222,7 +222,7 @@ export default function EventsManagement({ navigation }) {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'upcoming': return '#3b82f6';
+      case 'upcoming': return '#FF7722';
       case 'ongoing': return '#10b981';
       case 'completed': return '#6b7280';
       case 'cancelled': return '#ef4444';
@@ -241,17 +241,17 @@ export default function EventsManagement({ navigation }) {
   };
 
   const StatCard = ({ label, count, icon, color, active, onPress }) => (
-  <TouchableOpacity 
-    style={[styles.statCard, active && styles.statCardActive]} 
-    onPress={onPress}
-  >
-    <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-      <MaterialIcons name={icon} size={16} color={color} />
-    </View>
-    <Text style={styles.statType}>{label}</Text>
-    <Text style={[styles.statCount, { color }]}>{count}</Text>
-  </TouchableOpacity>
-);
+    <TouchableOpacity 
+      style={[styles.statCard, active && styles.statCardActive]} 
+      onPress={onPress}
+    >
+      <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={16} color={color} />
+      </View>
+      <Text style={styles.statType}>{label}</Text>
+      <Text style={[styles.statCount, { color }]}>{count}</Text>
+    </TouchableOpacity>
+  );
 
   const EventCard = ({ event }) => {
     const statusColor = getStatusColor(event.status);
@@ -335,7 +335,7 @@ export default function EventsManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -419,7 +419,6 @@ export default function EventsManagement({ navigation }) {
             onPress={() => handleFilterPress('Cancelled')}
           />
         </ScrollView>
-
       </View>
 
       {/* Events List */}
@@ -429,7 +428,7 @@ export default function EventsManagement({ navigation }) {
         renderItem={({ item }) => <EventCard event={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -462,7 +461,7 @@ export default function EventsManagement({ navigation }) {
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Event Image</Text>
               <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                <MaterialIcons name="photo-library" size={20} color="#3b82f6" />
+                <MaterialIcons name="photo-library" size={20} color="#FF7722" />
                 <Text style={styles.uploadButtonText}>
                   {formData.image ? 'Change Image' : 'Upload Image'}
                 </Text>
@@ -748,12 +747,12 @@ export default function EventsManagement({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -821,67 +820,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statCard: {
-  backgroundColor: 'rgba(255,255,255,0.15)',
-  borderRadius: 12,
-  padding: 8,
-  minWidth: 70,
-  width: 75,
-  alignItems: 'center', // Center align everything
-  justifyContent: 'center',
-  height: 65,
-  borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.2)',
-},
-statCardActive: {
-  backgroundColor: 'rgba(255,255,255,0.3)',
-  borderColor: '#ffffff',
-},
-statIconCircle: {
-  width: 28,
-  height: 28,
-  borderRadius: 14,
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 2,
-},
-statType: {
-  fontFamily: Fonts.Regular,
-  fontSize: 8,
-  color: 'rgba(255,255,255,0.8)',
-  textAlign: 'center',
-},
-statCount: {
-  fontFamily: Fonts.Bold,
-  fontSize: 14,
-  color: '#ffffff',
-  textAlign: 'center',
-},
-  // Filter Chips inside header
-  filterContainer: {
-    maxHeight: 36,
-  },
-  filterContent: {
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 70,
+    width: 75,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 65,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
-  filterChipActive: {
-    backgroundColor: '#ffffff',
+  statCardActive: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
     borderColor: '#ffffff',
   },
-  filterChipText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
+  statIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
-  filterChipTextActive: {
-    color: '#3b82f6',
+  statType: {
+    fontFamily: Fonts.Regular,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  statCount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#ffffff',
+    textAlign: 'center',
   },
 
   // List Content
@@ -996,7 +968,7 @@ statCount: {
     gap: 4,
   },
   editButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
   },
   deleteButton: {
     backgroundColor: '#ef4444',
@@ -1088,17 +1060,17 @@ statCount: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FFF5EB',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#FFD4B3',
     borderStyle: 'dashed',
     gap: 8,
   },
   uploadButtonText: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#FF7722',
     fontSize: 14,
   },
   imagePreview: {
@@ -1122,8 +1094,8 @@ statCount: {
     marginBottom: 4,
   },
   statusOptionActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    borderColor: '#FF7722',
   },
   statusOptionText: {
     fontFamily: Fonts.SemiBold,
@@ -1193,7 +1165,7 @@ statCount: {
     gap: 4,
   },
   detailEditButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
   },
   detailDeleteButton: {
     backgroundColor: '#ef4444',

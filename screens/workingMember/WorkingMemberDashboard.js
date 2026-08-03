@@ -21,6 +21,7 @@ export default function WorkingMemberDashboard({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [fabModalVisible, setFabModalVisible] = useState(false);
+  const [pendingApplications, setPendingApplications] = useState(0);
   const [stats, setStats] = useState({
     totalMembers: 0,
     totalCommission: 0,
@@ -33,6 +34,7 @@ export default function WorkingMemberDashboard({ navigation }) {
     fetchUserData();
     fetchStats();
     fetchRecentActivities();
+    fetchPendingApplications();
   }, []);
 
   const fetchUserData = async () => {
@@ -54,18 +56,33 @@ export default function WorkingMemberDashboard({ navigation }) {
     }
   };
 
+  const fetchPendingApplications = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const appsQuery = query(
+        collection(db, 'serviceApplications'),
+        where('userId', '==', userId),
+        where('status', '==', 'pending')
+      );
+      const appsSnap = await getDocs(appsQuery);
+      setPendingApplications(appsSnap.size);
+    } catch (error) {
+      console.error('Error fetching pending applications:', error);
+    }
+  };
+
   const fetchStats = async () => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
 
-      // Fetch registered members count
       const membersSnap = await getDocs(query(
         collection(db, 'registeredMembers'),
         where('workingMemberId', '==', userId)
       ));
 
-      // Fetch commission stats
       const commissionsSnap = await getDocs(query(
         collection(db, 'commissions'),
         where('workingMemberId', '==', userId)
@@ -82,7 +99,6 @@ export default function WorkingMemberDashboard({ navigation }) {
         }
       });
 
-      // Fetch orders count
       const ordersSnap = await getDocs(query(
         collection(db, 'orders'),
         where('memberId', '==', userId)
@@ -104,7 +120,6 @@ export default function WorkingMemberDashboard({ navigation }) {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
 
-      // Fetch recent registered members
       const membersQuery = query(
         collection(db, 'registeredMembers'),
         where('workingMemberId', '==', userId),
@@ -135,13 +150,19 @@ export default function WorkingMemberDashboard({ navigation }) {
     await fetchUserData();
     await fetchStats();
     await fetchRecentActivities();
+    await fetchPendingApplications();
     setRefreshing(false);
   };
 
-  const QuickActionButton = ({ title, icon, onPress }) => (
+  const QuickActionButton = ({ title, icon, onPress, badge }) => (
     <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
       <View style={styles.quickActionIconBg}>
         <MaterialIcons name={icon} size={28} color="#ffffff" />
+        {badge > 0 && (
+          <View style={styles.badgeContainer}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.quickActionText}>{title}</Text>
     </TouchableOpacity>
@@ -195,11 +216,11 @@ export default function WorkingMemberDashboard({ navigation }) {
       <ScrollView 
         style={styles.container}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Blue Header Card */}
+        {/* Purple Header Card */}
         <View style={styles.headerCard}>
           <View style={styles.headerTop}>
             <View>
@@ -208,37 +229,37 @@ export default function WorkingMemberDashboard({ navigation }) {
             </View>
             <TouchableOpacity 
               style={styles.profileIcon}
-              onPress={() => navigation.navigate('WorkingMemberProfile')}
+              onPress={() => navigation.navigate('Profile')}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={30} color="#3b82f6" />
+                <MaterialIcons name="person" size={30} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
 
-          {/* Quick Actions - 4 buttons in a row */}
+          {/* Quick Actions - Navigate to Tab Screens */}
           <View style={styles.quickActionsRow}>
             <QuickActionButton 
               title="Members" 
               icon="people" 
-              onPress={() => navigation.navigate('WorkingMemberRegisteredMembers')}
+              onPress={() => navigation.navigate('Members')}
             />
             <QuickActionButton 
               title="Shop" 
               icon="shopping-cart" 
-              onPress={() => navigation.navigate('WorkingMemberECommerce')}
+              onPress={() => navigation.navigate('Shop')}
             />
             <QuickActionButton 
-              title="Commission" 
-              icon="attach-money" 
-              onPress={() => navigation.navigate('WorkingMemberCommission')}
+              title="Events" 
+              icon="event" 
+              onPress={() => navigation.navigate('Events')}
             />
             <QuickActionButton 
               title="Wallet" 
               icon="account-balance-wallet" 
-              onPress={() => navigation.navigate('WorkingMemberWallet')}
+              onPress={() => navigation.navigate('Profile', { screen: 'WorkingMemberWallet' })}
             />
           </View>
         </View>
@@ -249,7 +270,7 @@ export default function WorkingMemberDashboard({ navigation }) {
             title="Members" 
             value={stats.totalMembers} 
             icon="people" 
-            color="#3b82f6" 
+            color="#8b5cf6" 
           />
           <StatCard 
             title="Commission" 
@@ -267,7 +288,7 @@ export default function WorkingMemberDashboard({ navigation }) {
             title="Orders" 
             value={stats.totalOrders} 
             icon="shopping-bag" 
-            color="#8b5cf6" 
+            color="#3b82f6" 
           />
         </View>
 
@@ -275,7 +296,7 @@ export default function WorkingMemberDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Registrations</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('WorkingMemberRegisteredMembers')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Members')}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -314,10 +335,63 @@ export default function WorkingMemberDashboard({ navigation }) {
                 style={styles.modalItem}
                 onPress={() => {
                   setFabModalVisible(false);
-                  navigation.navigate('WorkingMemberNotice');
+                  navigation.navigate('Applications');
+                }}
+              >
+                <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
+                  <MaterialIcons name="handshake" size={24} color="#ffffff" />
+                </View>
+                <View style={styles.modalItemTextContainer}>
+                  <Text style={styles.modalItemTitle}>Applications</Text>
+                  <Text style={styles.modalItemSubtitle}>Apply for services & competitions</Text>
+                </View>
+                {pendingApplications > 0 && (
+                  <View style={styles.pendingBadge}>
+                    <Text style={styles.pendingBadgeText}>{pendingApplications}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalItem}
+                onPress={() => {
+                  setFabModalVisible(false);
+                  navigation.navigate('Events');
                 }}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
+                  <MaterialIcons name="event" size={24} color="#ffffff" />
+                </View>
+                <View style={styles.modalItemTextContainer}>
+                  <Text style={styles.modalItemTitle}>Events</Text>
+                  <Text style={styles.modalItemSubtitle}>View upcoming events</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalItem}
+                onPress={() => {
+                  setFabModalVisible(false);
+                  navigation.navigate('Profile', { screen: 'WorkingMemberWallet' });
+                }}
+              >
+                <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
+                  <MaterialIcons name="account-balance-wallet" size={24} color="#ffffff" />
+                </View>
+                <View style={styles.modalItemTextContainer}>
+                  <Text style={styles.modalItemTitle}>Wallet</Text>
+                  <Text style={styles.modalItemSubtitle}>View your wallet balance</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.modalItem}
+                onPress={() => {
+                  setFabModalVisible(false);
+                  navigation.navigate('Profile', { screen: 'WorkingMemberNotice' });
+                }}
+              >
+                <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
                   <MaterialIcons name="announcement" size={24} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
@@ -330,7 +404,7 @@ export default function WorkingMemberDashboard({ navigation }) {
                 style={styles.modalItem}
                 onPress={() => {
                   setFabModalVisible(false);
-                  navigation.navigate('WorkingMemberComplaint');
+                  navigation.navigate('Profile', { screen: 'WorkingMemberComplaint' });
                 }}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
@@ -346,7 +420,7 @@ export default function WorkingMemberDashboard({ navigation }) {
                 style={styles.modalItem}
                 onPress={() => {
                   setFabModalVisible(false);
-                  navigation.navigate('WorkingMemberSuggestion');
+                  navigation.navigate('Profile', { screen: 'WorkingMemberSuggestion' });
                 }}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#f59e0b' }]}>
@@ -362,7 +436,7 @@ export default function WorkingMemberDashboard({ navigation }) {
                 style={styles.modalItem}
                 onPress={() => {
                   setFabModalVisible(false);
-                  navigation.navigate('WorkingMemberCompany');
+                  navigation.navigate('Company');
                 }}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
@@ -404,9 +478,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
-  // Blue Header Card
+  // Purple Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 24,
@@ -454,7 +528,7 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 4,
   },
   quickActionButton: {
     flex: 1,
@@ -463,10 +537,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   quickActionIconBg: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#2563eb',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#7c3aed',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -474,12 +548,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
+  },
+  badgeContainer: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#8b5cf6',
+  },
+  badgeText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 9,
+    color: '#ffffff',
   },
   quickActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 11,
-    marginTop: 6,
+    fontSize: 9,
+    marginTop: 3,
     textAlign: 'center',
   },
   // Stats Grid
@@ -504,6 +598,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   statContent: {
     flex: 1,
@@ -546,7 +642,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
-    color: '#3b82f6',
+    color: '#8b5cf6',
   },
   activityItem: {
     flexDirection: 'row',
@@ -561,6 +657,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   activityItemLeft: {
     flexDirection: 'row',
@@ -656,6 +754,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+  },
+  pendingBadge: {
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  pendingBadgeText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#ffffff',
   },
   modalCloseButton: {
     paddingVertical: 12,

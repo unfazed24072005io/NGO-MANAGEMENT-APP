@@ -25,7 +25,8 @@ export default function LoginScreen({ navigation, route }) {
     { id: 'member', label: 'Member' },
     { id: 'workingMember', label: 'Working Member' },
     { id: 'admin', label: 'Admin' },
-    { id: 'donor', label: 'Donor' }
+    { id: 'donor', label: 'Donor' },
+    { id: 'employee', label: 'Employee' }
   ];
 
   // Setup Recaptcha for Phone Auth
@@ -54,10 +55,9 @@ export default function LoginScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // Format phone number with country code if not present
       let formattedNumber = phoneNumber;
       if (!phoneNumber.startsWith('+')) {
-        formattedNumber = `+91${phoneNumber}`; // Default to India (+91)
+        formattedNumber = `+91${phoneNumber}`;
       }
 
       const verifier = setupRecaptcha();
@@ -91,24 +91,17 @@ export default function LoginScreen({ navigation, route }) {
       const userCredential = await auth.signInWithCredential(credential);
       const user = userCredential.user;
 
-      console.log('User UID:', user.uid);
-
-      // Check if user exists in users collection
       const userDoc = await getDoc(doc(db, 'users', user.uid));
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        console.log('User Data:', userData);
-        console.log('Role from Firestore:', userData.role);
-
         const role = userData.role || 'member';
         const userName = userData.fullName || userData.name || 'User';
 
         Alert.alert('Success', `Welcome ${userName}!`);
 
-        handleNavigation(role);
+        handleNavigation(role, userData);
       } else {
-        // Check if user exists in donors collection
         const donorDoc = await getDoc(doc(db, 'donors', user.uid));
         if (donorDoc.exists()) {
           Alert.alert('Success', 'Welcome donor!');
@@ -139,23 +132,17 @@ export default function LoginScreen({ navigation, route }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      console.log('User UID:', user.uid);
-
       const userDoc = await getDoc(doc(db, 'users', user.uid));
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        console.log('User Data:', userData);
-        console.log('Role from Firestore:', userData.role);
-
         const role = userData.role || 'member';
         const userName = userData.fullName || userData.name || 'User';
 
         Alert.alert('Success', `Welcome ${userName}!`);
 
-        handleNavigation(role);
+        handleNavigation(role, userData);
       } else {
-        // Check if user exists in donors collection
         const donorDoc = await getDoc(doc(db, 'donors', user.uid));
         if (donorDoc.exists()) {
           Alert.alert('Success', 'Welcome donor!');
@@ -187,43 +174,50 @@ export default function LoginScreen({ navigation, route }) {
     }
   };
 
-  const handleNavigation = (role) => {
-    // Check if this is donation flow
-    if (isDonationFlow) {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'DonationTabs' }],
-      });
-      return;
-    }
+  // In LoginScreen.js - Update the handleNavigation function
 
-    // Navigate based on role
-    if (role === 'admin') {
-      console.log('Navigating to AdminTabs');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'AdminTabs' }],
-      });
-    } else if (role === 'working') {
-      console.log('Navigating to WorkingMemberTabs');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'WorkingMemberTabs' }],
-      });
-    } else if (role === 'donor') {
-      console.log('Navigating to DonationTabs');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'DonationTabs' }],
-      });
-    } else {
-      console.log('Navigating to MemberTabs');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MemberTabs' }],
-      });
-    }
-  };
+const handleNavigation = (role, userData) => {
+  // Check if this is donation flow
+  if (isDonationFlow) {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'DonationTabs' }],
+    });
+    return;
+  }
+
+  // Check if user is an employee
+  if (userData?.isEmployee || userData?.role === 'employee') {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'EmployeeTabs' }],
+    });
+    return;
+  }
+
+  // Navigate based on role
+  if (role === 'admin') {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'AdminTabs' }],
+    });
+  } else if (role === 'working') {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'WorkingMemberTabs' }],
+    });
+  } else if (role === 'donor') {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'DonationTabs' }],
+    });
+  } else {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MemberTabs' }],
+    });
+  }
+};
 
   return (
     <View style={styles.container}>
@@ -576,7 +570,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    backgroundColor: '#3b82f6',
     paddingVertical: 16,
     borderRadius: 50,
     alignItems: 'center',

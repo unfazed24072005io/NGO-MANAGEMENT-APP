@@ -148,7 +148,7 @@ export default function MemberListManagement({ navigation }) {
 
   const getRoleColor = (role) => {
     switch(role) {
-      case 'admin': return '#3b82f6';
+      case 'admin': return '#FF7722';
       case 'workingMember': return '#f59e0b';
       case 'member': return '#10b981';
       default: return '#6b7280';
@@ -310,7 +310,7 @@ export default function MemberListManagement({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -411,7 +411,7 @@ export default function MemberListManagement({ navigation }) {
         renderItem={({ item }) => <MemberCard member={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3B82F6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContent}>
@@ -557,12 +557,12 @@ export default function MemberListManagement({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#fdf8f3',
   },
 
-  // Blue Header
+  // Saffron Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   activeStatusChipText: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
 
   // Stats inside header
@@ -714,14 +714,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
-    color: '#3B82F6',
+    color: '#FF7722',
   },
   memberDetails: {
     flex: 1,
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   viewButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#FF7722',
   },
   approveButton: {
     backgroundColor: '#10B981',
@@ -866,14 +866,14 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#FFF5EB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalAvatarText: {
     fontFamily: Fonts.Bold,
     fontSize: 32,
-    color: '#3B82F6',
+    color: '#FF7722',
   },
   modalName: {
     fontFamily: Fonts.Bold,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#10B981',
   },
   modalRoleButton: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FF7722',
   },
   modalDeleteButton: {
     backgroundColor: '#EF4444',

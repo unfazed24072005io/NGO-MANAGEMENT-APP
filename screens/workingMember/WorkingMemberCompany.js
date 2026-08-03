@@ -86,7 +86,7 @@ export default function MemberCompany({ navigation }) {
   const ServiceCard = ({ title, icon, children }) => (
     <View style={styles.serviceCard}>
       <View style={styles.serviceHeader}>
-        <MaterialIcons name={icon} size={20} color="#3b82f6" />
+        <MaterialIcons name={icon} size={20} color="#8b5cf6" />
         <Text style={styles.serviceTitle}>{title}</Text>
       </View>
       {children}
@@ -103,7 +103,7 @@ export default function MemberCompany({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading Organization Profile...</Text>
       </View>
     );
@@ -137,7 +137,7 @@ export default function MemberCompany({ navigation }) {
 
       <ScrollView 
         style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -191,14 +191,14 @@ export default function MemberCompany({ navigation }) {
         {/* Organization Details */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
-            <MaterialIcons name="info" size={20} color="#3b82f6" />
+            <MaterialIcons name="info" size={20} color="#8b5cf6" />
             <Text style={styles.sectionTitle}>Organization Details</Text>
           </View>
 
           {getField('cin') && getField('cin') !== 'Not provided' && (
             <View style={styles.detailRow}>
               <View style={[styles.iconCircle, { backgroundColor: '#eff6ff' }]}>
-                <MaterialIcons name="verified" size={18} color="#3b82f6" />
+                <MaterialIcons name="verified" size={18} color="#8b5cf6" />
               </View>
               <View style={styles.detailContent}>
                 <Text style={styles.detailLabel}>CIN</Text>
@@ -235,7 +235,7 @@ export default function MemberCompany({ navigation }) {
         {/* Services Offered Section */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
-            <MaterialIcons name="handshake" size={20} color="#3b82f6" />
+            <MaterialIcons name="handshake" size={20} color="#8b5cf6" />
             <Text style={styles.sectionTitle}>Services Offered</Text>
           </View>
 
@@ -314,7 +314,7 @@ export default function MemberCompany({ navigation }) {
               {getField('mission') && getField('mission') !== 'Not provided' && (
                 <View style={styles.mvItem}>
                   <View style={[styles.mvIcon, { backgroundColor: '#eff6ff' }]}>
-                    <MaterialIcons name="flag" size={20} color="#3b82f6" />
+                    <MaterialIcons name="flag" size={20} color="#8b5cf6" />
                   </View>
                   <View style={styles.mvContent}>
                     <Text style={styles.mvTitle}>Mission</Text>
@@ -348,7 +348,7 @@ export default function MemberCompany({ navigation }) {
 
             {getField('presidentName') && getField('presidentName') !== 'Not provided' && (
               <View style={styles.leaderRow}>
-                <View style={[styles.leaderIcon, { backgroundColor: '#3b82f6' }]}>
+                <View style={[styles.leaderIcon, { backgroundColor: '#8b5cf6' }]}>
                   <MaterialIcons name="person" size={24} color="#ffffff" />
                 </View>
                 <View style={styles.leaderContent}>
@@ -382,7 +382,7 @@ export default function MemberCompany({ navigation }) {
           {getField('email') && getField('email') !== 'Not provided' && (
             <TouchableOpacity style={styles.contactItem} onPress={() => sendEmail(getField('email'))}>
               <View style={[styles.contactIcon, { backgroundColor: '#eff6ff' }]}>
-                <MaterialIcons name="email" size={20} color="#3b82f6" />
+                <MaterialIcons name="email" size={20} color="#8b5cf6" />
               </View>
               <Text style={styles.contactText}>{getField('email')}</Text>
               <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
 
   // Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   linkText: {
-    color: '#3b82f6',
+    color: '#8b5cf6',
   },
 
   // Social Media

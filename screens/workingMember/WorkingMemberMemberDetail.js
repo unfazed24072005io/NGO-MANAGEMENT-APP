@@ -113,7 +113,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
           <Image source={{ uri: member.profilePhoto }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <MaterialIcons name="person" size={60} color="#3b82f6" />
+            <MaterialIcons name="person" size={60} color="#8b5cf6" />
           </View>
         )}
       </View>
@@ -253,7 +253,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
       
       {member?.aadharFront ? (
         <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Front', 'View document')}>
-          <MaterialIcons name="credit-card" size={20} color="#3b82f6" />
+          <MaterialIcons name="credit-card" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Aadhar Card (Front)</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -266,7 +266,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
 
       {member?.aadharBack ? (
         <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Back', 'View document')}>
-          <MaterialIcons name="credit-card" size={20} color="#3b82f6" />
+          <MaterialIcons name="credit-card" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Aadhar Card (Back)</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -279,7 +279,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
 
       {member?.panCard ? (
         <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('PAN Card', 'View document')}>
-          <MaterialIcons name="assignment" size={20} color="#3b82f6" />
+          <MaterialIcons name="assignment" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>PAN Card</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -292,7 +292,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
 
       {member?.signature ? (
         <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Signature', 'View document')}>
-          <MaterialIcons name="edit" size={20} color="#3b82f6" />
+          <MaterialIcons name="edit" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Signature</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
         </TouchableOpacity>
@@ -361,7 +361,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading member details...</Text>
       </View>
     );
@@ -395,7 +395,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#3b82f6" />
+                <MaterialIcons name="person" size={28} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
 
   // Blue Header Card - Same as ECommerce
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,

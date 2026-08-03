@@ -101,7 +101,6 @@ export default function AdminDashboard({ navigation }) {
 
   const fetchRecentData = async () => {
     try {
-      // Fetch recent members
       const membersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'member')));
       const members = [];
       membersSnap.forEach((doc) => {
@@ -115,7 +114,6 @@ export default function AdminDashboard({ navigation }) {
       });
       setRecentMembers(members.slice(0, 5));
 
-      // Fetch recent donations
       const donationsQuery = query(
         collection(db, 'donations'),
         orderBy('createdAt', 'desc'),
@@ -147,12 +145,12 @@ export default function AdminDashboard({ navigation }) {
   );
 
   const StatCard = ({ title, value, icon, color }) => (
-    <View style={[styles.statCard]}>
+    <View style={[styles.statCard, { borderLeftColor: color }]}>
       <View style={styles.statContent}>
         <Text style={styles.statTitle}>{title}</Text>
         <Text style={styles.statValue}>{value}</Text>
       </View>
-      <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
+      <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
         <MaterialIcons name={icon} size={22} color={color} />
       </View>
     </View>
@@ -164,8 +162,8 @@ export default function AdminDashboard({ navigation }) {
       onPress={() => navigation.navigate('Members')}
     >
       <View style={styles.recentItemLeft}>
-        <View style={styles.recentItemIcon}>
-          <MaterialIcons name="person" size={16} color="#3b82f6" />
+        <View style={[styles.recentItemIcon, { backgroundColor: '#FF772215' }]}>
+          <MaterialIcons name="person" size={16} color="#FF7722" />
         </View>
         <View>
           <Text style={styles.recentItemTitle}>{item.fullName || item.name || 'Unknown'}</Text>
@@ -205,11 +203,11 @@ export default function AdminDashboard({ navigation }) {
       <ScrollView 
         style={styles.container}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Blue Header Card */}
+        {/* Saffron Header Card */}
         <View style={styles.headerCard}>
           <View style={styles.headerTop}>
             <View>
@@ -223,7 +221,7 @@ export default function AdminDashboard({ navigation }) {
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={30} color="#3b82f6" />
+                <MaterialIcons name="person" size={30} color="#FF7722" />
               )}
             </TouchableOpacity>
           </View>
@@ -259,7 +257,7 @@ export default function AdminDashboard({ navigation }) {
             title="Total Members" 
             value={stats.totalMembers} 
             icon="people" 
-            color="#3b82f6" 
+            color="#FF7722" 
           />
           <StatCard 
             title="Total Donations" 
@@ -330,7 +328,6 @@ export default function AdminDashboard({ navigation }) {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-
       {/* FAB Modal */}
       <Modal
         animationType="fade"
@@ -354,7 +351,7 @@ export default function AdminDashboard({ navigation }) {
                   navigation.navigate('NoticeComplaint');
                 }}
               >
-                <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
+                <View style={[styles.modalItemIcon, { backgroundColor: '#FF7722' }]}>
                   <MaterialIcons name="announcement" size={24} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
@@ -412,13 +409,13 @@ export default function AdminDashboard({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -426,9 +423,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Blue Header Card
+  // Saffron Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 24,
@@ -489,7 +486,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 12,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#e0661a',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -571,7 +568,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   recentItem: {
     flexDirection: 'row',
@@ -596,7 +593,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#FF772215',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -628,25 +625,6 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 20,
-  },
-
-  // Floating Action Button
-  fabButton: {
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    zIndex: 10,
   },
 
   // FAB Modal

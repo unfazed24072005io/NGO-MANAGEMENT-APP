@@ -6,17 +6,27 @@ import WorkingMemberMemberDetail from './screens/workingMember/WorkingMemberMemb
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { loadFonts, Fonts } from './config/fonts';
-import WelcomeScreen from './screens/WelcomeScreen';
-import CartScreen from './screens/member/CartScreen';
-import CheckoutScreen from './screens/member/CheckoutScreen';
+
+// Import the new tab screens
+import HomeScreen from './screens/HomeScreen';
+import ShopScreen from './screens/ShopScreen';
+import EventsScreen from './screens/EventsScreen';
+import ProfileScreen from './screens/ProfileScreen';
+
 // Auth Screens
 import LoginScreen from './screens/LoginScreen';
 import DonorProfile from './screens/donation/DonorProfile';
-
 import RegisterScreen from './screens/RegisterScreen';
 import DonationScreen from './screens/member/DonationScreen';
 import CompanyManagement from './screens/admin/CompanyManagement';
 import MyOrders from './screens/member/MyOrders';
+
+// Member Applications
+import MemberApplications from './screens/member/MemberApplications';
+
+// Working Member Applications
+import WorkingMemberApplications from './screens/workingMember/WorkingMemberApplications';
+
 // Admin Screens
 import AdminDashboard from './screens/admin/AdminDashboard';
 import AdminProfile from './screens/admin/AdminProfile';
@@ -26,8 +36,17 @@ import ECommerceManagement from './screens/admin/ECommerceManagement';
 import FinancesManagement from './screens/admin/FinancesManagement';
 import EventsManagement from './screens/admin/EventsManagement';
 import CommissionManagement from './screens/admin/CommissionManagement';
-
 import CompanyProfileManagement from './screens/admin/CompanyProfileManagement';
+
+// Employee Management
+import EmployeeManagement from './screens/admin/EmployeeManagement';
+
+// Online Class Management
+import OnlineClassManagement from './screens/admin/OnlineClassManagement';
+
+// Employee Screens
+import EmployeeProfile from './screens/employee/EmployeeProfile';
+import EmployeeTasks from './screens/employee/EmployeeTasks';
 
 // Member Screens
 import MemberDashboard from './screens/member/MemberDashboard';
@@ -39,6 +58,7 @@ import MemberEvents from './screens/member/MemberEvents';
 import MemberNotice from './screens/member/MemberNotice';
 import MemberCompany from './screens/member/MemberCompany';
 import MemberComplaint from './screens/member/MemberComplaint';
+import MemberClasses from './screens/member/MemberClasses';
 
 // Working Member Screens
 import WorkingMemberDashboard from './screens/workingMember/WorkingMemberDashboard';
@@ -58,6 +78,7 @@ import WorkingMemberSuggestion from './screens/workingMember/WorkingMemberSugges
 import WorkingMemberRegisteredMembers from './screens/workingMember/WorkingMemberRegisteredMembers';
 import WorkingMemberCommission from './screens/workingMember/WorkingMemberCommission';
 import WorkingMemberWallet from './screens/workingMember/WorkingMemberWallet';
+import WorkingMemberClasses from './screens/workingMember/WorkingMemberClasses';
 
 // Donation Screens
 import DonationDashboard from './screens/donation/DonationDashboard';
@@ -71,10 +92,54 @@ import NotificationsScreen from './screens/admin/NotificationsScreen';
 import SuggestionsScreen from './screens/admin/SuggestionsScreen';
 import ComplaintsScreen from './screens/admin/ComplaintsScreen';
 
+// Cart Screens
+import CartScreen from './screens/member/CartScreen';
+import CheckoutScreen from './screens/member/CheckoutScreen';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Donation Tabs
+// ============ PUBLIC TABS (Home, Shop, Events, Profile) ============
+function PublicTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home';
+          } else if (route.name === 'Shop') {
+            iconName = focused ? 'shopping-bag' : 'shopping-bag';
+          } else if (route.name === 'Events') {
+            iconName = focused ? 'event' : 'event';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#9ca3af',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e5e7eb',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Shop" component={ShopScreen} />
+      <Tab.Screen name="Events" component={EventsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+}
+
+// ============ DONATION TABS ============
 function DonationTabs() {
   return (
     <Tab.Navigator
@@ -99,7 +164,7 @@ function DonationTabs() {
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null, // Hide labels
+        tabBarLabel: () => null,
         headerShown: false,
       })}
     >
@@ -113,7 +178,7 @@ function DonationTabs() {
   );
 }
 
-// Admin Notification Tabs
+// ============ ADMIN NOTIFICATION TABS ============
 function AdminNotificationTabs() {
   return (
     <Tab.Navigator
@@ -125,7 +190,7 @@ function AdminNotificationTabs() {
           else if (route.name === 'Complaints') iconName = 'report-problem';
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#4a90e2',
+        tabBarActiveTintColor: '#FF7722',
         tabBarInactiveTintColor: '#7f8c8d',
         tabBarStyle: {
           backgroundColor: '#ffffff',
@@ -146,7 +211,7 @@ function AdminNotificationTabs() {
   );
 }
 
-// Member Notification Tabs
+// ============ MEMBER NOTIFICATION TABS ============
 function MemberNotificationTabs() {
   return (
     <Tab.Navigator
@@ -179,7 +244,7 @@ function MemberNotificationTabs() {
   );
 }
 
-// Working Member Notification Tabs
+// ============ WORKING MEMBER NOTIFICATION TABS ============
 function WorkingMemberNotificationTabs() {
   return (
     <Tab.Navigator
@@ -212,10 +277,160 @@ function WorkingMemberNotificationTabs() {
   );
 }
 
-// Custom Tab Bar for Admin with Notification at Center
-function AdminTabs() {
-  const [fabModalVisible, setFabModalVisible] = useState(false);
+// ============ ORGANIZATION SETTINGS TABS (SAFFRON THEME) ============
+function OrganizationSettingsTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Dashboard') {
+            iconName = 'dashboard';
+          } else if (route.name === 'Finances') {
+            iconName = 'attach-money';
+          } else if (route.name === 'Commission') {
+            iconName = 'workspace-premium';
+          } else if (route.name === 'Employees') {
+            iconName = 'people';
+          } else if (route.name === 'Classes') {
+            iconName = 'video-library';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#FF7722',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Dashboard" component={CompanyManagement} />
+      <Tab.Screen name="Finances" component={FinancesManagement} />
+      <Tab.Screen name="Commission" component={CommissionManagement} />
+      <Tab.Screen name="Employees" component={EmployeeManagement} />
+      <Tab.Screen name="Classes" component={OnlineClassManagement} />
+    </Tab.Navigator>
+  );
+}
+// ============ MEMBER MORE SETTINGS TABS ============
+function MemberMoreSettingsTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Applications') {
+            iconName = focused ? 'handshake' : 'handshake';
+          } else if (route.name === 'Classes') {
+            iconName = focused ? 'video-library' : 'video-library';
+          } else if (route.name === 'Organisation') {
+            iconName = focused ? 'business' : 'business';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Applications" component={MemberApplications} />
+      <Tab.Screen name="Classes" component={MemberClasses} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} />
+    </Tab.Navigator>
+  );
+}
+// ============ WORKING MEMBER MORE SETTINGS TABS ============
+function WorkingMemberMoreSettingsTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Applications') {
+            iconName = focused ? 'handshake' : 'handshake';
+          } else if (route.name === 'Classes') {
+            iconName = focused ? 'video-library' : 'video-library';
+          } else if (route.name === 'Organisation') {
+            iconName = focused ? 'business' : 'business';
+          } else if (route.name === 'Commission') {
+            iconName = focused ? 'attach-money' : 'attach-money';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#8b5cf6',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Applications" component={WorkingMemberApplications} />
+      <Tab.Screen name="Classes" component={WorkingMemberClasses} />
+      <Tab.Screen name="Commission" component={WorkingMemberCommission} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} />
+    </Tab.Navigator>
+  );
+}
 
+// ============ EMPLOYEE TABS ============
+function EmployeeTabsNav() {
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName;
+          if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person';
+          } else if (route.name === 'Tasks') {
+            iconName = focused ? 'assignment' : 'assignment';
+          }
+          return <MaterialIcons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#FF7722',
+        tabBarInactiveTintColor: '#7f8c8d',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e8ecf1',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 6,
+        },
+        tabBarLabel: () => null,
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="Profile" component={EmployeeProfile} />
+      <Tab.Screen name="Tasks" component={EmployeeTasks} />
+    </Tab.Navigator>
+  );
+}
+
+// ============ ADMIN TABS (SAFFRON THEME - REMOVED FINANCE, COMPANY, COMMISSION) ============
+function AdminTabs() {
   let navigationRef = null;
 
   return (
@@ -227,14 +442,11 @@ function AdminTabs() {
             if (route.name === 'Dashboard') iconName = 'dashboard';
             else if (route.name === 'Members') iconName = 'people';
             else if (route.name === 'E-Commerce') iconName = 'shopping-cart';
-            else if (route.name === 'Finance') iconName = 'attach-money';
             else if (route.name === 'Events') iconName = 'event';
             else if (route.name === 'Profile') iconName = 'person';
-            else if (route.name === 'Company') iconName = 'business';
-            else if (route.name === 'Commission') iconName = 'workspace-premium';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: '#4a90e2',
+          tabBarActiveTintColor: '#FF7722',
           tabBarInactiveTintColor: '#7f8c8d',
           tabBarStyle: {
             backgroundColor: '#ffffff',
@@ -248,17 +460,14 @@ function AdminTabs() {
           headerShown: false,
         })}
         tabBar={(props) => {
-          const { state, descriptors, navigation } = props;
+          const { state, navigation } = props;
           navigationRef = navigation;
           
           const tabs = [
             { name: 'Dashboard', icon: 'dashboard' },
             { name: 'Members', icon: 'people' },
             { name: 'E-Commerce', icon: 'shopping-cart' },
-            { name: 'Finance', icon: 'attach-money' },
             { name: 'Events', icon: 'event' },
-            { name: 'Company', icon: 'business' },
-            { name: 'Commission', icon: 'workspace-premium' },
             { name: 'Profile', icon: 'person' },
           ];
 
@@ -289,7 +498,7 @@ function AdminTabs() {
                     <MaterialIcons 
                       name={tab.icon} 
                       size={26} 
-                      color={isFocused ? '#4a90e2' : '#7f8c8d'} 
+                      color={isFocused ? '#FF7722' : '#7f8c8d'} 
                     />
                   </TouchableOpacity>
                 );
@@ -315,20 +524,16 @@ function AdminTabs() {
         <Tab.Screen name="Dashboard" component={AdminDashboard} />
         <Tab.Screen name="Members" component={MemberListManagement} />
         <Tab.Screen name="E-Commerce" component={ECommerceManagement} />
-        <Tab.Screen name="Finance" component={FinancesManagement} />
         <Tab.Screen name="Events" component={EventsManagement} />
-        <Tab.Screen name="Company" component={CompanyManagement} />
-        <Tab.Screen name="Commission" component={CommissionManagement} />
         <Tab.Screen name="Profile" component={AdminProfile} />
       </Tab.Navigator>
     </>
   );
 }
 
-// Custom Tab Bar for Member with Notification at Center
+// ============ MEMBER TABS ============
+// ============ MEMBER TABS ============
 function MemberTabs() {
-  const [fabModalVisible, setFabModalVisible] = useState(false);
-
   let navigationRef = null;
 
   return (
@@ -342,7 +547,6 @@ function MemberTabs() {
             else if (route.name === 'Shop') iconName = 'shopping-cart';
             else if (route.name === 'Donate') iconName = 'favorite';
             else if (route.name === 'Profile') iconName = 'person';
-            else if (route.name === 'Company') iconName = 'business';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: '#3b82f6',
@@ -359,14 +563,13 @@ function MemberTabs() {
           headerShown: false,
         })}
         tabBar={(props) => {
-          const { state, descriptors, navigation } = props;
+          const { state, navigation } = props;
           navigationRef = navigation;
           
           const tabs = [
             { name: 'Dashboard', icon: 'dashboard' },
             { name: 'Events', icon: 'event' },
             { name: 'Shop', icon: 'shopping-cart' },
-            { name: 'Company', icon: 'business' },
             { name: 'Donate', icon: 'favorite' },
             { name: 'Profile', icon: 'person' },
           ];
@@ -424,7 +627,6 @@ function MemberTabs() {
         <Tab.Screen name="Dashboard" component={MemberDashboard} />
         <Tab.Screen name="Events" component={MemberEvents} />
         <Tab.Screen name="Shop" component={MemberECommerce} />
-        <Tab.Screen name="Company" component={MemberCompany} />
         <Tab.Screen name="Donate" component={DonationScreen} />
         <Tab.Screen name="Profile" component={MemberProfile} />
       </Tab.Navigator>
@@ -432,10 +634,8 @@ function MemberTabs() {
   );
 }
 
-// Custom Tab Bar for Working Member with Notification at Center
+// ============ WORKING MEMBER TABS ============
 function WorkingMemberTabs() {
-  const [fabModalVisible, setFabModalVisible] = useState(false);
-
   let navigationRef = null;
 
   return (
@@ -447,9 +647,8 @@ function WorkingMemberTabs() {
             if (route.name === 'Dashboard') iconName = 'dashboard';
             else if (route.name === 'Members') iconName = 'people';
             else if (route.name === 'Shop') iconName = 'shopping-cart';
-            else if (route.name === 'Commission') iconName = 'attach-money';
+            else if (route.name === 'Events') iconName = 'event';
             else if (route.name === 'Profile') iconName = 'person';
-            else if (route.name === 'Company') iconName = 'business';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
           tabBarActiveTintColor: '#8b5cf6',
@@ -466,15 +665,14 @@ function WorkingMemberTabs() {
           headerShown: false,
         })}
         tabBar={(props) => {
-          const { state, descriptors, navigation } = props;
+          const { state, navigation } = props;
           navigationRef = navigation;
           
           const tabs = [
             { name: 'Dashboard', icon: 'dashboard' },
             { name: 'Members', icon: 'people' },
             { name: 'Shop', icon: 'shopping-cart' },
-            { name: 'Company', icon: 'business' },
-            { name: 'Commission', icon: 'attach-money' },
+            { name: 'Events', icon: 'event' },
             { name: 'Profile', icon: 'person' },
           ];
 
@@ -531,14 +729,14 @@ function WorkingMemberTabs() {
         <Tab.Screen name="Dashboard" component={WorkingMemberDashboard} />
         <Tab.Screen name="Members" component={WorkingMemberRegisteredMembers} />
         <Tab.Screen name="Shop" component={WorkingMemberECommerce} />
-        <Tab.Screen name="Company" component={WorkingMemberCompany} />
-        <Tab.Screen name="Commission" component={WorkingMemberCommission} />
+        <Tab.Screen name="Events" component={WorkingMemberEvents} />
         <Tab.Screen name="Profile" component={WorkingMemberProfile} />
       </Tab.Navigator>
     </>
   );
 }
 
+// ============ MAIN APP ============
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -558,7 +756,7 @@ export default function App() {
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#FF7722" />
       </View>
     );
   }
@@ -567,29 +765,31 @@ export default function App() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
       <NavigationContainer>
         <Stack.Navigator 
-          initialRouteName="Welcome"
+          initialRouteName="PublicTabs"
           screenOptions={{ headerShown: false }}
         >
-          {/* Welcome Screen */}
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen 
-            name="WorkingMemberMemberDetail" 
-            component={WorkingMemberMemberDetail} 
-            options={{ headerShown: false }} 
-          />
-
+          {/* Public Tabs - Shows Home, Shop, Events, Profile */}
+          <Stack.Screen name="PublicTabs" component={PublicTabs} />
+          {/* Member More Settings */}
+<Stack.Screen name="MemberMoreSettingsTabs" component={MemberMoreSettingsTabs} />
           {/* Auth Screens */}
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          
+          {/* Organization Settings */}
+          <Stack.Screen name="OrganizationSettingsTabs" component={OrganizationSettingsTabs} />
+          
+          {/* Working Member More Settings */}
+          <Stack.Screen name="WorkingMemberMoreSettingsTabs" component={WorkingMemberMoreSettingsTabs} />
+          
+          {/* Employee Tabs */}
+          <Stack.Screen name="EmployeeTabs" component={EmployeeTabsNav} />
           
           {/* Admin Screens */}
           <Stack.Screen name="AdminTabs" component={AdminTabs} />
           <Stack.Screen name="WorkingMemberList" component={WorkingMemberManagement} />
           <Stack.Screen name="CompanyProfile" component={CompanyProfileManagement} />
-          <Stack.Screen name="CompanyManagement" component={CompanyManagement} />
           <Stack.Screen name="AdminProfile" component={AdminProfile} />
-          
-          {/* Admin Notification Screens */}
           <Stack.Screen name="AdminNotificationTabs" component={AdminNotificationTabs} />
           
           {/* Member Screens */}
@@ -606,8 +806,7 @@ export default function App() {
           <Stack.Screen name="MemberCompany" component={MemberCompany} />
           <Stack.Screen name="MemberComplaint" component={MemberComplaint} />
           <Stack.Screen name="MyOrders" component={MyOrders} />
-          
-          {/* Member Notification Screens */}
+          <Stack.Screen name="MemberApplications" component={MemberApplications} />
           <Stack.Screen name="MemberNotificationTabs" component={MemberNotificationTabs} />
           
           {/* Donation Screens */}
@@ -633,9 +832,8 @@ export default function App() {
           <Stack.Screen name="WorkingMemberRegisteredMembers" component={WorkingMemberRegisteredMembers} />
           <Stack.Screen name="WorkingMemberCommission" component={WorkingMemberCommission} />
           <Stack.Screen name="WorkingMemberWallet" component={WorkingMemberWallet} />
-          
-          {/* Working Member Notification Screens */}
           <Stack.Screen name="WorkingMemberNotificationTabs" component={WorkingMemberNotificationTabs} />
+          <Stack.Screen name="WorkingMemberMemberDetail" component={WorkingMemberMemberDetail} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaView>
@@ -686,7 +884,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#4a90e2',
+    backgroundColor: '#FF7722',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
