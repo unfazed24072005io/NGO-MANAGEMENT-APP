@@ -4,7 +4,7 @@ export const LEVELS = {
     id: "I",
     title: "Customer",
     directCommission: 25,
-    secondaryCommission: 0,
+    secondaryCommission: 10,        // ← Changed from 0 to 10
     minMembers: 0,
     maxMembers: 4,
     color: "#9ca3af",
@@ -15,7 +15,7 @@ export const LEVELS = {
     id: "II",
     title: "Executive",
     directCommission: 35,
-    secondaryCommission: 10,
+    secondaryCommission: 5,         // ← Changed from 10 to 5
     minMembers: 5,
     maxMembers: 9,
     color: "#3b82f6",
@@ -26,7 +26,7 @@ export const LEVELS = {
     id: "III",
     title: "Manager",
     directCommission: 40,
-    secondaryCommission: 5,
+    secondaryCommission: 2.5,       // ← Changed from 5 to 2.5
     minMembers: 10,
     maxMembers: 24,
     color: "#10b981",
@@ -37,7 +37,7 @@ export const LEVELS = {
     id: "IV",
     title: "Coordinator",
     directCommission: 42.5,
-    secondaryCommission: 2.5,
+    secondaryCommission: 1.25,      // ← Changed from 2.5 to 1.25
     minMembers: 25,
     maxMembers: 49,
     color: "#f59e0b",
@@ -48,7 +48,7 @@ export const LEVELS = {
     id: "V",
     title: "Guide",
     directCommission: 43.75,
-    secondaryCommission: 1.25,
+    secondaryCommission: 1.25,      // ✅ Correct
     minMembers: 50,
     maxMembers: 99,
     color: "#8b5cf6",
@@ -59,7 +59,7 @@ export const LEVELS = {
     id: "VI",
     title: "Leader",
     directCommission: 44.5,
-    secondaryCommission: 0.75,
+    secondaryCommission: 0.75,      // ✅ Correct
     minMembers: 100,
     maxMembers: 199,
     color: "#ef4444",
@@ -70,7 +70,7 @@ export const LEVELS = {
     id: "VII",
     title: "Crown",
     directCommission: 45,
-    secondaryCommission: 0.50,
+    secondaryCommission: 0.50,      // ✅ Correct
     minMembers: 200,
     maxMembers: Infinity,
     color: "#fbbf24",
