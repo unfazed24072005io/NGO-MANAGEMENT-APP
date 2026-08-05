@@ -27,10 +27,61 @@ export default function HomeScreen({ navigation }) {
   const [companyData, setCompanyData] = useState(null);
   const [products, setProducts] = useState([]);
   const [events, setEvents] = useState([]);
+  const [activeTab, setActiveTab] = useState('food');
+  const [expandedService, setExpandedService] = useState(null);
   const [activeProductIndex, setActiveProductIndex] = useState(0);
   const [activeEventIndex, setActiveEventIndex] = useState(0);
   const productTimerRef = useRef(null);
   const eventTimerRef = useRef(null);
+
+  const tabs = [
+    { id: 'food', label: 'Food', icon: 'restaurant' },
+    { id: 'clothing', label: 'Clothing', icon: 'checkroom' },
+    { id: 'education', label: 'Education', icon: 'school' },
+    { id: 'money', label: 'Money', icon: 'attach-money' },
+  ];
+
+  const services = [
+    {
+      id: 'oldage',
+      icon: 'elderly',
+      title: 'Old Age Assistance',
+      description: 'Support for senior citizens with medical care and daily needs',
+      details: [
+        { label: 'Below 20 years', value: '₹ 25,000' },
+        { label: '20 - 40 years', value: '₹ 15,000' },
+        { label: '40 - 60 years', value: '₹ 10,000' },
+        { label: '60 years & above', value: '₹ 5,000' },
+      ]
+    },
+    {
+      id: 'kanya',
+      icon: 'child-care',
+      title: 'Kanya Marriage Assistance',
+      description: 'Financial support for girl child marriage ceremonies',
+      details: [
+        { label: 'Below 4 years', value: '₹ 25,000' },
+        { label: '4 - 8 years', value: '₹ 15,000' },
+        { label: '8 - 12 years', value: '₹ 10,000' },
+        { label: '12 years & above', value: '₹ 5,000' },
+      ]
+    },
+    {
+      id: 'selfemployment',
+      icon: 'work',
+      title: 'Self-Employment Assistance',
+      description: 'Empower through livelihood and skill development programs',
+      details: [
+        { label: 'Available for unemployed elderly people', value: 'Support Provided' },
+      ]
+    },
+  ];
+
+  const leadership = [
+    { name: 'Shri. Rajesh Kumar', role: 'President', color: '#FF7722' },
+    { name: 'Smt. Anita Sharma', role: 'Secretary', color: '#10b981' },
+    { name: 'Shri. Sunil Verma', role: 'Treasurer', color: '#3b82f6' },
+  ];
 
   useEffect(() => {
     fetchHomeData();
@@ -128,11 +179,6 @@ export default function HomeScreen({ navigation }) {
     return value || fallback;
   };
 
-  const formatCurrency = (amount) => {
-    if (!amount || amount === 'Not provided') return 'N/A';
-    return `₹ ${parseInt(amount).toLocaleString('en-IN')}`;
-  };
-
   const handleRequireLogin = (action, screen) => {
     Alert.alert(
       'Login Required',
@@ -152,322 +198,14 @@ export default function HomeScreen({ navigation }) {
     handleRequireLogin('register for this event', 'Login');
   };
 
-  const handleDonatePress = () => {
-    handleRequireLogin('make a donation', 'Login');
-  };
-
-  const handleViewAllProducts = () => {
-    navigation.navigate('Shop');
-  };
-
-  const handleViewAllEvents = () => {
-    navigation.navigate('Events');
-  };
-
-  const handleServicePress = (service) => {
-    handleRequireLogin(`learn more about ${service}`, 'Login');
-  };
-
-  const renderServiceCard = (service, index) => (
-    <TouchableOpacity 
-      key={index} 
-      style={styles.serviceCard}
-      onPress={() => handleServicePress(service.title)}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.serviceIcon, { backgroundColor: service.bgColor }]}>
-        <MaterialIcons name={service.icon} size={28} color={service.color} />
-      </View>
-      <Text style={styles.serviceTitle}>{service.title}</Text>
-      <Text style={styles.serviceDescription}>{service.description}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderProductCarousel = () => {
-    if (products.length === 0) return null;
-
-    const displayedProducts = products.slice(0, 10);
-
-    return (
-      <View style={styles.carouselContainer}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderLeft}>
-            <MaterialIcons name="shopping-bag" size={22} color="#3b82f6" />
-            <Text style={styles.sectionTitle}>Our Products</Text>
-          </View>
-          <TouchableOpacity onPress={handleViewAllProducts}>
-            <Text style={styles.seeAllText}>View All →</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.carouselWrapper}>
-          <FlatList
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            data={displayedProducts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.productCard}
-                onPress={() => handleProductPress(item)}
-                activeOpacity={0.8}
-              >
-                <Image 
-                  source={{ uri: item.image || 'https://via.placeholder.com/300x200/3b82f6/ffffff?text=Product' }} 
-                  style={styles.productImage}
-                />
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.productPrice}>
-                    {formatCurrency(item.price)}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.buyButton}
-                    onPress={() => handleProductPress(item)}
-                  >
-                    <Text style={styles.buyButtonText}>View Details</Text>
-                    <MaterialIcons name="arrow-forward" size={16} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            )}
-            onScroll={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / (width * 0.75 + 12));
-              setActiveProductIndex(index);
-            }}
-          />
-          {displayedProducts.length > 1 && (
-            <View style={styles.dotsContainer}>
-              {displayedProducts.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.dot,
-                    index === activeProductIndex && styles.activeDot,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderEventCarousel = () => {
-    if (events.length === 0) return null;
-
-    const displayedEvents = events.slice(0, 10);
-
-    return (
-      <View style={styles.carouselContainer}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderLeft}>
-            <MaterialIcons name="event" size={22} color="#8b5cf6" />
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          </View>
-          <TouchableOpacity onPress={handleViewAllEvents}>
-            <Text style={styles.seeAllText}>View All →</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.carouselWrapper}>
-          <FlatList
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            data={displayedEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.eventCard}
-                onPress={() => handleEventPress(item)}
-                activeOpacity={0.8}
-              >
-                <Image 
-                  source={{ uri: item.image || 'https://via.placeholder.com/300x200/8b5cf6/ffffff?text=Event' }} 
-                  style={styles.eventImage}
-                />
-                <View style={styles.eventInfo}>
-                  <Text style={styles.eventName} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  <View style={styles.eventMeta}>
-                    <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
-                    <Text style={styles.eventDate}>
-                      {item.date ? new Date(item.date.seconds * 1000).toLocaleDateString('en-IN', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      }) : 'TBD'}
-                    </Text>
-                  </View>
-                  <View style={styles.eventMeta}>
-                    <MaterialIcons name="location-on" size={14} color="#6b7280" />
-                    <Text style={styles.eventLocation} numberOfLines={1}>
-                      {item.location || 'Virtual Event'}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.registerButton}
-                    onPress={() => handleEventPress(item)}
-                  >
-                    <Text style={styles.registerButtonText}>Register Now</Text>
-                    <MaterialIcons name="arrow-forward" size={16} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            )}
-            onScroll={(e) => {
-              const index = Math.round(e.nativeEvent.contentOffset.x / (width * 0.75 + 12));
-              setActiveEventIndex(index);
-            }}
-          />
-          {displayedEvents.length > 1 && (
-            <View style={styles.dotsContainer}>
-              {displayedEvents.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.dot,
-                    index === activeEventIndex && styles.activeDot,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderServices = () => {
-    const services = [
-      { 
-        icon: 'elderly', 
-        title: 'Old Age Assistance', 
-        description: 'Support for senior citizens',
-        color: '#3b82f6',
-        bgColor: '#eff6ff'
-      },
-      { 
-        icon: 'child-care', 
-        title: 'Kanya Marriage Assistance', 
-        description: 'Support for girl child marriage',
-        color: '#ec4899',
-        bgColor: '#fdf2f8'
-      },
-      { 
-        icon: 'work', 
-        title: 'Self Employment', 
-        description: 'Empower through livelihood',
-        color: '#10b981',
-        bgColor: '#d1fae5'
-      },
-      { 
-        icon: 'health-and-safety', 
-        title: 'Health Programs', 
-        description: 'Medical assistance & camps',
-        color: '#f59e0b',
-        bgColor: '#fef3c7'
-      },
-    ];
-
-    return (
-      <View style={styles.servicesContainer}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderLeft}>
-            <MaterialIcons name="handshake" size={22} color="#10b981" />
-            <Text style={styles.sectionTitle}>Our Services</Text>
-          </View>
-        </View>
-        <View style={styles.servicesGrid}>
-          {services.map((service, index) => renderServiceCard(service, index))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderServiceDetails = () => {
-    const serviceDetails = [
-      {
-        icon: 'elderly',
-        title: 'Kabir Old Age Assistance Program',
-        color: '#3b82f6',
-        bgColor: '#eff6ff',
-        details: [
-          { label: 'Below 20 years', value: '₹ 25,000' },
-          { label: '20 - 40 years', value: '₹ 15,000' },
-          { label: '40 - 60 years', value: '₹ 10,000' },
-          { label: '60 years & above', value: '₹ 5,000' },
-        ]
-      },
-      {
-        icon: 'child-care',
-        title: 'Kanya (Girl Child) Marriage Assistance',
-        color: '#ec4899',
-        bgColor: '#fdf2f8',
-        details: [
-          { label: 'Below 4 years', value: '₹ 25,000' },
-          { label: '4 - 8 years', value: '₹ 15,000' },
-          { label: '8 - 12 years', value: '₹ 10,000' },
-          { label: '12 years & above', value: '₹ 5,000' },
-        ]
-      },
-      {
-        icon: 'work',
-        title: 'Self-Employment Assistance Scheme',
-        color: '#10b981',
-        bgColor: '#d1fae5',
-        details: [
-          { label: 'Available for unemployed elderly people', value: 'Support Provided' },
-        ]
-      },
-    ];
-
-    return (
-      <View style={styles.serviceDetailsContainer}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionHeaderLeft}>
-            <MaterialIcons name="info" size={22} color="#8b5cf6" />
-            <Text style={styles.sectionTitle}>Service Details</Text>
-          </View>
-        </View>
-
-        {serviceDetails.map((service, index) => (
-          <TouchableOpacity 
-            key={index}
-            style={styles.serviceDetailCard}
-            onPress={() => handleServicePress(service.title)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.serviceDetailHeader}>
-              <View style={[styles.serviceDetailIcon, { backgroundColor: service.bgColor }]}>
-                <MaterialIcons name={service.icon} size={24} color={service.color} />
-              </View>
-              <Text style={styles.serviceDetailTitle}>{service.title}</Text>
-            </View>
-            {service.details.map((detail, idx) => (
-              <View key={idx} style={styles.serviceDetailRow}>
-                <Text style={styles.serviceDetailLabel}>{detail.label}</Text>
-                <Text style={[styles.serviceDetailValue, { color: service.color }]}>
-                  {detail.value}
-                </Text>
-              </View>
-            ))}
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
+  const toggleService = (id) => {
+    setExpandedService(expandedService === id ? null : id);
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#FF7722" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -478,135 +216,154 @@ export default function HomeScreen({ navigation }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
       >
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroOverlay}>
-            {companyData?.coverImage ? (
-              <Image 
-                source={{ uri: companyData.coverImage }} 
-                style={styles.heroImage}
-              />
-            ) : (
-              <View style={styles.heroPlaceholder}>
-                <MaterialIcons name="volunteer-activism" size={60} color="#3b82f6" />
-              </View>
-            )}
-            <View style={styles.heroContent}>
-              <Text style={styles.heroTitle}>
-                {getField('organizationName', 'NGO Organization')}
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                {getField('tagline', 'Making a difference together')}
-              </Text>
-              
-              
+        {/* Cover Image - Rectangle with rounded corners */}
+        <View style={styles.coverContainer}>
+          <Image 
+            source={{ uri: companyData?.coverImage || 'https://via.placeholder.com/400x200/FF7722/ffffff?text=NGO+Cover' }} 
+            style={styles.coverImage}
+          />
+        </View>
 
-              <View style={styles.heroStats}>
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatNumber}>500+</Text>
-                  <Text style={styles.heroStatLabel}>Members</Text>
+        {/* Profile Info Row */}
+        <View style={styles.profileRow}>
+          <View style={styles.profileLeft}>
+            <View style={styles.verifiedBadge}>
+              <MaterialIcons name="verified" size={18} color="#FF7722" />
+              <Text style={styles.verifiedText}>Verified</Text>
+            </View>
+          </View>
+          <View style={styles.profileRight}>
+            <TouchableOpacity style={styles.actionIcon}>
+              <MaterialIcons name="call" size={22} color="#FF7722" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionIcon}>
+              <MaterialIcons name="message" size={22} color="#FF7722" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* NGO Name */}
+        <Text style={styles.orgName}>{getField('organizationName', 'NGO Organization')}</Text>
+
+        {/* Location */}
+        <View style={styles.locationContainer}>
+          <MaterialIcons name="location-on" size={16} color="#6b7280" />
+          <Text style={styles.locationText}>{getField('address', 'Location not specified')}</Text>
+        </View>
+
+        {/* Tabs Row */}
+        <View style={styles.tabsContainer}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <MaterialIcons 
+                name={tab.icon} 
+                size={16} 
+                color={activeTab === tab.id ? '#FF7722' : '#6b7280'} 
+              />
+              <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Reviews Bar - Full width with saffron bg */}
+        <View style={styles.reviewsBar}>
+          <View style={styles.reviewsContent}>
+            <View style={styles.reviewsLeft}>
+              <Text style={styles.reviewsLabel}>Reviews</Text>
+              <View style={styles.ratingContainer}>
+                <MaterialIcons name="star" size={18} color="#fbbf24" />
+                <Text style={styles.ratingText}>4.8</Text>
+              </View>
+            </View>
+            <View style={styles.reviewsRight}>
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} style={[styles.avatarCircle, { marginLeft: i > 1 ? -12 : 0 }]}>
+                  <Text style={styles.avatarText}>{String.fromCharCode(64 + i)}</Text>
                 </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatNumber}>120+</Text>
-                  <Text style={styles.heroStatLabel}>Projects</Text>
-                </View>
-                <View style={styles.heroStatDivider} />
-                <View style={styles.heroStat}>
-                  <Text style={styles.heroStatNumber}>50+</Text>
-                  <Text style={styles.heroStatLabel}>Events</Text>
-                </View>
+              ))}
+              <View style={[styles.avatarCircle, styles.moreCircle]}>
+                <Text style={styles.moreText}>+{Math.floor(Math.random() * 10) + 5}</Text>
               </View>
             </View>
           </View>
         </View>
 
-
-        {/* Services */}
-        {renderServices()}
-
-        {/* Service Details */}
-        {renderServiceDetails()}
-
         {/* About Section */}
-        {(getField('about') && getField('about') !== 'Not provided') && (
-          <View style={styles.aboutContainer}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderLeft}>
-                <MaterialIcons name="info" size={22} color="#8b5cf6" />
-                <Text style={styles.sectionTitle}>About Us</Text>
+        <View style={styles.aboutContainer}>
+          <Text style={styles.aboutTitle}>About Us</Text>
+          <Text style={styles.aboutText}>
+            {getField('about', 'We are a non-profit organization dedicated to making a difference in the community through various social welfare programs and initiatives.')}
+          </Text>
+        </View>
+
+        {/* Services Section - 3 Tabs in a row */}
+        <View style={styles.servicesContainer}>
+          <View style={styles.servicesTabs}>
+            {services.map((service) => (
+              <TouchableOpacity
+                key={service.id}
+                style={[
+                  styles.serviceTab,
+                  expandedService === service.id && styles.serviceTabActive
+                ]}
+                onPress={() => toggleService(service.id)}
+              >
+                <View style={styles.serviceTabIcon}>
+                  <MaterialIcons 
+                    name={service.icon} 
+                    size={22} 
+                    color={expandedService === service.id ? '#FF7722' : '#6b7280'} 
+                  />
+                </View>
+                <Text style={[
+                  styles.serviceTabText,
+                  expandedService === service.id && styles.serviceTabTextActive
+                ]}>
+                  {service.title}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Expanded Service Details */}
+          {expandedService && (
+            <View style={styles.expandedServiceCard}>
+              {services.find(s => s.id === expandedService)?.details.map((detail, idx) => (
+                <View key={idx} style={styles.serviceDetailRow}>
+                  <Text style={styles.serviceDetailLabel}>{detail.label}</Text>
+                  <Text style={[styles.serviceDetailValue, { color: '#FF7722' }]}>
+                    {detail.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Leadership Section */}
+        <View style={styles.leadershipContainer}>
+          <Text style={styles.leadershipTitle}>Leadership</Text>
+          {leadership.map((leader, index) => (
+            <View key={index} style={styles.leaderCard}>
+              <View style={[styles.leaderIcon, { backgroundColor: leader.color }]}>
+                <Text style={styles.leaderInitial}>{leader.name.charAt(0)}</Text>
+              </View>
+              <View style={styles.leaderContent}>
+                <Text style={styles.leaderName}>{leader.name}</Text>
+                <Text style={styles.leaderRole}>{leader.role}</Text>
               </View>
             </View>
-            <Text style={styles.aboutText}>{getField('about')}</Text>
-          </View>
-        )}
-
-        {/* Mission & Vision */}
-        {(getField('mission') && getField('mission') !== 'Not provided') && (
-          <View style={styles.missionVisionContainer}>
-            {getField('mission') && getField('mission') !== 'Not provided' && (
-              <View style={styles.mvCard}>
-                <View style={styles.mvHeader}>
-                  <MaterialIcons name="flag" size={20} color="#3b82f6" />
-                  <Text style={styles.mvTitle}>Our Mission</Text>
-                </View>
-                <Text style={styles.mvText}>{getField('mission')}</Text>
-              </View>
-            )}
-            {getField('vision') && getField('vision') !== 'Not provided' && (
-              <View style={styles.mvCard}>
-                <View style={styles.mvHeader}>
-                  <MaterialIcons name="visibility" size={20} color="#10b981" />
-                  <Text style={styles.mvTitle}>Our Vision</Text>
-                </View>
-                <Text style={styles.mvText}>{getField('vision')}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Leadership */}
-        {(getField('presidentName') && getField('presidentName') !== 'Not provided') && (
-          <View style={styles.leadershipContainer}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionHeaderLeft}>
-                <MaterialIcons name="people" size={22} color="#f59e0b" />
-                <Text style={styles.sectionTitle}>Leadership</Text>
-              </View>
-            </View>
-            {getField('presidentName') && getField('presidentName') !== 'Not provided' && (
-              <View style={styles.leaderCard}>
-                <View style={[styles.leaderIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="person" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.leaderContent}>
-                  <Text style={styles.leaderRole}>President</Text>
-                  <Text style={styles.leaderName}>{getField('presidentName')}</Text>
-                </View>
-              </View>
-            )}
-            {getField('secretaryName') && getField('secretaryName') !== 'Not provided' && (
-              <View style={styles.leaderCard}>
-                <View style={[styles.leaderIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="person" size={24} color="#ffffff" />
-                </View>
-                <View style={styles.leaderContent}>
-                  <Text style={styles.leaderRole}>Secretary</Text>
-                  <Text style={styles.leaderName}>{getField('secretaryName')}</Text>
-                </View>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Product Carousel */}
-        {renderProductCarousel()}
-
-        {/* Event Carousel */}
-        {renderEventCarousel()}
+          ))}
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -647,359 +404,258 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  heroSection: {
-    backgroundColor: '#ffffff',
-    marginBottom: 8,
-  },
-  heroOverlay: {
-    position: 'relative',
-  },
-  heroImage: {
-    width: width,
-    height: 220,
-    resizeMode: 'cover',
-  },
-  heroPlaceholder: {
-    width: width,
-    height: 220,
-    backgroundColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroContent: {
-    padding: 20,
-    paddingTop: 12,
-  },
-  heroTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 24,
-    color: '#1f2937',
-    textAlign: 'center',
-    width: 400,
-    marginLeft: -7
-  },
-  heroSubtitle: {
-    fontFamily: Fonts.Italic,
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  orgDetails: {
-    marginTop: 8,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 10,
-  },
-  orgDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 2,
-  },
-  orgDetailText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  heroStats: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 16,
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-  },
-  heroStat: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  heroStatNumber: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#3b82f6',
-  },
-  heroStatLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#e5e7eb',
-  },
-
-  donateContainer: {
+  // Cover Image - Rectangle with rounded corners
+  coverContainer: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 16,
   },
-  donateButton: {
-    backgroundColor: '#ef4444',
+  coverImage: {
+    width: '100%',
+    height: 180,
     borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  donateButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  donateButtonText: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    resizeMode: 'cover',
+    backgroundColor: '#f3f4f6',
   },
 
-  carouselContainer: {
-    marginBottom: 12,
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-  },
-  carouselWrapper: {
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
+  // Profile Row
+  profileRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 12,
   },
-  sectionHeaderLeft: {
+  profileLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5eb',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    gap: 4,
+  },
+  verifiedText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#FF7722',
+  },
+  profileRight: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff5eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // NGO Name
+  orgName: {
+    fontFamily: Fonts.Bold,
+    fontSize: 22,
+    color: '#1f2937',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+
+  // Location
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    gap: 4,
+  },
+  locationText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+
+  // Tabs Row
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    gap: 8,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 4,
+  },
+  tabActive: {
+    backgroundColor: '#fff5eb',
+  },
+  tabText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  tabTextActive: {
+    color: '#FF7722',
+  },
+
+  // Reviews Bar - Full width with saffron bg
+  reviewsBar: {
+    backgroundColor: '#FF7722',
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    width: 400,
+    marginLeft: 13,      
+    borderRadius: 10
+  },
+  reviewsContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reviewsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  sectionTitle: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 18,
-    color: '#1f2937',
-  },
-  seeAllText: {
+  reviewsLabel: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
-    color: '#3b82f6',
-  },
-
-  productCard: {
-    width: width * 0.75,
-    marginRight: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  productImage: {
-    width: '100%',
-    height: 160,
-    resizeMode: 'cover',
-  },
-  productInfo: {
-    padding: 12,
-  },
-  productName: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  productPrice: {
-    fontFamily: Fonts.Bold,
-    fontSize: 16,
-    color: '#3b82f6',
-    marginBottom: 8,
-  },
-  buyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3b82f6',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  buyButtonText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#ffffff',
   },
-
-  eventCard: {
-    width: width * 0.75,
-    marginRight: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  eventImage: {
-    width: '100%',
-    height: 140,
-    resizeMode: 'cover',
-  },
-  eventInfo: {
-    padding: 12,
-  },
-  eventName: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 15,
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  eventMeta: {
+  ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 2,
   },
-  eventDate: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
+  ratingText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#ffffff',
   },
-  eventLocation: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
-    flex: 1,
-  },
-  registerButton: {
+  reviewsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8b5cf6',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginTop: 6,
-    gap: 6,
   },
-  registerButtonText: {
+  avatarCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FF7722',
+  },
+  avatarText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#ffffff',
   },
-
-  dotsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 12,
+  moreCircle: {
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#d1d5db',
-    marginHorizontal: 3,
-  },
-  activeDot: {
-    backgroundColor: '#3b82f6',
-    width: 18,
-  },
-
-  servicesContainer: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 16,
-    marginBottom: 8,
-  },
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    gap: 12,
-  },
-  serviceCard: {
-    flex: 1,
-    minWidth: (width - 48) / 2,
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  serviceIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  serviceTitle: {
+  moreText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
-    textAlign: 'center',
-  },
-  serviceDescription: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 2,
+    fontSize: 10,
+    color: '#ffffff',
   },
 
-  serviceDetailsContainer: {
+  // About Section
+  aboutContainer: {
     backgroundColor: '#ffffff',
     padding: 16,
-    marginBottom: 8,
-  },
-  serviceDetailCard: {
-    backgroundColor: '#f8fafc',
+    marginHorizontal: 16,
+    marginTop: 14,
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#f0f0f0',
   },
-  serviceDetailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  aboutTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
     marginBottom: 8,
   },
-  serviceDetailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  aboutText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 22,
+  },
+
+  // Services Section
+  servicesContainer: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  servicesTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  serviceTab: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 4,
+  },
+  serviceTabActive: {
+    backgroundColor: '#fff5eb',
+  },
+  serviceTabIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  serviceDetailTitle: {
+  serviceTabText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
-    flex: 1,
+    fontSize: 10,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  serviceTabTextActive: {
+    color: '#FF7722',
+  },
+
+  // Expanded Service Card
+  expandedServiceCard: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   serviceDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
@@ -1014,63 +670,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  aboutContainer: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    marginBottom: 8,
-  },
-  aboutText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 24,
-  },
-
-  missionVisionContainer: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    marginBottom: 8,
-  },
-  mvCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  mvHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  mvTitle: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
-  },
-  mvText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 22,
-  },
-
+  // Leadership Section
   leadershipContainer: {
     backgroundColor: '#ffffff',
     padding: 16,
-    marginBottom: 8,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  leadershipTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+    marginBottom: 12,
   },
   leaderCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f9fafb',
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: '#f0f0f0',
   },
   leaderIcon: {
     width: 44,
@@ -1080,25 +709,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  leaderInitial: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#ffffff',
+  },
   leaderContent: {
     flex: 1,
+  },
+  leaderName: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 15,
+    color: '#1f2937',
   },
   leaderRole: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
   },
-  leaderName: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 16,
-    color: '#1f2937',
-  },
 
+  // Footer
   footer: {
     backgroundColor: '#ffffff',
     paddingVertical: 16,
     paddingHorizontal: 20,
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   footerText: {
     fontFamily: Fonts.Regular,

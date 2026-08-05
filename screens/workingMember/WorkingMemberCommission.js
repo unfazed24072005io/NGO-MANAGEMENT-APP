@@ -1,9 +1,38 @@
+// screens/workingMember/WorkingMemberCommission.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList, Dimensions, ActivityIndicator, Image, TextInput, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  FlatList,
+  Dimensions,
+  ActivityIndicator,
+  Image,
+  TextInput,
+  Modal,
+  Share
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, query, where, getDocs, onSnapshot, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  onSnapshot, 
+  orderBy, 
+  doc, 
+  getDoc, 
+  updateDoc,
+  Timestamp
+} from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getLevelDetails, getCommissionRates, LEVELS, getLevelByMemberCount } from '../../config/commissionLevels';
+import { WalletService } from '../../services/WalletService';
+import { CommissionService } from '../../services/CommissionService';
 
 const { width } = Dimensions.get('window');
 
@@ -18,40 +47,43 @@ export default function WorkingMemberCommission({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCommission, setSelectedCommission] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [commissionSettings, setCommissionSettings] = useState({
-    levels: [
-      { id: 'I', name: 'ग्राहक', nameEn: 'Customer', percentage: 25 },
-      { id: 'II', name: 'सेवक', nameEn: 'Servant / Worker', percentage: 35 },
-      { id: 'III', name: 'प्रचारक', nameEn: 'Promoter', percentage: 40 },
-      { id: 'IV', name: 'संयोजक', nameEn: 'Coordinator / Organizer', percentage: 42.5 },
-      { id: 'V', name: 'मार्गदर्शक', nameEn: 'Guide / Mentor', percentage: 43.75 },
-      { id: 'VI', name: 'संरक्षक', nameEn: 'Guardian / Protector', percentage: 44.5 },
-      { id: 'VII', name: 'स्वामी', nameEn: 'Owner / Master', percentage: 45 }
-    ],
-    generalCommission: 10,
-    starCommission: 5
+  const [userLevel, setUserLevel] = useState('I');
+  const [userData, setUserData] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // all, direct, secondary
+  const [filterStatus, setFilterStatus] = useState('all'); // all, paid, pending
+  const [showStats, setShowStats] = useState(true);
+  const [monthlyEarnings, setMonthlyEarnings] = useState(0);
+  const [commissionSummary, setCommissionSummary] = useState({
+    directTotal: 0,
+    secondaryTotal: 0,
+    directCount: 0,
+    secondaryCount: 0,
+    thisMonth: 0,
+    lastMonth: 0
   });
 
   useEffect(() => {
-    fetchCommissionSettings();
+    fetchUserData();
     setupRealtimeListener();
     fetchUserProfile();
+    calculateMonthlyEarnings();
   }, []);
 
-  const fetchCommissionSettings = async () => {
+  const fetchUserData = async () => {
     try {
-      const docRef = doc(db, 'settings', 'commission');
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const docRef = doc(db, 'users', userId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setCommissionSettings({
-          levels: data.levels || commissionSettings.levels,
-          generalCommission: data.generalCommission || 10,
-          starCommission: data.starCommission || 5
-        });
+        setUserData(data);
+        setUserLevel(data.level || 'I');
+        setProfilePhoto(data.profilePhoto || null);
       }
     } catch (error) {
-      console.error('Error fetching commission settings:', error);
+      console.error('Error fetching user data:', error);
     }
   };
 
@@ -76,61 +108,117 @@ export default function WorkingMemberCommission({ navigation }) {
     if (!userId) return;
 
     const q = query(
-      collection(db, 'commissions'),
-      where('workingMemberId', '==', userId),
+      collection(db, 'walletTransactions'),
+      where('userId', '==', userId),
+      where('type', 'in', ['direct_commission', 'secondary_commission']),
       orderBy('createdAt', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const commissionsList = [];
       let total = 0;
+      let pending = 0;
+      let paid = 0;
+      let directTotal = 0;
+      let secondaryTotal = 0;
+      let directCount = 0;
+      let secondaryCount = 0;
       
       snapshot.forEach((doc) => {
         const data = doc.data();
-        commissionsList.push({ id: doc.id, ...data });
-        if (data.status === 'paid') {
+        const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
+        const commission = { 
+          id: doc.id, 
+          ...data,
+          title: data.type === 'direct_commission' ? 'Direct Commission' : 'Secondary Commission',
+          description: data.description || '',
+          status: data.status || 'pending',
+          amount: data.amount || 0,
+          type: data.type === 'direct_commission' ? 'direct' : 'secondary',
+          createdAt: createdAt,
+          date: createdAt
+        };
+        
+        commissionsList.push(commission);
+        
+        if (data.status === 'paid' || data.status === 'completed') {
           total += data.amount || 0;
+          paid += data.amount || 0;
+        } else {
+          pending += data.amount || 0;
+        }
+        
+        if (data.type === 'direct_commission') {
+          directTotal += data.amount || 0;
+          directCount++;
+        } else if (data.type === 'secondary_commission') {
+          secondaryTotal += data.amount || 0;
+          secondaryCount++;
         }
       });
       
       setCommissions(commissionsList);
       setTotalEarned(total);
+      setPendingCommission(pending);
+      setPaidCommission(paid);
+      setCommissionSummary(prev => ({
+        ...prev,
+        directTotal,
+        secondaryTotal,
+        directCount,
+        secondaryCount
+      }));
       setLoading(false);
     });
 
     return () => unsubscribe();
   };
 
-  const fetchTotalStats = async () => {
+  const calculateMonthlyEarnings = async () => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
 
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
       const q = query(
-        collection(db, 'commissions'),
-        where('workingMemberId', '==', userId)
+        collection(db, 'walletTransactions'),
+        where('userId', '==', userId),
+        where('type', 'in', ['direct_commission', 'secondary_commission']),
+        where('status', 'in', ['completed', 'paid'])
       );
 
       const snapshot = await getDocs(q);
-      let pending = 0, paid = 0;
-      
+      let thisMonth = 0;
+      let lastMonth = 0;
+
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.status === 'pending') pending += data.amount || 0;
-        else if (data.status === 'paid') paid += data.amount || 0;
+        const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
+        if (createdAt >= startOfMonth) {
+          thisMonth += data.amount || 0;
+        } else if (createdAt >= startOfLastMonth && createdAt < startOfMonth) {
+          lastMonth += data.amount || 0;
+        }
       });
 
-      setPendingCommission(pending);
-      setPaidCommission(paid);
+      setMonthlyEarnings(thisMonth);
+      setCommissionSummary(prev => ({
+        ...prev,
+        thisMonth,
+        lastMonth
+      }));
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Error calculating monthly earnings:', error);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchTotalStats();
-    await fetchCommissionSettings();
+    await fetchUserData();
+    await calculateMonthlyEarnings();
     setRefreshing(false);
   };
 
@@ -139,66 +227,66 @@ export default function WorkingMemberCommission({ navigation }) {
   };
 
   const getCommissionTypeColor = (type) => {
-    switch(type?.toLowerCase()) {
-      case 'registration': return '#8b5cf6';
-      case 'referral': return '#10b981';
-      case 'bonus': return '#f59e0b';
-      case 'performance': return '#8b5cf6';
-      case 'general': return '#6b7280';
-      case 'star': return '#ec4899';
-      default: return '#6b7280';
-    }
+    if (type === 'direct') return '#8b5cf6';
+    if (type === 'secondary') return '#10b981';
+    return '#6b7280';
   };
 
   const getCommissionTypeIcon = (type) => {
-    switch(type?.toLowerCase()) {
-      case 'registration': return 'person-add';
-      case 'referral': return 'share';
-      case 'bonus': return 'star';
-      case 'performance': return 'trending-up';
-      case 'general': return 'stars';
-      case 'star': return 'star-border';
-      default: return 'attach-money';
-    }
+    if (type === 'direct') return 'person-add';
+    if (type === 'secondary') return 'share';
+    return 'attach-money';
   };
 
   const getFilteredCommissions = () => {
     let filtered = commissions;
     
+    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(c => 
         c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.type?.toLowerCase().includes(searchQuery.toLowerCase())
+        c.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
+    // Type filter
+    if (filterType === 'direct') {
+      filtered = filtered.filter(c => c.type === 'direct');
+    } else if (filterType === 'secondary') {
+      filtered = filtered.filter(c => c.type === 'secondary');
+    }
+
+    // Status filter
+    if (filterStatus === 'paid') {
+      filtered = filtered.filter(c => c.status === 'paid' || c.status === 'completed');
+    } else if (filterStatus === 'pending') {
+      filtered = filtered.filter(c => c.status === 'pending' || c.status === 'partially_paid');
+    }
+
     return filtered;
   };
 
-  // Calculate commission based on membership level
-  const calculateCommission = (amount, levelId, hasGeneralBonus = false, hasStarBonus = false) => {
-    const level = commissionSettings.levels.find(l => l.id === levelId);
-    if (!level) return { base: 0, generalBonus: 0, starBonus: 0, total: 0 };
-
-    // Calculate base commission
-    const baseCommission = (amount * level.percentage) / 100;
-    
-    // Calculate bonuses
-    const generalBonus = hasGeneralBonus ? (amount * commissionSettings.generalCommission) / 100 : 0;
-    const starBonus = hasStarBonus ? (amount * commissionSettings.starCommission) / 100 : 0;
-    
-    const total = baseCommission + generalBonus + starBonus;
-
-    return {
-      base: baseCommission,
-      generalBonus: generalBonus,
-      starBonus: starBonus,
-      total: total,
-      percentage: level.percentage,
-      levelName: level.nameEn,
-      levelId: level.id
-    };
+  const handleShare = async () => {
+    try {
+      const levelDetails = getLevelDetails(userLevel);
+      const message = 
+        `📊 My Commission Report\n\n` +
+        `🎯 Level: ${levelDetails.title}\n` +
+        `💰 Total Earned: ₹${totalEarned.toLocaleString()}\n` +
+        `📈 This Month: ₹${monthlyEarnings.toLocaleString()}\n` +
+        `⏳ Pending: ₹${pendingCommission.toLocaleString()}\n` +
+        `✅ Paid: ₹${paidCommission.toLocaleString()}\n` +
+        `📋 Direct: ₹${commissionSummary.directTotal.toLocaleString()} (${commissionSummary.directCount} txns)\n` +
+        `🔄 Secondary: ₹${commissionSummary.secondaryTotal.toLocaleString()} (${commissionSummary.secondaryCount} txns)\n\n` +
+        `🚀 Keep referring more members to earn more!`;
+      
+      await Share.share({
+        message: message,
+        title: 'My Commission Report'
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
   };
 
   const StatCard = ({ label, count, icon, color }) => (
@@ -216,47 +304,50 @@ export default function WorkingMemberCommission({ navigation }) {
   const CommissionCard = ({ item }) => {
     const color = getCommissionTypeColor(item.type);
     const icon = getCommissionTypeIcon(item.type);
+    const isDirect = item.type === 'direct';
+    const isPaid = item.status === 'paid' || item.status === 'completed';
     
-    // Calculate commission details for display
-    let commissionDetails = null;
+    let levelDetails = null;
+    let levelName = '';
     if (item.levelId) {
-      commissionDetails = calculateCommission(
-        item.baseAmount || item.amount, 
-        item.levelId, 
-        item.hasGeneralBonus, 
-        item.hasStarBonus
-      );
+      levelDetails = getLevelDetails(item.levelId);
+      levelName = levelDetails?.title || '';
     }
 
     return (
       <TouchableOpacity 
-        style={styles.commissionCard}
+        style={[styles.commissionCard, !isPaid && styles.commissionCardPending]}
         onPress={() => {
           setSelectedCommission(item);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.commissionHeader}>
           <View style={[styles.commissionIcon, { backgroundColor: color + '15' }]}>
             <MaterialIcons name={icon} size={20} color={color} />
           </View>
           <View style={styles.commissionInfo}>
-            <Text style={styles.commissionTitle}>{item.title || item.type || 'Commission'}</Text>
+            <Text style={styles.commissionTitle}>
+              {isDirect ? 'Direct Commission' : `Secondary Commission${item.level ? ` (L${item.level})` : ''}`}
+            </Text>
             <Text style={styles.commissionDescription} numberOfLines={1}>
-              {item.description || 'No description'}
+              {item.description || (isDirect ? 'Member registration' : 'Upline referral')}
             </Text>
           </View>
-          <View style={[styles.commissionStatus, { backgroundColor: item.status === 'paid' ? '#10b981' : '#f59e0b' }]}>
-            <Text style={styles.commissionStatusText}>{item.status || 'pending'}</Text>
+          <View style={[styles.commissionStatus, { backgroundColor: isPaid ? '#10b981' : '#f59e0b' }]}>
+            <Text style={styles.commissionStatusText}>
+              {isPaid ? 'Paid' : 'Pending'}
+            </Text>
           </View>
         </View>
         
         <View style={styles.commissionFooter}>
           <View>
             <Text style={styles.commissionAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
-            {item.levelId && (
+            {levelName && (
               <Text style={styles.commissionLevel}>
-                {item.levelId} - {commissionSettings.levels.find(l => l.id === item.levelId)?.nameEn || ''}
+                {levelName} {item.percentage ? `(${item.percentage}%)` : ''}
               </Text>
             )}
           </View>
@@ -274,15 +365,12 @@ export default function WorkingMemberCommission({ navigation }) {
     
     const color = getCommissionTypeColor(selectedCommission.type);
     const icon = getCommissionTypeIcon(selectedCommission.type);
-    
-    let commissionDetails = null;
+    const isDirect = selectedCommission.type === 'direct';
+    const isPaid = selectedCommission.status === 'paid' || selectedCommission.status === 'completed';
+
+    let levelDetails = null;
     if (selectedCommission.levelId) {
-      commissionDetails = calculateCommission(
-        selectedCommission.baseAmount || selectedCommission.amount,
-        selectedCommission.levelId,
-        selectedCommission.hasGeneralBonus,
-        selectedCommission.hasStarBonus
-      );
+      levelDetails = getLevelDetails(selectedCommission.levelId);
     }
 
     return (
@@ -302,68 +390,62 @@ export default function WorkingMemberCommission({ navigation }) {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Header Info */}
               <View style={styles.detailHeader}>
                 <View style={[styles.detailIcon, { backgroundColor: color + '15' }]}>
                   <MaterialIcons name={icon} size={30} color={color} />
                 </View>
                 <View style={styles.detailTitleContainer}>
-                  <Text style={styles.detailTitle}>{selectedCommission.title || selectedCommission.type}</Text>
-                  <View style={[styles.detailStatus, { backgroundColor: selectedCommission.status === 'paid' ? '#10b981' : '#f59e0b' }]}>
-                    <Text style={styles.detailStatusText}>{selectedCommission.status || 'pending'}</Text>
+                  <Text style={styles.detailTitle}>
+                    {isDirect ? 'Direct Commission' : `Secondary Commission${selectedCommission.level ? ` (Level ${selectedCommission.level})` : ''}`}
+                  </Text>
+                  <View style={[styles.detailStatus, { backgroundColor: isPaid ? '#10b981' : '#f59e0b' }]}>
+                    <Text style={styles.detailStatusText}>
+                      {isPaid ? 'Paid' : 'Pending'}
+                    </Text>
                   </View>
                 </View>
               </View>
 
-              {/* Commission Breakdown */}
-              {commissionDetails && (
-                <View style={styles.breakdownCard}>
-                  <Text style={styles.breakdownTitle}>Commission Breakdown</Text>
-                  
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Level</Text>
-                    <Text style={styles.breakdownValue}>
-                      {commissionDetails.levelId} - {commissionDetails.levelName}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Base Amount</Text>
-                    <Text style={styles.breakdownValue}>₹{selectedCommission.baseAmount?.toLocaleString() || selectedCommission.amount?.toLocaleString()}</Text>
-                  </View>
-                  
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Commission Rate</Text>
-                    <Text style={styles.breakdownValue}>{commissionDetails.percentage}%</Text>
-                  </View>
-                  
-                  <View style={styles.breakdownRow}>
-                    <Text style={styles.breakdownLabel}>Base Commission</Text>
-                    <Text style={styles.breakdownValue}>₹{commissionDetails.base.toLocaleString()}</Text>
-                  </View>
-
-                  {commissionDetails.generalBonus > 0 && (
-                    <View style={styles.breakdownRow}>
-                      <Text style={styles.breakdownLabel}>General Bonus (10%)</Text>
-                      <Text style={[styles.breakdownValue, { color: '#f59e0b' }]}>₹{commissionDetails.generalBonus.toLocaleString()}</Text>
-                    </View>
-                  )}
-
-                  {commissionDetails.starBonus > 0 && (
-                    <View style={styles.breakdownRow}>
-                      <Text style={styles.breakdownLabel}>Star Bonus (5%)</Text>
-                      <Text style={[styles.breakdownValue, { color: '#ec4899' }]}>₹{commissionDetails.starBonus.toLocaleString()}</Text>
-                    </View>
-                  )}
-
-                  <View style={[styles.breakdownRow, styles.totalRow]}>
-                    <Text style={styles.totalLabel}>Total Commission</Text>
-                    <Text style={styles.totalValue}>₹{commissionDetails.total.toLocaleString()}</Text>
-                  </View>
+              <View style={styles.breakdownCard}>
+                <Text style={styles.breakdownTitle}>Commission Breakdown</Text>
+                
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Type</Text>
+                  <Text style={styles.breakdownValue}>{isDirect ? 'Direct' : 'Secondary'}</Text>
                 </View>
-              )}
+                
+                {levelDetails && (
+                  <>
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>Level</Text>
+                      <Text style={styles.breakdownValue}>
+                        {selectedCommission.levelId} - {levelDetails.title}
+                      </Text>
+                    </View>
+                    <View style={styles.breakdownRow}>
+                      <Text style={styles.breakdownLabel}>Commission Rate</Text>
+                      <Text style={styles.breakdownValue}>
+                        {isDirect ? levelDetails.directCommission : levelDetails.secondaryCommission}%
+                      </Text>
+                    </View>
+                  </>
+                )}
+                
+                {selectedCommission.percentage && (
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Applied Rate</Text>
+                    <Text style={styles.breakdownValue}>{selectedCommission.percentage}%</Text>
+                  </View>
+                )}
+                
+                <View style={[styles.breakdownRow, styles.totalRow]}>
+                  <Text style={styles.breakdownLabel}>Commission Amount</Text>
+                  <Text style={[styles.breakdownValue, { color: '#10b981', fontSize: 18 }]}>
+                    ₹{selectedCommission.amount?.toLocaleString() || 0}
+                  </Text>
+                </View>
+              </View>
 
-              {/* Description */}
               {selectedCommission.description && (
                 <View style={styles.detailSection}>
                   <Text style={styles.detailSectionTitle}>Description</Text>
@@ -371,12 +453,11 @@ export default function WorkingMemberCommission({ navigation }) {
                 </View>
               )}
 
-              {/* Metadata */}
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Metadata</Text>
                 <View style={styles.metadataRow}>
-                  <Text style={styles.metadataLabel}>Commission ID</Text>
-                  <Text style={styles.metadataValue}>{selectedCommission.id}</Text>
+                  <Text style={styles.metadataLabel}>Transaction ID</Text>
+                  <Text style={styles.metadataValue}>{selectedCommission.id?.slice(0, 12)}...</Text>
                 </View>
                 <View style={styles.metadataRow}>
                   <Text style={styles.metadataLabel}>Created</Text>
@@ -384,21 +465,66 @@ export default function WorkingMemberCommission({ navigation }) {
                     {selectedCommission.createdAt ? new Date(selectedCommission.createdAt).toLocaleString() : 'N/A'}
                   </Text>
                 </View>
-                {selectedCommission.updatedAt && (
+                {selectedCommission.referenceId && (
                   <View style={styles.metadataRow}>
-                    <Text style={styles.metadataLabel}>Updated</Text>
-                    <Text style={styles.metadataValue}>
-                      {new Date(selectedCommission.updatedAt).toLocaleString()}
-                    </Text>
+                    <Text style={styles.metadataLabel}>Reference</Text>
+                    <Text style={styles.metadataValue}>{selectedCommission.referenceId}</Text>
                   </View>
                 )}
               </View>
+
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setDetailModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
     );
   };
+
+  // Summary Cards
+  const SummaryCard = ({ title, value, icon, color, subtitle }) => (
+    <View style={styles.summaryCard}>
+      <View style={[styles.summaryIcon, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={20} color={color} />
+      </View>
+      <View style={styles.summaryContent}>
+        <Text style={styles.summaryTitle}>{title}</Text>
+        <Text style={[styles.summaryValue, { color }]}>₹{value.toLocaleString()}</Text>
+        {subtitle && <Text style={styles.summarySubtitle}>{subtitle}</Text>}
+      </View>
+    </View>
+  );
+
+  // Monthly Stats
+  const MonthlyStats = () => (
+    <View style={styles.monthlyStatsContainer}>
+      <View style={styles.monthlyStat}>
+        <Text style={styles.monthlyStatLabel}>This Month</Text>
+        <Text style={[styles.monthlyStatValue, { color: '#10b981' }]}>
+          ₹{commissionSummary.thisMonth.toLocaleString()}
+        </Text>
+      </View>
+      <View style={styles.monthlyDivider} />
+      <View style={styles.monthlyStat}>
+        <Text style={styles.monthlyStatLabel}>Last Month</Text>
+        <Text style={[styles.monthlyStatValue, { color: '#8b5cf6' }]}>
+          ₹{commissionSummary.lastMonth.toLocaleString()}
+        </Text>
+      </View>
+      <View style={styles.monthlyDivider} />
+      <View style={styles.monthlyStat}>
+        <Text style={styles.monthlyStatLabel}>Total</Text>
+        <Text style={[styles.monthlyStatValue, { color: '#f59e0b' }]}>
+          ₹{(commissionSummary.thisMonth + commissionSummary.lastMonth).toLocaleString()}
+        </Text>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -409,9 +535,11 @@ export default function WorkingMemberCommission({ navigation }) {
     );
   }
 
+  const filteredCommissions = getFilteredCommissions();
+
   return (
     <View style={styles.container}>
-      {/* Blue Header Card */}
+      {/* Purple Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
@@ -420,16 +548,21 @@ export default function WorkingMemberCommission({ navigation }) {
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Commissions</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.profileIcon}
-            onPress={() => navigation.navigate('WorkingMemberProfile')}
-          >
-            {profilePhoto ? (
-              <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
-            ) : (
-              <MaterialIcons name="person" size={28} color="#8b5cf6" />
-            )}
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <MaterialIcons name="share" size={22} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.profileIcon}
+              onPress={() => navigation.navigate('WorkingMemberProfile')}
+            >
+              {profilePhoto ? (
+                <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+              ) : (
+                <MaterialIcons name="person" size={28} color="#8b5cf6" />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search Bar inside header */}
@@ -462,9 +595,70 @@ export default function WorkingMemberCommission({ navigation }) {
         </ScrollView>
       </View>
 
+      {/* Monthly Stats */}
+      <MonthlyStats />
+
+      {/* Commission Summary */}
+      <View style={styles.summaryContainer}>
+        <SummaryCard 
+          title="Direct Commissions" 
+          value={commissionSummary.directTotal} 
+          icon="person-add" 
+          color="#8b5cf6"
+          subtitle={`${commissionSummary.directCount} transactions`}
+        />
+        <SummaryCard 
+          title="Secondary Commissions" 
+          value={commissionSummary.secondaryTotal} 
+          icon="share" 
+          color="#10b981"
+          subtitle={`${commissionSummary.secondaryCount} transactions`}
+        />
+      </View>
+
+      {/* Filters */}
+      <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <TouchableOpacity
+            style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
+            onPress={() => setFilterType('all')}
+          >
+            <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filterType === 'direct' && styles.filterChipActive]}
+            onPress={() => setFilterType('direct')}
+          >
+            <MaterialIcons name="person-add" size={14} color={filterType === 'direct' ? '#ffffff' : '#6b7280'} />
+            <Text style={[styles.filterChipText, filterType === 'direct' && styles.filterChipTextActive]}>Direct</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filterType === 'secondary' && styles.filterChipActive]}
+            onPress={() => setFilterType('secondary')}
+          >
+            <MaterialIcons name="share" size={14} color={filterType === 'secondary' ? '#ffffff' : '#6b7280'} />
+            <Text style={[styles.filterChipText, filterType === 'secondary' && styles.filterChipTextActive]}>Secondary</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filterStatus === 'paid' && styles.filterChipActive]}
+            onPress={() => setFilterStatus('paid')}
+          >
+            <MaterialIcons name="check-circle" size={14} color={filterStatus === 'paid' ? '#ffffff' : '#6b7280'} />
+            <Text style={[styles.filterChipText, filterStatus === 'paid' && styles.filterChipTextActive]}>Paid</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filterStatus === 'pending' && styles.filterChipActive]}
+            onPress={() => setFilterStatus('pending')}
+          >
+            <MaterialIcons name="pending" size={14} color={filterStatus === 'pending' ? '#ffffff' : '#6b7280'} />
+            <Text style={[styles.filterChipText, filterStatus === 'pending' && styles.filterChipTextActive]}>Pending</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
       {/* Commissions List */}
       <FlatList
-        data={getFilteredCommissions()}
+        data={filteredCommissions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <CommissionCard item={item} />}
         showsVerticalScrollIndicator={false}
@@ -472,8 +666,10 @@ export default function WorkingMemberCommission({ navigation }) {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialIcons name="attach-money" size={44} color="#d1d5db" />
-            <Text style={styles.emptyStateText}>No commissions yet</Text>
-            <Text style={styles.emptyStateSubtext}>Register members to earn commissions</Text>
+            <Text style={styles.emptyStateText}>No commissions found</Text>
+            <Text style={styles.emptyStateSubtext}>
+              {searchQuery ? 'Try adjusting your search' : 'Register members to earn commissions'}
+            </Text>
           </View>
         }
         contentContainerStyle={styles.listContent}
@@ -491,7 +687,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
-  // Blue Header Card
+  // Purple Header Card
   headerCard: {
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
@@ -518,6 +714,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shareButton: {
+    padding: 4,
   },
   profileIcon: {
     width: 70,
@@ -606,9 +810,113 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Monthly Stats
+  monthlyStatsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  monthlyStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  monthlyStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#6b7280',
+  },
+  monthlyStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    marginTop: 2,
+  },
+  monthlyDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 8,
+  },
+
+  // Summary Container
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  summaryContent: {
+    flex: 1,
+  },
+  summaryTitle: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  summaryValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+  },
+  summarySubtitle: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#9ca3af',
+    marginTop: 1,
+  },
+
+  // Filters
+  filterContainer: {
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+    gap: 4,
+  },
+  filterChipActive: {
+    backgroundColor: '#8b5cf6',
+  },
+  filterChipText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  filterChipTextActive: {
+    color: '#ffffff',
+  },
+
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 6,
   },
 
   commissionCard: {
@@ -618,6 +926,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  commissionCardPending: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
   },
   commissionHeader: {
     flexDirection: 'row',
@@ -774,20 +1086,10 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   totalRow: {
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: '#e5e7eb',
     marginTop: 4,
     paddingTop: 8,
-  },
-  totalLabel: {
-    fontFamily: Fonts.Bold,
-    fontSize: 14,
-    color: '#1f2937',
-  },
-  totalValue: {
-    fontFamily: Fonts.Bold,
-    fontSize: 16,
-    color: '#10b981',
   },
 
   // Detail Sections
@@ -820,6 +1122,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#1f2937',
+  },
+
+  closeButton: {
+    backgroundColor: '#6b7280',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  closeButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 14,
   },
 
   emptyState: {

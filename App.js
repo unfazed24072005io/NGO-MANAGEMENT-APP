@@ -38,6 +38,11 @@ import EventsManagement from './screens/admin/EventsManagement';
 import CommissionManagement from './screens/admin/CommissionManagement';
 import CompanyProfileManagement from './screens/admin/CompanyProfileManagement';
 
+// Quote Management
+import QuoteManagement from './screens/admin/QuoteManagement';
+import MemberQuotes from './screens/member/MemberQuotes';
+import WorkingMemberQuotes from './screens/workingMember/WorkingMemberQuotes';
+
 // Employee Management
 import EmployeeManagement from './screens/admin/EmployeeManagement';
 
@@ -99,7 +104,7 @@ import CheckoutScreen from './screens/member/CheckoutScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ============ PUBLIC TABS (Home, Shop, Events, Profile) ============
+// ============ PUBLIC TABS (Home, Shop, Events, Profile) - SAFFRON THEME ============
 function PublicTabs() {
   return (
     <Tab.Navigator
@@ -117,28 +122,29 @@ function PublicTabs() {
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: '#FF7722',     // Saffron color for active tab
+        tabBarInactiveTintColor: '#9ca3af',    // Gray for inactive tabs
         tabBarStyle: {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e5e7eb',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Shop" component={ShopScreen} />
-      <Tab.Screen name="Events" component={EventsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
 }
-
 // ============ DONATION TABS ============
 function DonationTabs() {
   return (
@@ -160,19 +166,23 @@ function DonationTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Dashboard" component={DonationDashboard} />
+      <Tab.Screen name="Dashboard" component={DonationDashboard} options={{ title: 'Home' }} />
       <Tab.Screen name="Donate" component={DonateScreen} />
-      <Tab.Screen name="MyDonations" component={MyDonations} />
+      <Tab.Screen name="MyDonations" component={MyDonations} options={{ title: 'History' }} />
       <Tab.Screen name="Company" component={DonorCompany} />
-      <Tab.Screen name="Certificate" component={DonationCertificate} />
+      <Tab.Screen name="Certificate" component={DonationCertificate} options={{ title: 'Certificate' }} />
       <Tab.Screen name="Profile" component={DonorProfile} />
     </Tab.Navigator>
   );
@@ -196,11 +206,15 @@ function AdminNotificationTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
@@ -229,11 +243,15 @@ function MemberNotificationTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
@@ -262,11 +280,15 @@ function WorkingMemberNotificationTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
@@ -294,6 +316,8 @@ function OrganizationSettingsTabs() {
             iconName = 'people';
           } else if (route.name === 'Classes') {
             iconName = 'video-library';
+          } else if (route.name === 'Quotes') {
+            iconName = 'format-quote';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -303,11 +327,15 @@ function OrganizationSettingsTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
@@ -316,9 +344,11 @@ function OrganizationSettingsTabs() {
       <Tab.Screen name="Commission" component={CommissionManagement} />
       <Tab.Screen name="Employees" component={EmployeeManagement} />
       <Tab.Screen name="Classes" component={OnlineClassManagement} />
+      <Tab.Screen name="Quotes" component={QuoteManagement} />
     </Tab.Navigator>
   );
 }
+
 // ============ MEMBER MORE SETTINGS TABS ============
 function MemberMoreSettingsTabs() {
   return (
@@ -332,6 +362,8 @@ function MemberMoreSettingsTabs() {
             iconName = focused ? 'video-library' : 'video-library';
           } else if (route.name === 'Organisation') {
             iconName = focused ? 'business' : 'business';
+          } else if (route.name === 'Quotes') {
+            iconName = focused ? 'format-quote' : 'format-quote';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -341,20 +373,26 @@ function MemberMoreSettingsTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Applications" component={MemberApplications} />
+      <Tab.Screen name="Applications" component={MemberApplications} options={{ title: 'Apps' }} />
       <Tab.Screen name="Classes" component={MemberClasses} />
-      <Tab.Screen name="Organisation" component={CompanyManagement} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} options={{ title: 'Org' }} />
+      <Tab.Screen name="Quotes" component={MemberQuotes} />
     </Tab.Navigator>
   );
 }
+
 // ============ WORKING MEMBER MORE SETTINGS TABS ============
 function WorkingMemberMoreSettingsTabs() {
   return (
@@ -370,6 +408,8 @@ function WorkingMemberMoreSettingsTabs() {
             iconName = focused ? 'business' : 'business';
           } else if (route.name === 'Commission') {
             iconName = focused ? 'attach-money' : 'attach-money';
+          } else if (route.name === 'Quotes') {
+            iconName = focused ? 'format-quote' : 'format-quote';
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
@@ -379,18 +419,23 @@ function WorkingMemberMoreSettingsTabs() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
-      <Tab.Screen name="Applications" component={WorkingMemberApplications} />
+      <Tab.Screen name="Applications" component={WorkingMemberApplications} options={{ title: 'Apps' }} />
       <Tab.Screen name="Classes" component={WorkingMemberClasses} />
       <Tab.Screen name="Commission" component={WorkingMemberCommission} />
-      <Tab.Screen name="Organisation" component={CompanyManagement} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} options={{ title: 'Org' }} />
+      <Tab.Screen name="Quotes" component={WorkingMemberQuotes} />
     </Tab.Navigator>
   );
 }
@@ -415,11 +460,15 @@ function EmployeeTabsNav() {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
           borderTopColor: '#e8ecf1',
-          height: 65,
+          height: 75,
           paddingBottom: 8,
           paddingTop: 6,
         },
-        tabBarLabel: () => null,
+        tabBarLabelStyle: {
+          fontFamily: Fonts.SemiBold,
+          fontSize: 11,
+          marginTop: 2,
+        },
         headerShown: false,
       })}
     >
@@ -429,7 +478,7 @@ function EmployeeTabsNav() {
   );
 }
 
-// ============ ADMIN TABS (SAFFRON THEME - REMOVED FINANCE, COMPANY, COMMISSION) ============
+// ============ ADMIN TABS (SAFFRON THEME) ============
 function AdminTabs() {
   let navigationRef = null;
 
@@ -452,11 +501,15 @@ function AdminTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 65,
+            height: 75,
             paddingBottom: 8,
             paddingTop: 6,
           },
-          tabBarLabel: () => null,
+          tabBarLabelStyle: {
+            fontFamily: Fonts.SemiBold,
+            fontSize: 11,
+            marginTop: 2,
+          },
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -464,11 +517,11 @@ function AdminTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard' },
-            { name: 'Members', icon: 'people' },
-            { name: 'E-Commerce', icon: 'shopping-cart' },
-            { name: 'Events', icon: 'event' },
-            { name: 'Profile', icon: 'person' },
+            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+            { name: 'Members', icon: 'people', label: 'Members' },
+            { name: 'E-Commerce', icon: 'shopping-cart', label: 'Shop' },
+            { name: 'Events', icon: 'event', label: 'Events' },
+            { name: 'Profile', icon: 'person', label: 'Profile' },
           ];
 
           return (
@@ -500,6 +553,12 @@ function AdminTabs() {
                       size={26} 
                       color={isFocused ? '#FF7722' : '#7f8c8d'} 
                     />
+                    <Text style={[
+                      styles.tabLabel,
+                      { color: isFocused ? '#FF7722' : '#7f8c8d' }
+                    ]}>
+                      {tab.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -515,6 +574,7 @@ function AdminTabs() {
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
+                  <Text style={styles.notificationLabel}></Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -531,7 +591,6 @@ function AdminTabs() {
   );
 }
 
-// ============ MEMBER TABS ============
 // ============ MEMBER TABS ============
 function MemberTabs() {
   let navigationRef = null;
@@ -555,11 +614,15 @@ function MemberTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 65,
+            height: 75,
             paddingBottom: 8,
             paddingTop: 6,
           },
-          tabBarLabel: () => null,
+          tabBarLabelStyle: {
+            fontFamily: Fonts.SemiBold,
+            fontSize: 11,
+            marginTop: 2,
+          },
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -567,11 +630,11 @@ function MemberTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard' },
-            { name: 'Events', icon: 'event' },
-            { name: 'Shop', icon: 'shopping-cart' },
-            { name: 'Donate', icon: 'favorite' },
-            { name: 'Profile', icon: 'person' },
+            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+            { name: 'Events', icon: 'event', label: 'Events' },
+            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
+            { name: 'Donate', icon: 'favorite', label: 'Donate' },
+            { name: 'Profile', icon: 'person', label: 'Profile' },
           ];
 
           return (
@@ -603,6 +666,12 @@ function MemberTabs() {
                       size={26} 
                       color={isFocused ? '#3b82f6' : '#7f8c8d'} 
                     />
+                    <Text style={[
+                      styles.tabLabel,
+                      { color: isFocused ? '#3b82f6' : '#7f8c8d' }
+                    ]}>
+                      {tab.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -618,6 +687,7 @@ function MemberTabs() {
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
+                  <Text style={styles.notificationLabel}></Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -657,11 +727,15 @@ function WorkingMemberTabs() {
             backgroundColor: '#ffffff',
             borderTopWidth: 1,
             borderTopColor: '#e8ecf1',
-            height: 65,
+            height: 75,
             paddingBottom: 8,
             paddingTop: 6,
           },
-          tabBarLabel: () => null,
+          tabBarLabelStyle: {
+            fontFamily: Fonts.SemiBold,
+            fontSize: 11,
+            marginTop: 2,
+          },
           headerShown: false,
         })}
         tabBar={(props) => {
@@ -669,11 +743,11 @@ function WorkingMemberTabs() {
           navigationRef = navigation;
           
           const tabs = [
-            { name: 'Dashboard', icon: 'dashboard' },
-            { name: 'Members', icon: 'people' },
-            { name: 'Shop', icon: 'shopping-cart' },
-            { name: 'Events', icon: 'event' },
-            { name: 'Profile', icon: 'person' },
+            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+            { name: 'Members', icon: 'people', label: 'Members' },
+            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
+            { name: 'Events', icon: 'event', label: 'Events' },
+            { name: 'Profile', icon: 'person', label: 'Profile' },
           ];
 
           return (
@@ -705,6 +779,12 @@ function WorkingMemberTabs() {
                       size={26} 
                       color={isFocused ? '#8b5cf6' : '#7f8c8d'} 
                     />
+                    <Text style={[
+                      styles.tabLabel,
+                      { color: isFocused ? '#8b5cf6' : '#7f8c8d' }
+                    ]}>
+                      {tab.label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -720,6 +800,7 @@ function WorkingMemberTabs() {
                   activeOpacity={0.8}
                 >
                   <MaterialIcons name="notifications" size={28} color="#ffffff" />
+                  <Text style={styles.notificationLabel}></Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -770,8 +851,10 @@ export default function App() {
         >
           {/* Public Tabs - Shows Home, Shop, Events, Profile */}
           <Stack.Screen name="PublicTabs" component={PublicTabs} />
+          
           {/* Member More Settings */}
-<Stack.Screen name="MemberMoreSettingsTabs" component={MemberMoreSettingsTabs} />
+          <Stack.Screen name="MemberMoreSettingsTabs" component={MemberMoreSettingsTabs} />
+          
           {/* Auth Screens */}
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -846,9 +929,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e8ecf1',
-    height: 65,
+    height: 75,
     paddingBottom: 8,
-    paddingTop: 6,
+    paddingTop: 4,
     alignItems: 'center',
     justifyContent: 'space-around',
     paddingHorizontal: 5,
@@ -858,19 +941,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: 2,
+  },
+  tabLabel: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 10,
+    marginTop: 2,
   },
   notificationWrapper: {
     position: 'absolute',
     top: -35,
     left: '50%',
-    marginLeft: -28,
+    marginLeft: -32,
     zIndex: 999,
+    alignItems: 'center',
+  },
+  notificationLabel: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 9,
+    color: '#ffffff',
+    marginTop: 1,
   },
   notificationButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -881,9 +976,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   adminNotificationButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#FF7722',
     justifyContent: 'center',
     alignItems: 'center',
@@ -894,9 +989,9 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   workingNotificationButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#8b5cf6',
     justifyContent: 'center',
     alignItems: 'center',

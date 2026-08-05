@@ -16,10 +16,10 @@ export default function ProfileScreen({ navigation }) {
   const [loginModalVisible, setLoginModalVisible] = useState(false);
 
   const menuItems = [
-    { icon: 'person', label: 'My Profile', color: '#3b82f6' },
+    { icon: 'person', label: 'My Profile', color: '#FF7722' },
     { icon: 'receipt', label: 'My Orders', color: '#10b981' },
     { icon: 'favorite', label: 'My Donations', color: '#ef4444' },
-    { icon: 'event', label: 'My Events', color: '#3b82f6' },
+    { icon: 'event', label: 'My Events', color: '#FF7722' },
     { icon: 'card-membership', label: 'ID Card', color: '#f59e0b' },
     { icon: 'verified', label: 'Certificate', color: '#06b6d4' },
     { icon: 'notifications', label: 'Notifications', color: '#ec4899' },
@@ -48,17 +48,20 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        {/* Saffron Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.avatarContainer}>
+              <View style={styles.avatarPlaceholder}>
+                <MaterialIcons name="person" size={50} color="#FF7722" />
+              </View>
             </View>
             <Text style={styles.greeting}>Welcome!</Text>
             <Text style={styles.subGreeting}>Please login to access all features</Text>
           </View>
         </View>
 
-        {/* Login/Register Buttons */}
+        {/* Login/Register Buttons - Saffron Theme */}
         <View style={styles.authButtonsContainer}>
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
             <MaterialIcons name="login" size={24} color="#ffffff" />
@@ -66,30 +69,12 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.registerButton} onPress={handleRegister} activeOpacity={0.8}>
-            <MaterialIcons name="person-add" size={24} color="#3b82f6" />
+            <MaterialIcons name="person-add" size={24} color="#FF7722" />
             <Text style={styles.registerButtonText}>Register</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          <Text style={styles.menuTitle}>Quick Access</Text>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.menuItem}
-              onPress={() => handleMenuItemPress(item)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: item.color + '15' }]}>
-                <MaterialIcons name={item.icon} size={22} color={item.color} />
-              </View>
-              <Text style={styles.menuLabel}>{item.label}</Text>
-              <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
-            </TouchableOpacity>
-          ))}
-        </View>
-
+        
         {/* About Section */}
         <View style={styles.aboutContainer}>
           <Text style={styles.aboutTitle}>About the App</Text>
@@ -114,11 +99,12 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
+  // Saffron Header
   header: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 30,
@@ -132,10 +118,13 @@ const styles = StyleSheet.create({
   avatarContainer: {
     marginBottom: 12,
   },
-  avatar: {
+  avatarPlaceholder: {
     width: 90,
     height: 90,
     borderRadius: 45,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 3,
     borderColor: 'rgba(255,255,255,0.4)',
   },
@@ -162,11 +151,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
-    shadowColor: '#3b82f6',
+    shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -187,7 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     borderWidth: 2,
-    borderColor: '#3b82f6',
+    borderColor: '#FF7722',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -197,7 +186,7 @@ const styles = StyleSheet.create({
   registerButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
-    color: '#3b82f6',
+    color: '#FF7722',
   },
 
   menuContainer: {
@@ -242,7 +231,7 @@ const styles = StyleSheet.create({
   aboutContainer: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 10,
     padding: 16,
     borderRadius: 16,
     shadowColor: '#000',
@@ -250,6 +239,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    marginTop: 10,
   },
   aboutTitle: {
     fontFamily: Fonts.SemiBold,
@@ -275,6 +265,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
+    marginTop: 40,
   },
   footerText: {
     fontFamily: Fonts.Regular,

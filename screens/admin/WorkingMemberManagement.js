@@ -1,10 +1,45 @@
+// screens/admin/WorkingMemberManagement.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, Image, ActivityIndicator, RefreshControl, FlatList, Switch } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  Image,
+  ActivityIndicator,
+  RefreshControl,
+  FlatList,
+  Switch
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, getDocs, updateDoc, doc, deleteDoc, query, where, orderBy, onSnapshot, getDoc, addDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  getDocs, 
+  updateDoc, 
+  doc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  getDoc, 
+  setDoc,
+  addDoc,
+  Timestamp,
+  runTransaction,
+  increment
+} from 'firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import { Fonts } from '../../config/fonts';
+import { getLevelDetails, getLevelByMemberCount, LEVELS } from '../../config/commissionLevels';
+import { WalletService } from '../../services/WalletService';
+import { CommissionService } from '../../services/CommissionService';
+import { LevelUpdateService } from '../../services/LevelUpdateService';
 
 const FILTERS = ['All', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -23,6 +58,8 @@ export default function WorkingMemberManagement() {
   const [commissionModalVisible, setCommissionModalVisible] = useState(false);
   const [commissionHistoryModalVisible, setCommissionHistoryModalVisible] = useState(false);
   const [commissionHistory, setCommissionHistory] = useState([]);
+  const [walletModalVisible, setWalletModalVisible] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState(null);
   const [promotionData, setPromotionData] = useState({
     memberId: '',
     memberName: '',
@@ -34,8 +71,8 @@ export default function WorkingMemberManagement() {
     memberId: '',
     memberName: '',
     amount: '',
+    type: 'direct',
     description: '',
-    period: 'monthly',
     status: 'pending'
   });
 
@@ -51,6 +88,21 @@ export default function WorkingMemberManagement() {
         const data = doc.data();
         const member = { id: doc.id, ...data };
         
+        // Get level details
+        const level = data.level || 'I';
+        const levelDetails = getLevelDetails(level);
+        member.levelTitle = levelDetails.title;
+        member.levelColor = levelDetails.color;
+        member.levelBadge = levelDetails.badge;
+        member.directCommission = levelDetails.directCommission;
+        member.secondaryCommission = levelDetails.secondaryCommission;
+        
+        // Count direct referrals
+        const directReferrals = data.directReferrals || [];
+        member.directReferralCount = directReferrals.length;
+        member.directReferrals = directReferrals;
+        
+        // Get registered members count (for display compatibility)
         const registeredQuery = query(
           collection(db, 'users'), 
           where('registeredBy', '==', doc.id)
@@ -62,38 +114,52 @@ export default function WorkingMemberManagement() {
           member.registeredMembersList.push({ id: regDoc.id, ...regDoc.data() });
         });
 
-        let totalDonations = 0;
-        for (const regMember of member.registeredMembersList) {
-          const donationsQuery = query(
-            collection(db, 'donations'),
-            where('memberId', '==', regMember.id),
-            where('status', '==', 'completed')
-          );
-          const donationsSnap = await getDocs(donationsQuery);
-          donationsSnap.forEach((don) => {
-            totalDonations += don.data().amount || 0;
-          });
+        // Get wallet data
+        try {
+          const wallet = await WalletService.getOrCreateWallet(doc.id);
+          member.walletBalance = wallet.balance || 0;
+          member.totalEarned = wallet.totalEarned || 0;
+          member.pendingCommission = wallet.pendingCommission || 0;
+        } catch (error) {
+          console.error('Error fetching wallet:', error);
+          member.walletBalance = 0;
+          member.totalEarned = 0;
+          member.pendingCommission = 0;
         }
-        member.totalDonations = totalDonations;
-        member.commissionEarned = totalDonations * 0.1;
-        member.commissionRate = data.commissionRate || 10;
 
-        if (totalDonations >= 50000) {
-          member.level = 'platinum';
-        } else if (totalDonations >= 25000) {
-          member.level = 'gold';
-        } else if (totalDonations >= 10000) {
-          member.level = 'silver';
+        // Check promotion eligibility based on new system
+        const nextLevelId = getNextLevelId(level);
+        if (nextLevelId) {
+          const nextLevel = getLevelDetails(nextLevelId);
+          const requiredMembers = nextLevel.minMembers;
+          member.promotionEligible = directReferrals.length >= requiredMembers;
+          member.membersNeededForPromotion = Math.max(0, requiredMembers - directReferrals.length);
         } else {
-          member.level = 'bronze';
+          member.promotionEligible = false;
+          member.membersNeededForPromotion = 0;
         }
 
-        member.promotionEligible = totalDonations >= 50000 && data.level !== 'platinum';
         member.promotionPending = data.promotionPending || false;
-        member.commissionHistory = data.commissionHistory || [];
+        
+        // Get commission history
+        const commissionQuery = query(
+          collection(db, 'walletTransactions'),
+          where('userId', '==', doc.id),
+          where('type', 'in', ['direct_commission', 'secondary_commission']),
+          orderBy('createdAt', 'desc')
+        );
+        const commissionSnap = await getDocs(commissionQuery);
+        const history = [];
+        commissionSnap.forEach((cDoc) => {
+          history.push({ id: cDoc.id, ...cDoc.data() });
+        });
+        member.commissionHistory = history;
 
         membersList.push(member);
       }
+      
+      // Sort by total earned (highest first)
+      membersList.sort((a, b) => (b.totalEarned || 0) - (a.totalEarned || 0));
       
       setWorkingMembers(membersList);
       applyFilters(membersList, search, filterStatus, filterLevel);
@@ -103,13 +169,23 @@ export default function WorkingMemberManagement() {
     return () => unsubscribe();
   };
 
+  const getNextLevelId = (currentLevelId) => {
+    const levels = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+    const currentIndex = levels.indexOf(currentLevelId);
+    if (currentIndex < levels.length - 1) {
+      return levels[currentIndex + 1];
+    }
+    return null;
+  };
+
   const applyFilters = (data, searchText, status, level) => {
     let filtered = data;
 
     if (searchText) {
       filtered = filtered.filter(member =>
         member.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        member.email?.toLowerCase().includes(searchText.toLowerCase())
+        member.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+        member.levelTitle?.toLowerCase().includes(searchText.toLowerCase())
       );
     }
 
@@ -118,7 +194,7 @@ export default function WorkingMemberManagement() {
     }
 
     if (level !== 'All') {
-      filtered = filtered.filter(member => member.level === level.toLowerCase());
+      filtered = filtered.filter(member => member.levelTitle?.toLowerCase() === level.toLowerCase());
     }
 
     setFilteredMembers(filtered);
@@ -158,25 +234,36 @@ export default function WorkingMemberManagement() {
     }
 
     try {
-      await updateDoc(doc(db, 'users', promotionData.memberId), {
-        level: promotionData.newLevel,
-        promotionPending: false,
-        promotionDate: new Date().toISOString(),
-        commissionRate: parseFloat(promotionData.commissionRate) || 10,
-        updatedAt: new Date().toISOString()
+      const memberRef = doc(db, 'users', promotionData.memberId);
+      
+      await runTransaction(db, async (transaction) => {
+        const memberDoc = await transaction.get(memberRef);
+        if (!memberDoc.exists()) {
+          throw new Error('Member not found');
+        }
+
+        // Update member level
+        transaction.update(memberRef, {
+          level: promotionData.newLevel,
+          promotionPending: false,
+          promotionDate: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Log promotion
+        const promotionRef = doc(collection(db, 'promotions'));
+        transaction.set(promotionRef, {
+          memberId: promotionData.memberId,
+          memberName: promotionData.memberName,
+          fromLevel: promotionData.currentLevel,
+          toLevel: promotionData.newLevel,
+          date: Timestamp.now(),
+          approvedBy: auth.currentUser?.uid,
+          approvedByName: auth.currentUser?.displayName || 'Admin'
+        });
       });
 
-      await addDoc(collection(db, 'promotions'), {
-        memberId: promotionData.memberId,
-        memberName: promotionData.memberName,
-        fromLevel: promotionData.currentLevel,
-        toLevel: promotionData.newLevel,
-        date: new Date().toISOString(),
-        approvedBy: auth.currentUser?.uid,
-        approvedByName: auth.currentUser?.displayName || 'Admin'
-      });
-
-      Alert.alert('Success', `${promotionData.memberName} promoted to ${promotionData.newLevel}`);
+      Alert.alert('Success', `${promotionData.memberName} promoted to ${getLevelDetails(promotionData.newLevel).title}`);
       setPromotionModalVisible(false);
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -190,36 +277,21 @@ export default function WorkingMemberManagement() {
     }
 
     try {
-      const commission = {
-        amount: parseFloat(commissionData.amount),
-        description: commissionData.description || 'Commission payment',
-        period: commissionData.period || 'monthly',
-        status: commissionData.status || 'pending',
-        date: new Date().toISOString(),
-        memberName: commissionData.memberName
-      };
-
-      await addDoc(collection(db, 'commissions'), {
-        memberId: commissionData.memberId,
-        memberName: commissionData.memberName,
-        amount: parseFloat(commissionData.amount),
-        description: commissionData.description || 'Commission payment',
-        period: commissionData.period || 'monthly',
-        status: commissionData.status || 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
+      const amount = parseFloat(commissionData.amount);
       const memberRef = doc(db, 'users', commissionData.memberId);
       const memberDoc = await getDoc(memberRef);
-      const existingHistory = memberDoc.data()?.commissionHistory || [];
-      
-      await updateDoc(memberRef, {
-        commissionHistory: [...existingHistory, commission],
-        updatedAt: new Date().toISOString()
-      });
+      const memberData = memberDoc.data();
 
-      Alert.alert('Success', `₹${commissionData.amount} Commission added for ${commissionData.memberName}`);
+      // Add commission using WalletService
+      await WalletService.addCommission(
+        commissionData.memberId,
+        amount,
+        commissionData.type === 'direct' ? 'direct_commission' : 'secondary_commission',
+        commissionData.description || `${commissionData.type} commission payment`,
+        `admin_${Date.now()}`
+      );
+
+      Alert.alert('Success', `₹${amount} Commission added for ${commissionData.memberName}`);
       setCommissionModalVisible(false);
       resetCommissionForm();
     } catch (error) {
@@ -230,11 +302,33 @@ export default function WorkingMemberManagement() {
   const viewCommissionHistory = async (member) => {
     setSelectedMember(member);
     try {
-      const memberRef = doc(db, 'users', member.id);
-      const memberDoc = await getDoc(memberRef);
-      const history = memberDoc.data()?.commissionHistory || [];
+      const q = query(
+        collection(db, 'walletTransactions'),
+        where('userId', '==', member.id),
+        where('type', 'in', ['direct_commission', 'secondary_commission']),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const history = [];
+      snapshot.forEach((doc) => {
+        history.push({ id: doc.id, ...doc.data() });
+      });
       setCommissionHistory(history);
       setCommissionHistoryModalVisible(true);
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const viewWallet = async (member) => {
+    try {
+      const wallet = await WalletService.getOrCreateWallet(member.id);
+      setSelectedWallet({
+        ...wallet,
+        memberName: member.fullName || member.name,
+        memberId: member.id
+      });
+      setWalletModalVisible(true);
     } catch (error) {
       Alert.alert('Error', error.message);
     }
@@ -245,8 +339,8 @@ export default function WorkingMemberManagement() {
       memberId: '',
       memberName: '',
       amount: '',
+      type: 'direct',
       description: '',
-      period: 'monthly',
       status: 'pending'
     });
   };
@@ -259,7 +353,7 @@ export default function WorkingMemberManagement() {
 
   const getFilterCount = (filter) => {
     if (filter === 'All') return workingMembers.length;
-    return workingMembers.filter(m => m.level === filter.toLowerCase()).length;
+    return workingMembers.filter(m => m.levelTitle?.toLowerCase() === filter.toLowerCase()).length;
   };
 
   const getStatusCount = (status) => {
@@ -267,24 +361,22 @@ export default function WorkingMemberManagement() {
     return workingMembers.filter(m => m.status === status).length;
   };
 
-  const getLevelColor = (level) => {
-    switch(level) {
-      case 'platinum': return '#8b5cf6';
-      case 'gold': return '#f59e0b';
-      case 'silver': return '#9ca3af';
-      case 'bronze': return '#cd7f32';
-      default: return '#6b7280';
-    }
+  const getLevelColor = (levelId) => {
+    const details = getLevelDetails(levelId);
+    return details.color || '#6b7280';
   };
 
-  const getLevelIcon = (level) => {
-    switch(level) {
-      case 'platinum': return 'stars';
-      case 'gold': return 'star';
-      case 'silver': return 'star-half';
-      case 'bronze': return 'grade';
-      default: return 'circle';
-    }
+  const getLevelIcon = (levelId) => {
+    const icons = {
+      'I': 'grade',
+      'II': 'star-half',
+      'III': 'star',
+      'IV': 'stars',
+      'V': 'military-tech',
+      'VI': 'workspace-premium',
+      'VII': 'emoji-events'
+    };
+    return icons[levelId] || 'circle';
   };
 
   const getStatusColor = (status) => {
@@ -324,6 +416,7 @@ export default function WorkingMemberManagement() {
     const levelColor = getLevelColor(member.level);
     const levelIcon = getLevelIcon(member.level);
     const statusColor = getStatusColor(member.status);
+    const levelDetails = getLevelDetails(member.level);
 
     return (
       <TouchableOpacity 
@@ -361,16 +454,16 @@ export default function WorkingMemberManagement() {
 
         <View style={styles.cardStats}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{member.registeredMembers || 0}</Text>
-            <Text style={styles.statLabel}>Members</Text>
+            <Text style={styles.statValue}>{member.directReferralCount || 0}</Text>
+            <Text style={styles.statLabel}>Direct Members</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹{member.totalDonations?.toLocaleString() || 0}</Text>
-            <Text style={styles.statLabel}>Donations</Text>
+            <Text style={styles.statValue}>₹{member.totalEarned?.toLocaleString() || 0}</Text>
+            <Text style={styles.statLabel}>Total Earned</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹{member.commissionEarned?.toLocaleString() || 0}</Text>
-            <Text style={styles.statLabel}>Commission</Text>
+            <Text style={styles.statValue}>₹{member.pendingCommission?.toLocaleString() || 0}</Text>
+            <Text style={styles.statLabel}>Pending</Text>
           </View>
         </View>
 
@@ -378,19 +471,18 @@ export default function WorkingMemberManagement() {
           <View style={[styles.levelBadge, { backgroundColor: levelColor + '15' }]}>
             <MaterialIcons name={levelIcon} size={14} color={levelColor} />
             <Text style={[styles.levelBadgeText, { color: levelColor }]}>
-              {member.level?.toUpperCase() || 'N/A'}
+              {levelDetails?.title?.toUpperCase() || 'N/A'}
+            </Text>
+          </View>
+          <View style={styles.commissionInfo}>
+            <Text style={styles.commissionRateText}>
+              {member.directCommission || 0}% / {member.secondaryCommission || 0}%
             </Text>
           </View>
           {member.promotionEligible && (
             <View style={styles.promotionBadge}>
               <MaterialIcons name="stars" size={12} color="#10b981" />
               <Text style={styles.promotionText}>Eligible</Text>
-            </View>
-          )}
-          {member.promotionPending && (
-            <View style={styles.pendingBadge}>
-              <MaterialIcons name="pending" size={12} color="#f59e0b" />
-              <Text style={styles.pendingText}>Pending</Text>
             </View>
           )}
         </View>
@@ -403,15 +495,15 @@ export default function WorkingMemberManagement() {
                 memberId: member.id,
                 memberName: member.fullName || member.name || 'Unknown',
                 amount: '',
+                type: 'direct',
                 description: '',
-                period: 'monthly',
                 status: 'pending'
               });
               setCommissionModalVisible(true);
             }}
           >
             <MaterialIcons name="attach-money" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Commission</Text>
+            <Text style={styles.actionButtonText}>Add Commission</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.actionButton, styles.historyButton]}
@@ -420,18 +512,24 @@ export default function WorkingMemberManagement() {
             <MaterialIcons name="history" size={14} color="#ffffff" />
             <Text style={styles.actionButtonText}>History</Text>
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.walletButton]}
+            onPress={() => viewWallet(member)}
+          >
+            <MaterialIcons name="account-balance-wallet" size={14} color="#ffffff" />
+            <Text style={styles.actionButtonText}>Wallet</Text>
+          </TouchableOpacity>
           {member.promotionEligible && (
             <TouchableOpacity 
               style={[styles.actionButton, styles.promoteButton]}
               onPress={() => {
+                const nextLevelId = getNextLevelId(member.level);
                 setPromotionData({
                   memberId: member.id,
                   memberName: member.fullName,
                   currentLevel: member.level,
-                  newLevel: member.level === 'bronze' ? 'silver' :
-                           member.level === 'silver' ? 'gold' : 'platinum',
-                  commissionRate: member.level === 'bronze' ? '15' :
-                                 member.level === 'silver' ? '20' : '25'
+                  newLevel: nextLevelId || member.level,
+                  commissionRate: ''
                 });
                 setPromotionModalVisible(true);
               }}
@@ -473,6 +571,60 @@ export default function WorkingMemberManagement() {
     );
   };
 
+  // Wallet Modal
+  const WalletModal = () => {
+    if (!selectedWallet) return null;
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={walletModalVisible}
+        onRequestClose={() => setWalletModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Wallet Details</Text>
+              <TouchableOpacity onPress={() => setWalletModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.walletSummary}>
+              <Text style={styles.walletMemberName}>{selectedWallet.memberName}</Text>
+              <View style={styles.walletBalanceContainer}>
+                <Text style={styles.walletBalanceLabel}>Available Balance</Text>
+                <Text style={styles.walletBalance}>₹{selectedWallet.balance?.toLocaleString() || 0}</Text>
+              </View>
+              <View style={styles.walletStats}>
+                <View style={styles.walletStat}>
+                  <Text style={styles.walletStatValue}>₹{selectedWallet.totalEarned?.toLocaleString() || 0}</Text>
+                  <Text style={styles.walletStatLabel}>Total Earned</Text>
+                </View>
+                <View style={styles.walletStat}>
+                  <Text style={styles.walletStatValue}>₹{selectedWallet.pendingCommission?.toLocaleString() || 0}</Text>
+                  <Text style={styles.walletStatLabel}>Pending</Text>
+                </View>
+                <View style={styles.walletStat}>
+                  <Text style={styles.walletStatValue}>₹{selectedWallet.totalWithdrawn?.toLocaleString() || 0}</Text>
+                  <Text style={styles.walletStatLabel}>Withdrawn</Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setWalletModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Saffron Header */}
@@ -482,7 +634,12 @@ export default function WorkingMemberManagement() {
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Working Members</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={onRefresh}
+          >
+            <MaterialIcons name="refresh" size={24} color="#ffffff" />
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar inside header */}
@@ -546,38 +703,20 @@ export default function WorkingMemberManagement() {
               active={filterLevel === 'All'}
               onPress={() => handleFilterLevel('All')}
             />
-            <StatCard 
-              label="Bronze" 
-              count={workingMembers.filter(m => m.level === 'bronze').length} 
-              icon="grade" 
-              color="#ffffff"
-              active={filterLevel === 'Bronze'}
-              onPress={() => handleFilterLevel('Bronze')}
-            />
-            <StatCard 
-              label="Silver" 
-              count={workingMembers.filter(m => m.level === 'silver').length} 
-              icon="star-half" 
-              color="#ffffff"
-              active={filterLevel === 'Silver'}
-              onPress={() => handleFilterLevel('Silver')}
-            />
-            <StatCard 
-              label="Gold" 
-              count={workingMembers.filter(m => m.level === 'gold').length} 
-              icon="star" 
-              color="#ffffff"
-              active={filterLevel === 'Gold'}
-              onPress={() => handleFilterLevel('Gold')}
-            />
-            <StatCard 
-              label="Platinum" 
-              count={workingMembers.filter(m => m.level === 'platinum').length} 
-              icon="stars" 
-              color="#ffffff"
-              active={filterLevel === 'Platinum'}
-              onPress={() => handleFilterLevel('Platinum')}
-            />
+            {Object.keys(LEVELS).map((key) => {
+              const level = getLevelDetails(key);
+              return (
+                <StatCard 
+                  key={key}
+                  label={level.title} 
+                  count={workingMembers.filter(m => m.level === key).length} 
+                  icon="star" 
+                  color="#ffffff"
+                  active={filterLevel === level.title}
+                  onPress={() => handleFilterLevel(level.title)}
+                />
+              );
+            })}
           </ScrollView>
         </View>
       </View>
@@ -637,7 +776,7 @@ export default function WorkingMemberManagement() {
                   <View style={[styles.detailLevelBadge, { backgroundColor: getLevelColor(selectedMember.level) + '15' }]}>
                     <MaterialIcons name={getLevelIcon(selectedMember.level)} size={16} color={getLevelColor(selectedMember.level)} />
                     <Text style={[styles.detailLevelText, { color: getLevelColor(selectedMember.level) }]}>
-                      {selectedMember.level?.toUpperCase()}
+                      {getLevelDetails(selectedMember.level)?.title?.toUpperCase() || 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -646,32 +785,41 @@ export default function WorkingMemberManagement() {
                   <Text style={styles.detailSectionTitle}>Performance</Text>
                   <View style={styles.detailStats}>
                     <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>{selectedMember.registeredMembers || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Members</Text>
+                      <Text style={styles.detailStatValue}>{selectedMember.directReferralCount || 0}</Text>
+                      <Text style={styles.detailStatLabel}>Direct Members</Text>
                     </View>
                     <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>₹{selectedMember.totalDonations?.toLocaleString() || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Donations</Text>
+                      <Text style={styles.detailStatValue}>₹{selectedMember.totalEarned?.toLocaleString() || 0}</Text>
+                      <Text style={styles.detailStatLabel}>Total Earned</Text>
                     </View>
                     <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>₹{selectedMember.commissionEarned?.toLocaleString() || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Commission</Text>
+                      <Text style={styles.detailStatValue}>₹{selectedMember.pendingCommission?.toLocaleString() || 0}</Text>
+                      <Text style={styles.detailStatLabel}>Pending Commission</Text>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>Registered Members</Text>
-                  {selectedMember.registeredMembersList?.length === 0 ? (
-                    <Text style={styles.detailEmptyText}>No members registered yet</Text>
+                  <Text style={styles.detailSectionTitle}>Commission Rates</Text>
+                  <View style={styles.detailCommissionRow}>
+                    <Text style={styles.detailLabel}>Direct Commission:</Text>
+                    <Text style={styles.detailValue}>{selectedMember.directCommission || 0}%</Text>
+                  </View>
+                  <View style={styles.detailCommissionRow}>
+                    <Text style={styles.detailLabel}>Secondary Commission:</Text>
+                    <Text style={styles.detailValue}>{selectedMember.secondaryCommission || 0}%</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Direct Members</Text>
+                  {selectedMember.directReferrals?.length === 0 ? (
+                    <Text style={styles.detailEmptyText}>No direct members yet</Text>
                   ) : (
-                    selectedMember.registeredMembersList?.map((member, index) => (
+                    selectedMember.directReferrals?.map((memberId, index) => (
                       <View key={index} style={styles.registeredMemberItem}>
                         <Text style={styles.registeredMemberName}>
-                          {member.fullName || 'Unknown'}
-                        </Text>
-                        <Text style={styles.registeredMemberDetail}>
-                          {member.email}
+                          Member ID: {memberId.slice(0, 12)}...
                         </Text>
                       </View>
                     ))
@@ -689,13 +837,23 @@ export default function WorkingMemberManagement() {
                     </View>
                   </View>
                   <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Commission Rate:</Text>
-                    <Text style={styles.detailValue}>{selectedMember.commissionRate || 10}%</Text>
+                    <Text style={styles.detailLabel}>Level:</Text>
+                    <Text style={styles.detailValue}>
+                      {getLevelDetails(selectedMember.level)?.title || selectedMember.level}
+                    </Text>
                   </View>
-                  {selectedMember.promotionPending && (
+                  <View style={styles.detailStatusRow}>
+                    <Text style={styles.detailLabel}>Wallet Balance:</Text>
+                    <Text style={[styles.detailValue, { color: '#10b981' }]}>
+                      ₹{selectedMember.walletBalance?.toLocaleString() || 0}
+                    </Text>
+                  </View>
+                  {selectedMember.promotionEligible && (
                     <View style={styles.detailStatusRow}>
                       <Text style={styles.detailLabel}>Promotion:</Text>
-                      <Text style={styles.detailPendingText}>Pending</Text>
+                      <Text style={[styles.detailValue, { color: '#10b981' }]}>
+                        Eligible ({selectedMember.membersNeededForPromotion || 0} more members needed)
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -736,41 +894,34 @@ export default function WorkingMemberManagement() {
             <View style={styles.promotionInfo}>
               <Text style={styles.promotionLabel}>Current Level</Text>
               <Text style={styles.promotionValue}>
-                {promotionData.currentLevel?.toUpperCase()}
+                {getLevelDetails(promotionData.currentLevel)?.title || promotionData.currentLevel}
               </Text>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>New Level</Text>
               <View style={styles.levelOptions}>
-                {['bronze', 'silver', 'gold', 'platinum'].map((level) => (
-                  <TouchableOpacity
-                    key={level}
-                    style={[styles.levelOption, promotionData.newLevel === level && styles.levelOptionActive]}
-                    onPress={() => setPromotionData({...promotionData, newLevel: level})}
-                  >
-                    <MaterialIcons 
-                      name={getLevelIcon(level)} 
-                      size={16} 
-                      color={promotionData.newLevel === level ? '#ffffff' : getLevelColor(level)} 
-                    />
-                    <Text style={[styles.levelOptionText, promotionData.newLevel === level && styles.levelOptionTextActive]}>
-                      {level.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((level) => {
+                  const levelDetails = getLevelDetails(level);
+                  const isActive = promotionData.newLevel === level;
+                  return (
+                    <TouchableOpacity
+                      key={level}
+                      style={[styles.levelOption, isActive && styles.levelOptionActive]}
+                      onPress={() => setPromotionData({...promotionData, newLevel: level})}
+                    >
+                      <MaterialIcons 
+                        name={getLevelIcon(level)} 
+                        size={16} 
+                        color={isActive ? '#ffffff' : getLevelColor(level)} 
+                      />
+                      <Text style={[styles.levelOptionText, isActive && styles.levelOptionTextActive]}>
+                        {levelDetails.title}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Commission Rate (%)</Text>
-              <TextInput
-                style={styles.formInput}
-                value={promotionData.commissionRate}
-                onChangeText={(text) => setPromotionData({...promotionData, commissionRate: text})}
-                keyboardType="numeric"
-                placeholder="Enter commission rate"
-              />
             </View>
 
             <TouchableOpacity style={styles.promoteConfirmButton} onPress={handlePromotion}>
@@ -814,6 +965,28 @@ export default function WorkingMemberManagement() {
             </View>
 
             <View style={styles.formField}>
+              <Text style={styles.formLabel}>Type</Text>
+              <View style={styles.typeToggle}>
+                <TouchableOpacity
+                  style={[styles.typeButton, commissionData.type === 'direct' && styles.typeButtonActive]}
+                  onPress={() => setCommissionData({...commissionData, type: 'direct'})}
+                >
+                  <Text style={[styles.typeButtonText, commissionData.type === 'direct' && styles.typeButtonTextActive]}>
+                    Direct
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, commissionData.type === 'secondary' && styles.typeButtonActive]}
+                  onPress={() => setCommissionData({...commissionData, type: 'secondary'})}
+                >
+                  <Text style={[styles.typeButtonText, commissionData.type === 'secondary' && styles.typeButtonTextActive]}>
+                    Secondary
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.formField}>
               <Text style={styles.formLabel}>Description</Text>
               <TextInput
                 style={[styles.formInput, styles.formTextArea]}
@@ -826,36 +999,24 @@ export default function WorkingMemberManagement() {
             </View>
 
             <View style={styles.formField}>
-              <Text style={styles.formLabel}>Period</Text>
-              <View style={styles.periodToggle}>
-                {['monthly', 'quarterly', 'yearly', 'one-time'].map((period) => (
-                  <TouchableOpacity
-                    key={period}
-                    style={[styles.periodButton, commissionData.period === period && styles.periodButtonActive]}
-                    onPress={() => setCommissionData({...commissionData, period: period})}
-                  >
-                    <Text style={[styles.periodButtonText, commissionData.period === period && styles.periodButtonTextActive]}>
-                      {period.charAt(0).toUpperCase() + period.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formField}>
               <Text style={styles.formLabel}>Status</Text>
               <View style={styles.statusToggle}>
-                {['pending', 'paid', 'cancelled'].map((status) => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[styles.statusButton, commissionData.status === status && styles.statusButtonActive]}
-                    onPress={() => setCommissionData({...commissionData, status: status})}
-                  >
-                    <Text style={[styles.statusButtonText, commissionData.status === status && styles.statusButtonTextActive]}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity
+                  style={[styles.statusButton, commissionData.status === 'pending' && styles.statusButtonActive]}
+                  onPress={() => setCommissionData({...commissionData, status: 'pending'})}
+                >
+                  <Text style={[styles.statusButtonText, commissionData.status === 'pending' && styles.statusButtonTextActive]}>
+                    Pending
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.statusButton, commissionData.status === 'paid' && styles.statusButtonActive]}
+                  onPress={() => setCommissionData({...commissionData, status: 'paid'})}
+                >
+                  <Text style={[styles.statusButtonText, commissionData.status === 'paid' && styles.statusButtonTextActive]}>
+                    Paid
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -891,22 +1052,36 @@ export default function WorkingMemberManagement() {
                 <Text style={styles.emptyText}>No commission history</Text>
               </View>
             ) : (
-              commissionHistory.map((item, index) => (
-                <View key={index} style={styles.historyItem}>
-                  <View style={styles.historyHeader}>
-                    <Text style={styles.historyAmount}>₹{item.amount}</Text>
-                    <View style={[styles.historyStatus, { 
-                      backgroundColor: item.status === 'paid' ? '#10b981' : 
-                                     item.status === 'pending' ? '#f59e0b' : '#ef4444' 
-                    }]}>
-                      <Text style={styles.historyStatusText}>{item.status}</Text>
+              commissionHistory.map((item, index) => {
+                const isDirect = item.type === 'direct_commission';
+                return (
+                  <View key={index} style={styles.historyItem}>
+                    <View style={styles.historyHeader}>
+                      <View>
+                        <Text style={styles.historyAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
+                        <Text style={styles.historyType}>
+                          {isDirect ? 'Direct' : 'Secondary'} Commission
+                        </Text>
+                      </View>
+                      <View style={[styles.historyStatus, { 
+                        backgroundColor: item.status === 'paid' || item.status === 'completed' ? '#10b981' : 
+                                       item.status === 'pending' ? '#f59e0b' : '#ef4444' 
+                      }]}>
+                        <Text style={styles.historyStatusText}>
+                          {item.status === 'paid' || item.status === 'completed' ? 'Paid' : 
+                           item.status === 'pending' ? 'Pending' : 'Failed'}
+                        </Text>
+                      </View>
                     </View>
+                    {item.description && (
+                      <Text style={styles.historyDescription}>{item.description}</Text>
+                    )}
+                    <Text style={styles.historyDate}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
+                    </Text>
                   </View>
-                  <Text style={styles.historyDescription}>{item.description || 'No description'}</Text>
-                  <Text style={styles.historyDate}>{item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}</Text>
-                  <Text style={styles.historyPeriod}>Period: {item.period}</Text>
-                </View>
-              ))
+                );
+              })
             )}
 
             <TouchableOpacity 
@@ -918,6 +1093,9 @@ export default function WorkingMemberManagement() {
           </View>
         </View>
       </Modal>
+
+      {/* Wallet Modal */}
+      <WalletModal />
     </View>
   );
 }
@@ -952,6 +1130,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+  },
+  refreshButton: {
+    padding: 4,
   },
 
   // Search inside header
@@ -1164,6 +1345,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
   },
+  commissionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  commissionRateText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#6b7280',
+  },
   promotionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1177,20 +1368,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#10b981',
-  },
-  pendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    gap: 4,
-  },
-  pendingText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 10,
-    color: '#f59e0b',
   },
   cardActions: {
     flexDirection: 'row',
@@ -1215,6 +1392,9 @@ const styles = StyleSheet.create({
   },
   historyButton: {
     backgroundColor: '#06b6d4',
+  },
+  walletButton: {
+    backgroundColor: '#10b981',
   },
   approveButton: {
     backgroundColor: '#10b981',
@@ -1342,6 +1522,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+  },
+  detailCommissionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
   },
   registeredMemberItem: {
     paddingVertical: 6,
@@ -1482,11 +1667,11 @@ const styles = StyleSheet.create({
   levelOptionTextActive: {
     color: '#ffffff',
   },
-  periodToggle: {
+  typeToggle: {
     flexDirection: 'row',
     gap: 6,
   },
-  periodButton: {
+  typeButton: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 6,
@@ -1494,16 +1679,16 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     alignItems: 'center',
   },
-  periodButtonActive: {
+  typeButtonActive: {
     backgroundColor: '#8b5cf6',
     borderColor: '#8b5cf6',
   },
-  periodButtonText: {
+  typeButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
+    fontSize: 12,
     color: '#6b7280',
   },
-  periodButtonTextActive: {
+  typeButtonTextActive: {
     color: '#ffffff',
   },
   statusToggle: {
@@ -1583,6 +1768,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
   },
+  historyType: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
   historyStatus: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -1605,16 +1796,58 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginTop: 2,
   },
-  historyPeriod: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
-  },
   emptyText: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+  },
+
+  // Wallet Modal
+  walletSummary: {
+    padding: 16,
+  },
+  walletMemberName: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  walletBalanceContainer: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  walletBalanceLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  walletBalance: {
+    fontFamily: Fonts.Bold,
+    fontSize: 32,
+    color: '#10b981',
+    marginTop: 4,
+  },
+  walletStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  walletStat: {
+    alignItems: 'center',
+  },
+  walletStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  walletStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
   },
 });

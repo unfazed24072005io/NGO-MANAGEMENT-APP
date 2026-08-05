@@ -1,3 +1,4 @@
+// screens/RegisterScreen.js
 import React, { useState } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
@@ -66,7 +67,6 @@ export default function RegisterScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      // Format phone number with country code
       let formattedNumber = formData.phone;
       if (!formattedNumber.startsWith('+')) {
         formattedNumber = `+91${formattedNumber}`;
@@ -97,7 +97,6 @@ export default function RegisterScreen({ navigation, route }) {
       return;
     }
 
-    // Validate other required fields
     if (!formData.fullName.trim()) {
       Alert.alert('Error', 'Please enter your full name');
       return;
@@ -112,7 +111,6 @@ export default function RegisterScreen({ navigation, route }) {
       const userId = user.uid;
       const finalRole = isDonationFlow ? 'donor' : role;
 
-      // Base user data
       const userData = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase() || '',
@@ -129,7 +127,6 @@ export default function RegisterScreen({ navigation, route }) {
         updatedAt: new Date().toISOString(),
       };
 
-      // Save to Firestore
       if (finalRole === 'donor') {
         await setDoc(doc(db, 'donors', userId), {
           ...userData,
@@ -141,7 +138,6 @@ export default function RegisterScreen({ navigation, route }) {
         await setDoc(doc(db, 'users', userId), userData);
       }
 
-      // Create wallet for working member
       if (finalRole === 'working') {
         await setDoc(doc(db, 'wallets', userId), {
           balance: 0,
@@ -153,7 +149,6 @@ export default function RegisterScreen({ navigation, route }) {
         });
       }
 
-      // Show success message
       let successMessage = 'Your registration has been submitted for approval. You will be notified once approved.';
       let navigateTo = 'Login';
 
@@ -197,7 +192,6 @@ export default function RegisterScreen({ navigation, route }) {
   };
 
   const handleEmailRegister = async () => {
-    // Validate all required fields
     if (!formData.fullName.trim()) {
       Alert.alert('Error', 'Please enter your full name');
       return;
@@ -348,7 +342,7 @@ export default function RegisterScreen({ navigation, route }) {
     }
   };
 
-  // ============ STEP 1: Role Selection (Hidden for Donation Flow) ============
+  // ============ STEP 1: Role Selection ============
   const renderRoleSelection = () => {
     if (isDonationFlow) {
       setTimeout(() => setStep(2), 100);
@@ -364,7 +358,7 @@ export default function RegisterScreen({ navigation, route }) {
           style={[styles.roleCard, role === 'member' && styles.roleCardActive]}
           onPress={() => setRole('member')}
         >
-          <View style={[styles.roleIcon, { backgroundColor: role === 'member' ? '#3b82f6' : '#e5e7eb' }]}>
+          <View style={[styles.roleIcon, { backgroundColor: role === 'member' ? '#FF7722' : '#e5e7eb' }]}>
             <MaterialIcons name="person" size={24} color={role === 'member' ? '#ffffff' : '#6b7280'} />
           </View>
           <View style={styles.roleContent}>
@@ -372,7 +366,7 @@ export default function RegisterScreen({ navigation, route }) {
             <Text style={styles.roleDescription}>Register as a regular member</Text>
           </View>
           {role === 'member' && (
-            <MaterialIcons name="check-circle" size={20} color="#3b82f6" />
+            <MaterialIcons name="check-circle" size={20} color="#FF7722" />
           )}
         </TouchableOpacity>
 
@@ -427,7 +421,7 @@ export default function RegisterScreen({ navigation, route }) {
         style={[styles.methodCard, registrationMethod === 'email' && styles.methodCardActive]}
         onPress={() => setRegistrationMethod('email')}
       >
-        <View style={[styles.methodIcon, { backgroundColor: registrationMethod === 'email' ? '#3b82f6' : '#e5e7eb' }]}>
+        <View style={[styles.methodIcon, { backgroundColor: registrationMethod === 'email' ? '#FF7722' : '#e5e7eb' }]}>
           <MaterialIcons name="email" size={24} color={registrationMethod === 'email' ? '#ffffff' : '#6b7280'} />
         </View>
         <View style={styles.methodContent}>
@@ -435,7 +429,7 @@ export default function RegisterScreen({ navigation, route }) {
           <Text style={styles.methodDescription}>Register using your email and password</Text>
         </View>
         {registrationMethod === 'email' && (
-          <MaterialIcons name="check-circle" size={20} color="#3b82f6" />
+          <MaterialIcons name="check-circle" size={20} color="#FF7722" />
         )}
       </TouchableOpacity>
 
@@ -553,7 +547,7 @@ export default function RegisterScreen({ navigation, route }) {
     </View>
   );
 
-  // ============ STEP 4: Address & Password (Email only) ============
+  // ============ STEP 4: Address & Password ============
   const renderAddressAndPassword = () => (
     <View>
       <Text style={styles.stepTitle}>Address & Security</Text>
@@ -617,8 +611,8 @@ export default function RegisterScreen({ navigation, route }) {
 
       <View style={styles.uploadContainer}>
         <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('profilePhoto')}>
-          <MaterialIcons name="photo-camera" size={24} color={isDonationFlow ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6')} />
-          <Text style={[styles.uploadButtonText, { color: isDonationFlow ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6') }]}>
+          <MaterialIcons name="photo-camera" size={24} color="#FF7722" />
+          <Text style={[styles.uploadButtonText, { color: '#FF7722' }]}>
             {formData.profilePhoto ? 'Change Photo' : 'Upload Profile Photo'}
           </Text>
         </TouchableOpacity>
@@ -654,8 +648,8 @@ export default function RegisterScreen({ navigation, route }) {
 
         <View style={styles.uploadContainer}>
           <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharFront')}>
-            <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+            <MaterialIcons name="credit-card" size={24} color="#FF7722" />
+            <Text style={[styles.uploadButtonText, { color: '#FF7722' }]}>
               {formData.aadharFront ? 'Change Aadhar Front' : 'Upload Aadhar Front'}
             </Text>
           </TouchableOpacity>
@@ -689,8 +683,8 @@ export default function RegisterScreen({ navigation, route }) {
 
         <View style={styles.uploadContainer}>
           <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('aadharBack')}>
-            <MaterialIcons name="credit-card" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+            <MaterialIcons name="credit-card" size={24} color="#FF7722" />
+            <Text style={[styles.uploadButtonText, { color: '#FF7722' }]}>
               {formData.aadharBack ? 'Change Aadhar Back' : 'Upload Aadhar Back'}
             </Text>
           </TouchableOpacity>
@@ -724,8 +718,8 @@ export default function RegisterScreen({ navigation, route }) {
 
         <View style={styles.uploadContainer}>
           <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('panCard')}>
-            <MaterialIcons name="assignment" size={24} color={role === 'working' ? '#8b5cf6' : '#3b82f6'} />
-            <Text style={[styles.uploadButtonText, { color: role === 'working' ? '#8b5cf6' : '#3b82f6' }]}>
+            <MaterialIcons name="assignment" size={24} color="#FF7722" />
+            <Text style={[styles.uploadButtonText, { color: '#FF7722' }]}>
               {formData.panCard ? 'Change PAN Card' : 'Upload PAN Card'}
             </Text>
           </TouchableOpacity>
@@ -751,9 +745,8 @@ export default function RegisterScreen({ navigation, route }) {
   // ============ STEP 9: Signature & Submit ============
   const renderSignature = () => {
     const isDonor = isDonationFlow || role === 'donor';
-    const buttonColor = isDonor ? '#10b981' : (role === 'working' ? '#8b5cf6' : '#3b82f6');
+    const buttonColor = isDonor ? '#FF7722' : (role === 'working' ? '#8b5cf6' : '#FF7722');
 
-    // If phone registration, use handlePhoneRegister
     const handleSubmit = registrationMethod === 'phone' ? handlePhoneRegister : handleEmailRegister;
 
     return (
@@ -815,23 +808,21 @@ export default function RegisterScreen({ navigation, route }) {
   };
 
   const getTotalSteps = () => {
-    if (isDonationFlow) return 5; // Skip role selection and document uploads
+    if (isDonationFlow) return 5;
     return 9;
   };
 
-  // If donation flow, skip to step 2
   if (isDonationFlow && step === 1) {
     setTimeout(() => setStep(2), 100);
   }
 
-  // If registration method is phone, skip step 4 (password)
   if (registrationMethod === 'phone' && step === 4) {
     setTimeout(() => setStep(5), 100);
   }
 
   return (
     <KeyboardAvoidingView 
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      style={{ flex: 1, backgroundColor: '#fdf8f3' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View id="recaptcha-container" style={styles.recaptchaContainer} />
@@ -915,7 +906,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     borderRadius: 2,
   },
   recaptchaContainer: {
@@ -931,6 +922,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 4,
     width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   stepTitle: {
     fontFamily: Fonts.SemiBold,
@@ -957,7 +953,7 @@ const styles = StyleSheet.create({
   },
   bottomLine: {
     height: 2,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#FF7722',
     width: '100%',
     marginTop: 4,
   },
@@ -979,7 +975,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#fff5eb',
     padding: 14,
     borderRadius: 10,
     gap: 10,
@@ -987,7 +983,7 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#FF7722',
     fontSize: 16,
   },
   previewImage: {
@@ -1007,11 +1003,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.9)',
+    backgroundColor: '#FF7722',
     paddingVertical: 16,
     borderRadius: 50,
     flex: 0.45,
-    shadowColor: '#3b82f6',
+    shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -1031,25 +1027,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+    backgroundColor: '#FF7722',
     paddingVertical: 16,
     borderRadius: 50,
     flex: 0.45,
     gap: 8,
-    shadowColor: '#10b981',
+    shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
   },
   sendOtpButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#FF7722',
     paddingVertical: 14,
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
     marginBottom: 16,
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   sendOtpText: {
     fontFamily: Fonts.SemiBold,
@@ -1077,7 +1078,7 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#FF7722',
     fontSize: 14,
   },
   // Role Cards
@@ -1092,8 +1093,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   roleCardActive: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#f0f7ff',
+    borderColor: '#FF7722',
+    backgroundColor: '#fff5eb',
   },
   roleIcon: {
     width: 44,
@@ -1112,7 +1113,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   roleTitleActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   roleDescription: {
     fontFamily: Fonts.Regular,
@@ -1131,8 +1132,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   methodCardActive: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#f0f7ff',
+    borderColor: '#FF7722',
+    backgroundColor: '#fff5eb',
   },
   methodIcon: {
     width: 44,
@@ -1151,7 +1152,7 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   methodTitleActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   methodDescription: {
     fontFamily: Fonts.Regular,

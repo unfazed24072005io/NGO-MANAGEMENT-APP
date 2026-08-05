@@ -104,7 +104,7 @@ export default function EventsScreen({ navigation }) {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'upcoming': return '#3b82f6';
+      case 'upcoming': return '#FF7722';
       case 'ongoing': return '#10b981';
       case 'completed': return '#6b7280';
       case 'cancelled': return '#ef4444';
@@ -136,7 +136,7 @@ export default function EventsScreen({ navigation }) {
           <Image source={{ uri: event.image }} style={styles.eventImage} />
         ) : (
           <View style={styles.eventImagePlaceholder}>
-            <MaterialIcons name="event" size={40} color="#9ca3af" />
+            <MaterialIcons name="event" size={40} color="#FF7722" />
           </View>
         )}
 
@@ -215,7 +215,7 @@ export default function EventsScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color="#FF7722" />
           <Text style={styles.loadingText}>Loading events...</Text>
         </View>
       </View>
@@ -224,6 +224,7 @@ export default function EventsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Saffron Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Events</Text>
@@ -258,21 +259,13 @@ export default function EventsScreen({ navigation }) {
         </ScrollView>
       </View>
 
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.filterWrapper}
-        contentContainerStyle={styles.filterContent}
-      >
-        
-      </ScrollView>
 
       <FlatList
         data={filteredEvents}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <EventCard event={item} />}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialIcons name="event-busy" size={44} color="#d1d5db" />
@@ -283,7 +276,7 @@ export default function EventsScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
       />
 
-      {/* Login Modal */}
+      {/* Login Modal - Saffron Theme */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -293,7 +286,7 @@ export default function EventsScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIconContainer}>
-              <MaterialIcons name="lock" size={50} color="#3b82f6" />
+              <MaterialIcons name="lock" size={50} color="#FF7722" />
             </View>
             <Text style={styles.modalTitle}>Login Required</Text>
             <Text style={styles.modalMessage}>
@@ -326,11 +319,12 @@ export default function EventsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8fafc' 
+    backgroundColor: '#fdf8f3' 
   },
   
+  // Saffron Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -415,11 +409,12 @@ const styles = StyleSheet.create({
   },
 
   filterWrapper: { 
-    marginVertical: 12 
+    marginVertical: 12,
+    paddingHorizontal: 16,
   },
   filterContent: { 
-    paddingHorizontal: 16, 
-    gap: 8 
+    gap: 8,
+    paddingHorizontal: 4,
   },
   filterChip: {
     paddingHorizontal: 16,
@@ -430,8 +425,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   filterChipActive: { 
-    backgroundColor: '#3b82f6', 
-    borderColor: '#3b82f6' 
+    backgroundColor: '#FF7722', 
+    borderColor: '#FF7722' 
   },
   filterChipText: { 
     fontFamily: Fonts.SemiBold,
@@ -453,6 +448,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   eventImage: { 
     width: '100%', 
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   eventImagePlaceholder: { 
     width: '100%', 
     height: 150, 
-    backgroundColor: '#f3f4f6', 
+    backgroundColor: '#fff5eb', 
     justifyContent: 'center', 
     alignItems: 'center' 
   },
@@ -540,11 +540,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingVertical: 10,
     borderRadius: 8,
     marginTop: 10,
     gap: 6,
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   registerButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -573,6 +578,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -580,7 +586,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Modal Styles
+  // Modal Styles - Saffron Theme
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -605,7 +611,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f5f3ff',
+    backgroundColor: '#fff5eb',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -644,7 +650,12 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   modalLoginButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   modalLoginText: {
     fontFamily: Fonts.SemiBold,

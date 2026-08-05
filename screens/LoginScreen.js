@@ -1,3 +1,4 @@
+// screens/LoginScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ActivityIndicator, Switch } from 'react-native';
 import { signInWithEmailAndPassword, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
@@ -174,50 +175,48 @@ export default function LoginScreen({ navigation, route }) {
     }
   };
 
-  // In LoginScreen.js - Update the handleNavigation function
+  const handleNavigation = (role, userData) => {
+    // Check if this is donation flow
+    if (isDonationFlow) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'DonationTabs' }],
+      });
+      return;
+    }
 
-const handleNavigation = (role, userData) => {
-  // Check if this is donation flow
-  if (isDonationFlow) {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'DonationTabs' }],
-    });
-    return;
-  }
+    // Check if user is an employee
+    if (userData?.isEmployee || userData?.role === 'employee') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'EmployeeTabs' }],
+      });
+      return;
+    }
 
-  // Check if user is an employee
-  if (userData?.isEmployee || userData?.role === 'employee') {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'EmployeeTabs' }],
-    });
-    return;
-  }
-
-  // Navigate based on role
-  if (role === 'admin') {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'AdminTabs' }],
-    });
-  } else if (role === 'working') {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'WorkingMemberTabs' }],
-    });
-  } else if (role === 'donor') {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'DonationTabs' }],
-    });
-  } else {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MemberTabs' }],
-    });
-  }
-};
+    // Navigate based on role
+    if (role === 'admin') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'AdminTabs' }],
+      });
+    } else if (role === 'working' || role === 'workingMember') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'WorkingMemberTabs' }],
+      });
+    } else if (role === 'donor') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'DonationTabs' }],
+      });
+    } else {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MemberTabs' }],
+      });
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -233,7 +232,7 @@ const handleNavigation = (role, userData) => {
       <Text style={styles.title}>Log into</Text>
       <Text style={styles.subtitle}>your account</Text>
 
-      {/* Login Method Toggle */}
+      {/* Login Method Toggle - Saffron Theme */}
       <View style={styles.methodToggle}>
         <TouchableOpacity
           style={[styles.methodButton, loginMethod === 'email' && styles.methodButtonActive]}
@@ -342,7 +341,7 @@ const handleNavigation = (role, userData) => {
           </>
         )}
 
-        {/* Role Selection - Optional, just for UI */}
+        {/* Role Selection - Saffron Theme */}
         <View style={styles.roleContainer}>
           <Text style={styles.roleLabel}>Login as:</Text>
           <View style={styles.roleButtonsContainer}>
@@ -373,7 +372,7 @@ const handleNavigation = (role, userData) => {
           </TouchableOpacity>
         )}
 
-        {/* Login Button - Only for Email Login */}
+        {/* Login Button - Saffron Theme */}
         {loginMethod === 'email' && (
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.disabledButton]}
@@ -388,7 +387,7 @@ const handleNavigation = (role, userData) => {
           </TouchableOpacity>
         )}
 
-        {/* Sign Up Link */}
+        {/* Sign Up Link - Saffron Theme */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -396,7 +395,7 @@ const handleNavigation = (role, userData) => {
           </TouchableOpacity>
         </View>
 
-        {/* Donation Register Link - Show when not in donation flow */}
+        {/* Donation Register Link - Saffron Theme */}
         {!isDonationFlow && (
           <View style={styles.donationContainer}>
             <Text style={styles.donationText}>Want to donate? </Text>
@@ -413,7 +412,7 @@ const handleNavigation = (role, userData) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#fdf8f3', // Saffron theme background
     paddingHorizontal: 30,
     paddingTop: 60,
   },
@@ -443,7 +442,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
 
-  // Method Toggle
+  // Method Toggle - Saffron Theme
   methodToggle: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
@@ -461,7 +460,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   methodButtonActive: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722', // Saffron color
   },
   methodText: {
     fontFamily: Fonts.SemiBold,
@@ -488,7 +487,7 @@ const styles = StyleSheet.create({
   },
   bottomLine: {
     height: 2,
-    backgroundColor: '#1f2937',
+    backgroundColor: '#FF7722', // Saffron color for bottom line
     width: '100%',
     marginTop: 4,
   },
@@ -511,14 +510,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
 
-  // Send OTP Button
+  // Send OTP Button - Saffron Theme
   sendOtpButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#FF7722', // Saffron color
     paddingVertical: 14,
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   sendOtpText: {
     fontFamily: Fonts.SemiBold,
@@ -526,6 +530,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  // Role Selection - Saffron Theme
   roleContainer: {
     marginBottom: 20,
   },
@@ -549,8 +554,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   roleButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#FF7722', // Saffron color
+    borderColor: '#FF7722',
   },
   roleText: {
     fontFamily: Fonts.SemiBold,
@@ -560,6 +565,7 @@ const styles = StyleSheet.create({
   roleTextActive: {
     color: '#ffffff',
   },
+
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 25,
@@ -569,13 +575,15 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 14,
   },
+
+  // Login Button - Saffron Theme
   loginButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722', // Saffron color
     paddingVertical: 16,
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3b82f6',
+    shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -590,6 +598,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     letterSpacing: 0.5,
   },
+
+  // Sign Up Link - Saffron Theme
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -602,7 +612,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontFamily: Fonts.SemiBold,
-    color: '#3b82f6',
+    color: '#FF7722', // Saffron color
     fontSize: 14,
   },
   donationContainer: {
@@ -617,7 +627,7 @@ const styles = StyleSheet.create({
   },
   donationLink: {
     fontFamily: Fonts.SemiBold,
-    color: '#10b981',
+    color: '#FF7722', // Saffron color
     fontSize: 14,
   },
 });

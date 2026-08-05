@@ -1,3 +1,4 @@
+// screens/workingMember/WorkingMemberRegisteredMembers.js
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
@@ -8,8 +9,16 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../../config/firebase';
-import { collection, query, where, onSnapshot, orderBy, doc, getDoc, setDoc, addDoc, getDocs } from 'firebase/firestore';
+import { 
+  collection, query, where, onSnapshot, orderBy, doc, getDoc, 
+  setDoc, addDoc, getDocs, updateDoc, increment, Timestamp,
+  runTransaction
+} from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { CommissionService } from '../../services/CommissionService';
+import { WalletService } from '../../services/WalletService';
+import { LevelUpdateService } from '../../services/LevelUpdateService';
+import { getLevelDetails } from '../../config/commissionLevels';
 
 export default function WorkingMemberRegisteredMembers({ navigation }) {
   const [members, setMembers] = useState([]);
@@ -18,12 +27,14 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
     pending: 0,
     inactive: 0,
-    totalDonations: 0
+    totalDonations: 0,
+    totalCommission: 0
   });
 
   // Register Member Modal States
@@ -49,9 +60,27 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
   });
 
   useEffect(() => {
+    fetchUserData();
     setupRealtimeListener();
     fetchUserProfile();
   }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserData(data);
+        setProfilePhoto(data.profilePhoto || null);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -83,8 +112,8 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
       const membersList = [];
       let total = 0, active = 0, pending = 0, inactive = 0;
       let totalDonations = 0;
+      let totalCommission = 0;
       
-      // First, get all members
       const memberPromises = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -94,7 +123,6 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         else if (data.status === 'pending') pending++;
         else inactive++;
         
-        // Fetch donations for this member
         if (data.memberId) {
           memberPromises.push(
             getDocs(query(
@@ -112,20 +140,43 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         }
       });
       
-      // Calculate total donations
       const donationResults = await Promise.all(memberPromises);
       donationResults.forEach(result => {
         totalDonations += result.total;
-        // Update member with their donation total
         const memberIndex = membersList.findIndex(m => m.memberId === result.memberId);
         if (memberIndex !== -1) {
           membersList[memberIndex].totalDonations = result.total;
         }
       });
+
+      const commissionQuery = query(
+        collection(db, 'walletTransactions'),
+        where('userId', '==', userId),
+        where('type', 'in', ['direct_commission', 'secondary_commission'])
+      );
+      const commissionSnap = await getDocs(commissionQuery);
+      commissionSnap.forEach((doc) => {
+        const data = doc.data();
+        if (data.status === 'completed' || data.status === 'paid') {
+          totalCommission += data.amount || 0;
+        }
+      });
+
+      membersList.forEach(member => {
+        const commission = (member.totalDonations || 0) * 0.1;
+        member.commission = commission;
+      });
       
       setMembers(membersList);
       setFilteredMembers(membersList);
-      setStats({ total, active, pending, inactive, totalDonations });
+      setStats({ 
+        total, 
+        active, 
+        pending, 
+        inactive, 
+        totalDonations,
+        totalCommission 
+      });
       setLoading(false);
     });
 
@@ -148,6 +199,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    await fetchUserData();
     await new Promise(resolve => setTimeout(resolve, 1000));
     setRefreshing(false);
   };
@@ -161,7 +213,6 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
     }
   };
 
-  // Image Picker
   const pickImage = async (field) => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -194,37 +245,92 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
     return re.test(email);
   };
 
-  // Register Member Functions
+  // ============ FIXED: Register Member with Commission & Level Tracking ============
   const handleRegisterMember = async () => {
+    console.log('🚀 Register button clicked!');
+    console.log('📋 Current form data:', {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password ? '***' : 'empty',
+      confirmPassword: formData.confirmPassword ? '***' : 'empty',
+      gender: formData.gender
+    });
+    
+    // Validation - Check all required fields
+    console.log('🔍 Validating form data...');
+    
     if (!formData.fullName.trim()) {
-      Alert.alert('Error', 'Please enter full name');
+      console.log('❌ Validation failed: Full name is empty');
+      Alert.alert('Validation Error', 'Please enter full name');
       return;
     }
+    console.log('✅ Full name validated');
 
     if (!formData.email.trim() || !validateEmail(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      console.log('❌ Validation failed: Email is invalid');
+      Alert.alert('Validation Error', 'Please enter a valid email address');
       return;
     }
+    console.log('✅ Email validated');
 
     if (!formData.phone.trim()) {
-      Alert.alert('Error', 'Please enter phone number');
+      console.log('❌ Validation failed: Phone is empty');
+      Alert.alert('Validation Error', 'Please enter phone number');
       return;
     }
+    console.log('✅ Phone validated');
 
-    if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (!formData.password || formData.password.length < 6) {
+      console.log('❌ Validation failed: Password is too short');
+      Alert.alert('Validation Error', 'Password must be at least 6 characters');
       return;
     }
+    console.log('✅ Password validated');
 
     if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      console.log('❌ Validation failed: Passwords do not match');
+      Alert.alert('Validation Error', 'Passwords do not match');
       return;
     }
+    console.log('✅ Passwords match');
 
+    console.log('✅ All validations passed, starting registration...');
     setRegisterLoading(true);
 
     try {
+      console.log('👤 Getting current user...');
       const workingMemberId = auth.currentUser?.uid;
+      console.log('👤 Working Member ID:', workingMemberId);
+      
+      if (!workingMemberId) {
+        console.log('❌ No user logged in');
+        Alert.alert('Error', 'You must be logged in to register a member');
+        setRegisterLoading(false);
+        return;
+      }
+      
+      console.log('📖 Fetching working member data...');
+      const workingMemberDoc = await getDoc(doc(db, 'users', workingMemberId));
+      
+      if (!workingMemberDoc.exists()) {
+        console.log('❌ Working member document does not exist');
+        Alert.alert('Error', 'Working member not found');
+        setRegisterLoading(false);
+        return;
+      }
+      
+      const workingMemberData = workingMemberDoc.data();
+      console.log('📋 Working Member Data found:', {
+        name: workingMemberData.fullName,
+        email: workingMemberData.email,
+        role: workingMemberData.role,
+        level: workingMemberData.level
+      });
+      
+      // Create user account
+      console.log('📧 Creating user account for:', formData.email);
+      console.log('🔐 Password length:', formData.password.length);
       
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
@@ -233,8 +339,11 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
       );
       
       const userId = userCredential.user.uid;
+      console.log('✅ User created with ID:', userId);
 
-      await setDoc(doc(db, 'users', userId), {
+      // Create user document
+      console.log('📝 Creating user document...');
+      const userDocData = {
         uid: userId,
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
@@ -247,6 +356,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         role: 'member',
         isWorkingMember: false,
         createdBy: workingMemberId,
+        registeredBy: workingMemberId,
         status: 'active',
         profilePhoto: formData.profilePhoto || null,
         aadharFront: formData.aadharFront || null,
@@ -255,9 +365,15 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         signature: formData.signature || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
+      console.log('📝 User document data:', { ...userDocData, password: '***' });
+      
+      await setDoc(doc(db, 'users', userId), userDocData);
+      console.log('✅ User document created');
 
-      await addDoc(collection(db, 'registeredMembers'), {
+      // Add to registeredMembers collection
+      console.log('📝 Adding to registeredMembers...');
+      const registeredMemberData = {
         memberId: userId,
         workingMemberId: workingMemberId,
         fullName: formData.fullName.trim(),
@@ -278,8 +394,14 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         signature: formData.signature || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
+      console.log('📝 Registered member data:', registeredMemberData);
+      
+      const registeredMemberRef = await addDoc(collection(db, 'registeredMembers'), registeredMemberData);
+      console.log('✅ Registered member added with ID:', registeredMemberRef.id);
 
+      // Add to members collection
+      console.log('📝 Adding to members...');
       await addDoc(collection(db, 'members'), {
         uid: userId,
         fullName: formData.fullName.trim(),
@@ -295,54 +417,216 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+      console.log('✅ Members collection updated');
 
-      // Create a wallet for the member
+      // Create wallet for the member
+      console.log('📝 Creating wallet...');
       await setDoc(doc(db, 'wallets', userId), {
         balance: 0,
         totalDonations: 0,
         totalWithdrawn: 0,
         pendingWithdrawals: 0,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      console.log('✅ Wallet created');
+
+      // ============ 🎯 COMMISSION & LEVEL UPDATE ============
+      
+      let commissionResult = null;
+      let levelUpdateResult = null;
+      let commissionError = null;
+
+      try {
+        // 1. Update working member's direct referrals
+        console.log('📝 Updating direct referrals...');
+        const workingMemberRef = doc(db, 'users', workingMemberId);
+        const currentReferrals = workingMemberData.directReferrals || [];
+        console.log('📊 Current referrals:', currentReferrals);
+        
+        if (!currentReferrals.includes(userId)) {
+          currentReferrals.push(userId);
+          await updateDoc(workingMemberRef, {
+            directReferrals: currentReferrals,
+            updatedAt: new Date().toISOString()
+          });
+          console.log('✅ Direct referrals updated:', currentReferrals.length);
+        } else {
+          console.log('ℹ️ User already in referrals list');
+        }
+
+        // 2. Process commission
+        console.log('💰 Processing commission...');
+        const registrationAmount = 1000;
+        commissionResult = await CommissionService.processNewRegistration(
+          userId, 
+          workingMemberId, 
+          registrationAmount
+        );
+        console.log('✅ Commission processed:', commissionResult);
+
+        // 3. Update working member's level
+        console.log('📊 Updating level...');
+        levelUpdateResult = await LevelUpdateService.checkAndUpdateLevel(workingMemberId);
+        console.log('✅ Level updated:', levelUpdateResult);
+
+        // 4. Log the activity
+        console.log('📝 Logging activity...');
+        await addDoc(collection(db, 'activities'), {
+          workingMemberId: workingMemberId,
+          memberId: userId,
+          memberName: formData.fullName.trim(),
+          type: 'member_registration',
+          commission: commissionResult?.directCommission || 0,
+          levelChanged: levelUpdateResult?.levelChanged || false,
+          oldLevel: levelUpdateResult?.oldLevel || null,
+          newLevel: levelUpdateResult?.newLevel || null,
+          createdAt: new Date().toISOString()
+        });
+        console.log('✅ Activity logged');
+
+      } catch (err) {
+        console.error('❌ Commission/Level update error:', err);
+        commissionError = err;
+      }
+
+      // ✅ FIX: Update local state - Check for duplicates
+      console.log('📊 Updating local state...');
+      const newMember = {
+        id: registeredMemberRef.id,
+        memberId: userId,
+        workingMemberId: workingMemberId,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        status: 'active',
+        commission: 0,
+        totalDonations: 0,
+        profilePhoto: formData.profilePhoto || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      // ✅ FIX: Check if member already exists before adding
+      setMembers(prev => {
+        const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
+        if (exists) {
+          console.log('⚠️ Member already exists in list, skipping duplicate');
+          return prev;
+        }
+        return [newMember, ...prev];
       });
 
-      Alert.alert('Success', 'Member registered successfully! They can now login and make donations.');
-      
-      setFormData({
-        fullName: '',
-        email: '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        pincode: '',
-        gender: 'Male',
-        password: '',
-        confirmPassword: '',
-        aadharFront: null,
-        aadharBack: null,
-        panCard: null,
-        profilePhoto: null,
-        signature: null,
+      setFilteredMembers(prev => {
+        const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
+        if (exists) {
+          return prev;
+        }
+        return [newMember, ...prev];
       });
-      setStep(1);
-      setRegisterModalVisible(false);
+      
+      setStats(prev => ({
+        ...prev,
+        total: prev.total + 1,
+        active: prev.active + 1
+      }));
+
+      // Build success message
+      let successMessage = `✅ Member registered successfully!\n\n`;
+      successMessage += `👤 ${formData.fullName} is now registered.\n`;
+      
+      if (commissionResult && commissionResult.directCommission > 0) {
+        successMessage += `💰 Commission earned: ₹${commissionResult.directCommission}\n`;
+      }
+      
+      if (levelUpdateResult && levelUpdateResult.levelChanged) {
+        successMessage += `🎉 Level Promoted: ${levelUpdateResult.oldTitle || 'N/A'} → ${levelUpdateResult.newTitle || 'N/A'}\n`;
+        successMessage += `🌟 ${levelUpdateResult.message || 'Congratulations!'}`;
+      } else if (levelUpdateResult) {
+        const levelDetails = getLevelDetails(levelUpdateResult.currentLevel || 'I');
+        successMessage += `📊 Current Level: ${levelDetails.title}`;
+      }
+
+      if (commissionError) {
+        successMessage += '\n\n⚠️ Commission processing had an issue. Please check commission settings.';
+      }
+
+      console.log('🎉 Registration complete! Showing success message...');
+      Alert.alert(
+        '✅ Registration Successful', 
+        successMessage,
+        [
+          { 
+            text: 'OK', 
+            onPress: () => {
+              console.log('📝 Resetting form...');
+              setFormData({
+                fullName: '',
+                email: '',
+                phone: '',
+                address: '',
+                city: '',
+                state: '',
+                pincode: '',
+                gender: 'Male',
+                password: '',
+                confirmPassword: '',
+                aadharFront: null,
+                aadharBack: null,
+                panCard: null,
+                profilePhoto: null,
+                signature: null,
+              });
+              setStep(1);
+              setRegisterModalVisible(false);
+              fetchUserData();
+              console.log('✅ Form reset complete');
+            }
+          }
+        ]
+      );
       
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error message:', error.message);
       
       if (error.code === 'auth/email-already-in-use') {
-        Alert.alert('Error', 'This email is already registered');
+        Alert.alert('Error', 'This email is already registered. Please use a different email.');
       } else if (error.code === 'auth/invalid-email') {
-        Alert.alert('Error', 'Invalid email address');
+        Alert.alert('Error', 'Invalid email address. Please enter a valid email.');
       } else if (error.code === 'auth/weak-password') {
-        Alert.alert('Error', 'Password is too weak. Please use at least 6 characters');
+        Alert.alert('Error', 'Password is too weak. Please use at least 6 characters.');
+      } else if (error.code === 'auth/network-request-failed') {
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
       } else {
-        Alert.alert('Error', error.message || 'Failed to register member');
+        Alert.alert('Registration Failed', error.message || 'Something went wrong. Please try again.');
       }
     } finally {
+      console.log('🏁 Registration process completed');
       setRegisterLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      fullName: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      gender: 'Male',
+      password: '',
+      confirmPassword: '',
+      aadharFront: null,
+      aadharBack: null,
+      panCard: null,
+      profilePhoto: null,
+      signature: null,
+    });
+    setStep(1);
   };
 
   // ============ STEP 1: Personal Information ============
@@ -676,14 +960,16 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
   // ============ STEP ROUTING ============
   const getStepContent = () => {
-    if (step === 1) return renderPersonalInfo();
-    if (step === 2) return renderAddressAndPassword();
-    if (step === 3) return renderProfilePhoto();
-    if (step === 4) return renderAadharFront();
-    if (step === 5) return renderAadharBack();
-    if (step === 6) return renderPANCard();
-    if (step === 7) return renderSignature();
-    return null;
+    switch(step) {
+      case 1: return renderPersonalInfo();
+      case 2: return renderAddressAndPassword();
+      case 3: return renderProfilePhoto();
+      case 4: return renderAadharFront();
+      case 5: return renderAadharBack();
+      case 6: return renderPANCard();
+      case 7: return renderSignature();
+      default: return null;
+    }
   };
 
   const getTotalSteps = () => 7;
@@ -703,7 +989,22 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
   const MemberCard = ({ item }) => (
     <TouchableOpacity 
       style={styles.memberCard}
-      onPress={() => navigation.navigate('WorkingMemberMemberDetail', { memberId: item.id })}
+      onPress={() => {
+        // Check if detail screen exists
+        try {
+          navigation.navigate('WorkingMemberMemberDetail', { memberId: item.id });
+        } catch (e) {
+          Alert.alert(
+            'Member Details',
+            `👤 Name: ${item.fullName || 'Unknown'}\n` +
+            `📧 Email: ${item.email || 'N/A'}\n` +
+            `📱 Phone: ${item.phone || 'N/A'}\n` +
+            `💰 Commission: ₹${item.commission?.toFixed(2) || 0}\n` +
+            `💵 Total Donations: ₹${item.totalDonations?.toFixed(2) || 0}\n` +
+            `📊 Status: ${item.status || 'pending'}`
+          );
+        }
+      }}
     >
       <View style={styles.memberHeader}>
         <View style={styles.memberAvatar}>
@@ -739,7 +1040,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
             </View>
           )}
           {item.commission !== undefined && (
-            <Text style={styles.memberCommission}>Commission: ₹{item.commission || 0}</Text>
+            <Text style={styles.memberCommission}>Commission: ₹{item.commission?.toFixed(2) || 0}</Text>
           )}
         </View>
       </View>
@@ -757,7 +1058,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header Card */}
+      {/* Purple Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
@@ -790,7 +1091,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           </View>
         </View>
 
-        {/* Search Bar inside header */}
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
           <MaterialIcons name="search" size={20} color="#9ca3af" />
           <TextInput
@@ -807,7 +1108,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           )}
         </View>
 
-        {/* Stat Cards inside header */}
+        {/* Stat Cards */}
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
@@ -818,14 +1119,14 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           <StatCard label="Active" count={stats.active} icon="check-circle" color="#10b981" />
           <StatCard label="Pending" count={stats.pending} icon="pending" color="#f59e0b" />
           <StatCard label="Inactive" count={stats.inactive} icon="block" color="#ef4444" />
-
+          <StatCard label="Total Commission" count={`₹${stats.totalCommission.toFixed(0)}`} icon="attach-money" color="#fbbf24" />
         </ScrollView>
       </View>
 
       {/* Members List */}
       <FlatList
         data={filteredMembers}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id || item.memberId || Math.random().toString()}
         renderItem={({ item }) => <MemberCard item={item} />}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
@@ -848,7 +1149,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         contentContainerStyle={styles.listContent}
       />
 
-      {/* Register Member Modal with Multi-Step Flow */}
+      {/* Register Member Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -905,7 +1206,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
-  // Blue Header Card
   headerCard: {
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
@@ -1190,7 +1490,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Modal Styles - Multi-Step Registration
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

@@ -129,7 +129,7 @@ export default function ShopScreen({ navigation }) {
             <Image source={{ uri: product.image }} style={styles.productCardImage} resizeMode="cover" />
           ) : (
             <View style={styles.productCardImagePlaceholder}>
-              <MaterialIcons name="image" size={35} color="#9ca3af" />
+              <MaterialIcons name="image" size={35} color="#FF7722" />
             </View>
           )}
           
@@ -204,7 +204,7 @@ export default function ShopScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b82f6" />
+          <ActivityIndicator size="large" color="#FF7722" />
           <Text style={styles.loadingText}>Loading products...</Text>
         </View>
       </View>
@@ -236,7 +236,7 @@ export default function ShopScreen({ navigation }) {
           <Text style={styles.emptyStateSubtext}>Please check back later</Text>
         </View>
 
-        {/* Login Modal */}
+        {/* Login Modal - Saffron Theme */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -246,7 +246,7 @@ export default function ShopScreen({ navigation }) {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalIconContainer}>
-                <MaterialIcons name="lock" size={50} color="#3b82f6" />
+                <MaterialIcons name="lock" size={50} color="#FF7722" />
               </View>
               <Text style={styles.modalTitle}>Login Required</Text>
               <Text style={styles.modalMessage}>
@@ -278,6 +278,7 @@ export default function ShopScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Saffron Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Shop</Text>
@@ -324,7 +325,7 @@ export default function ShopScreen({ navigation }) {
         )}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -336,7 +337,7 @@ export default function ShopScreen({ navigation }) {
         contentContainerStyle={styles.listContent}
       />
 
-      {/* Login Modal */}
+      {/* Login Modal - Saffron Theme */}
       <Modal
         animationType="fade"
         transparent={true}
@@ -346,7 +347,7 @@ export default function ShopScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIconContainer}>
-              <MaterialIcons name="lock" size={50} color="#3b82f6" />
+              <MaterialIcons name="lock" size={50} color="#FF7722" />
             </View>
             <Text style={styles.modalTitle}>Login Required</Text>
             <Text style={styles.modalMessage}>
@@ -379,13 +380,14 @@ export default function ShopScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fdf8f3',
   },
 
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fdf8f3',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -393,8 +395,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
+  // Saffron Header Card
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -461,7 +464,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   categoryChipLabelActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
   categoryChipCount: {
     fontFamily: Fonts.SemiBold,
@@ -469,7 +472,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
   },
   categoryChipCountActive: {
-    color: '#3b82f6',
+    color: '#FF7722',
   },
 
   // Category Sections
@@ -488,7 +491,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  // Product Card - Horizontal scroll style
+  // Product Card
   productCard: {
     width: 170,
     backgroundColor: '#ffffff',
@@ -517,7 +520,7 @@ const styles = StyleSheet.create({
     width: 146,
     height: 150,
     borderRadius: 10,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#fff5eb',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
@@ -547,16 +550,23 @@ const styles = StyleSheet.create({
 
   // Add to Cart Button
   addToCartButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 12,
     minHeight: 36,
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   disabledButton: {
     backgroundColor: '#9ca3af',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   addToCartButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -586,7 +596,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Modal Styles
+  // Modal Styles - Saffron Theme
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -611,7 +621,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#fff5eb',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -650,7 +660,12 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   modalLoginButton: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#FF7722',
+    shadowColor: '#FF7722',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   modalLoginText: {
     fontFamily: Fonts.SemiBold,
