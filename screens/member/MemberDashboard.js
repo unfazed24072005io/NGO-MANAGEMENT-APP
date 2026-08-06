@@ -1,9 +1,11 @@
+// screens/member/MemberDashboard.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList, Image, Platform, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { collection, getDocs, query, where, doc, getDoc, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getTotalDonations, getDonationCount, getDonationHistory } from '../../services/paymentService';
 
 export default function MemberDashboard({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -14,6 +16,10 @@ export default function MemberDashboard({ navigation }) {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [fabModalVisible, setFabModalVisible] = useState(false);
   const [pendingApplications, setPendingApplications] = useState(0);
+  const [razorpayStats, setRazorpayStats] = useState({
+    totalAmount: 0,
+    count: 0,
+  });
   const [stats, setStats] = useState({
     totalDonations: 0,
     eventsAttended: 0,
@@ -26,7 +32,17 @@ export default function MemberDashboard({ navigation }) {
     fetchStats();
     fetchRecentData();
     fetchPendingApplications();
+    loadRazorpayStats();
   }, []);
+
+  const loadRazorpayStats = () => {
+    const total = getTotalDonations();
+    const count = getDonationCount();
+    setRazorpayStats({
+      totalAmount: total,
+      count: count,
+    });
+  };
 
   const fetchUserData = async () => {
     try {
@@ -79,6 +95,9 @@ export default function MemberDashboard({ navigation }) {
         totalDonations += doc.data().amount || 0;
       });
 
+      // Add Razorpay donations
+      const razorpayTotal = getTotalDonations();
+
       const eventsSnap = await getDocs(query(
         collection(db, 'eventRegistrations'),
         where('memberId', '==', userId)
@@ -95,7 +114,7 @@ export default function MemberDashboard({ navigation }) {
       ));
 
       setStats({
-        totalDonations,
+        totalDonations: totalDonations + razorpayTotal,
         eventsAttended: eventsSnap.size,
         certificates: certSnap.size,
         orders: ordersSnap.size
@@ -121,7 +140,23 @@ export default function MemberDashboard({ navigation }) {
       donationsSnap.forEach(doc => {
         donationsList.push({ id: doc.id, ...doc.data() });
       });
-      setRecentDonations(donationsList);
+
+      // Get Razorpay donations
+      const razorpayHistory = getDonationHistory();
+      const user = auth.currentUser;
+      const userRazorpayDonations = razorpayHistory.filter(
+        donation => donation.email === user?.email || donation.phone === user?.phoneNumber
+      );
+
+      // Merge and sort
+      const allDonations = [...donationsList, ...userRazorpayDonations];
+      allDonations.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.timestamp);
+        const dateB = new Date(b.createdAt || b.timestamp);
+        return dateB - dateA;
+      });
+
+      setRecentDonations(allDonations.slice(0, 5));
 
       const ordersQuery = query(
         collection(db, 'orders'),
@@ -146,6 +181,7 @@ export default function MemberDashboard({ navigation }) {
     await fetchStats();
     await fetchRecentData();
     await fetchPendingApplications();
+    loadRazorpayStats();
     setRefreshing(false);
   };
 
@@ -163,30 +199,37 @@ export default function MemberDashboard({ navigation }) {
     </TouchableOpacity>
   );
 
-  const RecentItem = ({ item, type }) => (
-    <View style={styles.recentItem}>
-      <View style={styles.recentItemLeft}>
-        <View style={[styles.recentItemIcon, { backgroundColor: type === 'donation' ? '#ef444415' : '#8b5cf615' }]}>
-          <MaterialIcons 
-            name={type === 'donation' ? 'favorite' : 'shopping-bag'} 
-            size={16} 
-            color={type === 'donation' ? '#ef4444' : '#8b5cf6'} 
-          />
+  const RecentItem = ({ item, type }) => {
+    const isRazorpay = item.paymentMethod === 'razorpay' || item.paymentId;
+    
+    return (
+      <View style={styles.recentItem}>
+        <View style={styles.recentItemLeft}>
+          <View style={[styles.recentItemIcon, { backgroundColor: isRazorpay ? '#3b82f615' : type === 'donation' ? '#ef444415' : '#8b5cf615' }]}>
+            <MaterialIcons 
+              name={isRazorpay ? 'security' : type === 'donation' ? 'favorite' : 'shopping-bag'} 
+              size={16} 
+              color={isRazorpay ? '#3b82f6' : type === 'donation' ? '#ef4444' : '#8b5cf6'} 
+            />
+          </View>
+          <View>
+            <Text style={styles.recentItemTitle}>
+              {type === 'donation' ? `₹${item.amount?.toLocaleString() || 0}` : item.productName || 'Order'}
+            </Text>
+            <Text style={styles.recentItemSubtitle}>
+              {type === 'donation' 
+                ? (item.purpose || 'Donation') + (isRazorpay ? ' • Razorpay' : '')
+                : `Order #${item.id?.slice(-6) || 'N/A'}`}
+            </Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.recentItemTitle}>
-            {type === 'donation' ? `₹${item.amount?.toLocaleString() || 0}` : item.productName || 'Order'}
-          </Text>
-          <Text style={styles.recentItemSubtitle}>
-            {type === 'donation' ? item.purpose || 'Donation' : `Order #${item.id?.slice(-6) || 'N/A'}`}
-          </Text>
-        </View>
+        <Text style={styles.recentItemDate}>
+          {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 
+           item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'N/A'}
+        </Text>
       </View>
-      <Text style={styles.recentItemDate}>
-        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
-      </Text>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -250,6 +293,27 @@ export default function MemberDashboard({ navigation }) {
             />
           </View>
         </View>
+
+        {/* Razorpay Stats Card */}
+        {razorpayStats.count > 0 && (
+          <View style={[styles.statCard, { marginHorizontal: 16, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialIcons name="security" size={16} color="#3b82f6" />
+              <Text style={{ fontFamily: Fonts.SemiBold, fontSize: 12, color: '#3b82f6' }}>Razorpay</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937' }}>{razorpayStats.count}</Text>
+                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280' }}>Payments</Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: '#e5e7eb' }} />
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937' }}>₹{razorpayStats.totalAmount.toLocaleString()}</Text>
+                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280' }}>Total</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* Stats Cards */}
         <View style={styles.statsContainer}>

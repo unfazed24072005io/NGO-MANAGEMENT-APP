@@ -1,11 +1,11 @@
 // screens/donation/DonationDashboard.js
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Image, Modal, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { collection, getDocs, query, where, doc, getDoc, orderBy, limit } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getDonationHistory, getTotalDonations, getDonationCount } from '../../services/paymentService';
 
 export default function DonationDashboard({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -14,6 +14,10 @@ export default function DonationDashboard({ navigation }) {
   const [recentDonations, setRecentDonations] = useState([]);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [fabModalVisible, setFabModalVisible] = useState(false);
+  const [razorpayStats, setRazorpayStats] = useState({
+    totalAmount: 0,
+    count: 0,
+  });
   const [stats, setStats] = useState({
     totalDonations: 0,
     donationCount: 0,
@@ -25,7 +29,17 @@ export default function DonationDashboard({ navigation }) {
     fetchUserData();
     fetchStats();
     fetchRecentDonations();
+    loadRazorpayStats();
   }, []);
+
+  const loadRazorpayStats = () => {
+    const total = getTotalDonations();
+    const count = getDonationCount();
+    setRazorpayStats({
+      totalAmount: total,
+      count: count,
+    });
+  };
 
   const fetchUserData = async () => {
     try {
@@ -65,11 +79,15 @@ export default function DonationDashboard({ navigation }) {
         donationCount++;
       });
 
+      // Add Razorpay donations to stats
+      const razorpayTotal = getTotalDonations();
+      const razorpayCount = getDonationCount();
+
       setStats({
-        totalDonations,
-        donationCount,
-        livesImpacted: Math.floor(totalDonations / 100) + donationCount,
-        campaignsJoined: Math.min(donationCount, 5)
+        totalDonations: totalDonations + razorpayTotal,
+        donationCount: donationCount + razorpayCount,
+        livesImpacted: Math.floor((totalDonations + razorpayTotal) / 100) + donationCount + razorpayCount,
+        campaignsJoined: Math.min(donationCount + razorpayCount, 5)
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -92,7 +110,23 @@ export default function DonationDashboard({ navigation }) {
       donationsSnap.forEach(doc => {
         donationsList.push({ id: doc.id, ...doc.data() });
       });
-      setRecentDonations(donationsList);
+
+      // Add Razorpay donations to recent
+      const razorpayHistory = getDonationHistory();
+      const user = auth.currentUser;
+      const userRazorpayDonations = razorpayHistory.filter(
+        donation => donation.email === user?.email || donation.phone === user?.phoneNumber
+      );
+      
+      // Merge and sort by date
+      const allDonations = [...donationsList, ...userRazorpayDonations];
+      allDonations.sort((a, b) => {
+        const dateA = new Date(a.createdAt || a.timestamp);
+        const dateB = new Date(b.createdAt || b.timestamp);
+        return dateB - dateA;
+      });
+
+      setRecentDonations(allDonations.slice(0, 5));
     } catch (error) {
       console.error('Error fetching recent donations:', error);
     }
@@ -103,12 +137,13 @@ export default function DonationDashboard({ navigation }) {
     await fetchUserData();
     await fetchStats();
     await fetchRecentDonations();
+    loadRazorpayStats();
     setRefreshing(false);
   };
 
-  const QuickActionButton = ({ title, icon, onPress }) => (
+  const QuickActionButton = ({ title, icon, onPress, color }) => (
     <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
-      <View style={styles.quickActionIconBg}>
+      <View style={[styles.quickActionIconBg, { backgroundColor: color || '#059669' }]}>
         <MaterialIcons name={icon} size={28} color="#ffffff" />
       </View>
       <Text style={styles.quickActionText}>{title}</Text>
@@ -118,16 +153,24 @@ export default function DonationDashboard({ navigation }) {
   const RecentItem = ({ item }) => (
     <View style={styles.recentItem}>
       <View style={styles.recentItemLeft}>
-        <View style={[styles.recentItemIcon, { backgroundColor: '#10b98115' }]}>
-          <MaterialIcons name="favorite" size={16} color="#10b981" />
+        <View style={[styles.recentItemIcon, { backgroundColor: item.paymentMethod === 'razorpay' ? '#3b82f615' : '#10b98115' }]}>
+          <MaterialIcons 
+            name={item.paymentMethod === 'razorpay' ? 'security' : 'favorite'} 
+            size={16} 
+            color={item.paymentMethod === 'razorpay' ? '#3b82f6' : '#10b981'} 
+          />
         </View>
         <View>
           <Text style={styles.recentItemTitle}>₹{item.amount?.toLocaleString() || 0}</Text>
-          <Text style={styles.recentItemSubtitle}>{item.campaign || 'General Donation'}</Text>
+          <Text style={styles.recentItemSubtitle}>
+            {item.purpose || item.campaign || 'General Donation'}
+            {item.paymentMethod === 'razorpay' && ' • Razorpay'}
+          </Text>
         </View>
       </View>
       <Text style={styles.recentItemDate}>
-        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+        {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 
+         item.timestamp ? new Date(item.timestamp).toLocaleDateString() : 'N/A'}
       </Text>
     </View>
   );
@@ -193,21 +236,15 @@ export default function DonationDashboard({ navigation }) {
 
           {/* Quick Actions - 4 buttons in a row */}
           <View style={styles.quickActionsRow}>
-            <QuickActionButton 
-              title="Donate" 
-              icon="favorite" 
-              onPress={() => navigation.navigate('Donate')}
-            />
-            <QuickActionButton 
-              title="My Donations" 
-              icon="receipt" 
-              onPress={() => navigation.navigate('MyDonations')}
-            />
-            <QuickActionButton 
-              title="Certificate" 
-              icon="verified" 
-              onPress={() => navigation.navigate('Certificate')}
-            />
+            {quickActions.map((action, index) => (
+              <QuickActionButton 
+                key={index}
+                title={action.label} 
+                icon={action.icon} 
+                color={action.color}
+                onPress={action.onPress}
+              />
+            ))}
           </View>
         </View>
 
@@ -227,6 +264,27 @@ export default function DonationDashboard({ navigation }) {
           </View>
         </View>
 
+        {/* Razorpay Stats */}
+        {razorpayStats.count > 0 && (
+          <View style={styles.razorpayCard}>
+            <View style={styles.razorpayHeader}>
+              <MaterialIcons name="security" size={20} color="#3b82f6" />
+              <Text style={styles.razorpayTitle}>Razorpay Payments</Text>
+            </View>
+            <View style={styles.razorpayStats}>
+              <View style={styles.razorpayStat}>
+                <Text style={styles.razorpayStatValue}>{razorpayStats.count}</Text>
+                <Text style={styles.razorpayStatLabel}>Transactions</Text>
+              </View>
+              <View style={styles.razorpayStatDivider} />
+              <View style={styles.razorpayStat}>
+                <Text style={styles.razorpayStatValue}>₹{razorpayStats.totalAmount.toLocaleString()}</Text>
+                <Text style={styles.razorpayStatLabel}>Total Amount</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Recent Donations */}
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
@@ -242,7 +300,9 @@ export default function DonationDashboard({ navigation }) {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No recent donations</Text>
+              <MaterialIcons name="favorite-border" size={40} color="#d1d5db" />
+              <Text style={styles.emptyStateText}>No donations yet</Text>
+              <Text style={styles.emptyStateSubtext}>Start your journey of giving</Text>
               <TouchableOpacity 
                 style={styles.donateButton}
                 onPress={() => navigation.navigate('Donate')}
@@ -284,7 +344,7 @@ export default function DonationDashboard({ navigation }) {
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Make a Donation</Text>
-                  <Text style={styles.modalItemSubtitle}>Support a cause</Text>
+                  <Text style={styles.modalItemSubtitle}>Support a cause with Razorpay</Text>
                 </View>
               </TouchableOpacity>
 
@@ -410,7 +470,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 12,
-    backgroundColor: '#059669',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -430,7 +489,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   statCard: {
     backgroundColor: '#ffffff',
@@ -451,6 +510,50 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+  },
+  razorpayCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  razorpayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  },
+  razorpayTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  razorpayStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  razorpayStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  razorpayStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#3b82f6',
+  },
+  razorpayStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  razorpayStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#e5e7eb',
   },
   recentSection: {
     paddingHorizontal: 16,
@@ -515,13 +618,18 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   emptyState: {
-    paddingVertical: 20,
+    paddingVertical: 30,
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 10,
-    gap: 12,
+    gap: 8,
   },
   emptyStateText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#9ca3af',
@@ -530,15 +638,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
     gap: 6,
+    marginTop: 4,
   },
   donateButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 14,
   },
   bottomSpacing: {
     height: 20,

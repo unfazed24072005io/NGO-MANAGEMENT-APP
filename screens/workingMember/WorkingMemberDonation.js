@@ -1,9 +1,14 @@
+// screens/workingMember/WorkingMemberDonation.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, addDoc, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, where, setDoc, orderBy, onSnapshot, doc, getDoc, updateDoc, increment, getDocs } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { 
+  initiateRazorpayPayment, 
+  verifyRazorpayPayment 
+} from '../../services/paymentService';
 
 export default function WorkingMemberDonation({ navigation }) {
   const [loading, setLoading] = useState(false);
@@ -11,20 +16,24 @@ export default function WorkingMemberDonation({ navigation }) {
   const [totalDonated, setTotalDonated] = useState(0);
   const [donationCount, setDonationCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [donationData, setDonationData] = useState(null);
   const [formData, setFormData] = useState({
     amount: '',
-    purpose: '',
+    purpose: 'General',
     name: '',
     email: '',
     phone: '',
-    message: ''
+    message: '',
+    anonymous: false
   });
-  const [donationHistory, setDonationHistory] = useState([]);
+
+  const purposes = ['General', 'Education', 'Healthcare', 'Relief'];
 
   useEffect(() => {
-    fetchDonationHistory();
     setupRealtimeListener();
     fetchUserData();
+    fetchDonationHistory();
   }, []);
 
   const fetchUserData = async () => {
@@ -84,8 +93,7 @@ export default function WorkingMemberDonation({ navigation }) {
       const q = query(
         collection(db, 'donations'),
         where('memberId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(10)
+        orderBy('createdAt', 'desc')
       );
       
       const snapshot = await getDocs(q);
@@ -93,56 +101,152 @@ export default function WorkingMemberDonation({ navigation }) {
       snapshot.forEach((doc) => {
         donationsList.push({ id: doc.id, ...doc.data() });
       });
-      setDonationHistory(donationsList);
+      setDonations(donationsList);
     } catch (error) {
       console.error('Error fetching donation history:', error);
     }
   };
 
   const handleDonate = async () => {
-    if (!formData.amount || isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid donation amount');
-      return;
+  if (!formData.amount || isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
+    Alert.alert('Error', 'Please enter a valid donation amount');
+    return;
+  }
+
+  if (parseFloat(formData.amount) < 10) {
+    Alert.alert('Error', 'Minimum donation amount is ₹10');
+    return;
+  }
+
+  if (!formData.purpose) {
+    Alert.alert('Error', 'Please select a purpose for your donation');
+    return;
+  }
+
+  const user = auth.currentUser;
+  if (!user) {
+    Alert.alert('Error', 'Please login to donate');
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const donationAmount = parseFloat(formData.amount);
+    const donorName = formData.anonymous ? 'Anonymous Donor' : formData.name || 'Working Member';
+    const donorEmail = formData.anonymous ? 'anonymous@donor.com' : formData.email || user.email || '';
+    const donorPhone = formData.anonymous ? '0000000000' : formData.phone || '';
+
+    // Initiate Razorpay payment
+    const paymentResult = await initiateRazorpayPayment({
+      amount: donationAmount,
+      name: donorName,
+      email: donorEmail,
+      phone: donorPhone,
+      description: formData.purpose || 'General Donation',
+    });
+
+    if (paymentResult.success) {
+      // Verify payment
+      let verificationResult = { success: true };
+      if (paymentResult.paymentId) {
+        verificationResult = await verifyRazorpayPayment({
+          paymentId: paymentResult.paymentId,
+          orderId: paymentResult.orderId,
+          signature: paymentResult.signature,
+        });
+      }
+
+      if (verificationResult.success) {
+        // Generate unique certificate number
+        const certificateNumber = `CERT-${Date.now().toString().slice(-8)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+        // Save donation to Firebase
+        const donationRef = await addDoc(collection(db, 'donations'), {
+          memberId: user.uid,
+          amount: donationAmount,
+          purpose: formData.purpose,
+          donorName: donorName,
+          donorEmail: donorEmail,
+          donorPhone: donorPhone,
+          message: formData.message || '',
+          paymentMethod: 'razorpay',
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          orderId: paymentResult.orderId || '',
+          status: 'completed',
+          anonymous: formData.anonymous,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Create Certificate for the donation
+        await addDoc(collection(db, 'certificates'), {
+          memberId: user.uid,
+          memberName: donorName,
+          donorName: donorName,
+          donorEmail: donorEmail,
+          donorPhone: donorPhone,
+          amount: donationAmount,
+          purpose: formData.purpose,
+          type: 'donation',
+          title: `${formData.purpose} Donation Certificate`,
+          description: `Certificate of appreciation for your generous donation of ₹${donationAmount} for ${formData.purpose}`,
+          certificateNumber: certificateNumber,
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          orderId: paymentResult.orderId || '',
+          issuedDate: new Date().toISOString(),
+          status: 'issued',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Update donor stats
+        const donorRef = doc(db, 'donors', user.uid);
+        const donorDoc = await getDoc(donorRef);
+        if (donorDoc.exists()) {
+          await updateDoc(donorRef, {
+            totalDonations: increment(donationAmount),
+            donationCount: increment(1),
+            lastDonation: new Date().toISOString(),
+          });
+        } else {
+          // Create donor document if it doesn't exist
+          await setDoc(donorRef, {
+            userId: user.uid,
+            totalDonations: donationAmount,
+            donationCount: 1,
+            lastDonation: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        setDonationData({
+          amount: donationAmount,
+          name: donorName,
+          purpose: formData.purpose,
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          certificateNumber: certificateNumber,
+        });
+        setShowSuccessModal(true);
+        
+        // Reset form
+        setFormData(prev => ({
+          ...prev,
+          amount: '',
+          message: ''
+        }));
+      } else {
+        Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+      }
+    } else {
+      Alert.alert('Payment Failed', paymentResult.error || 'Something went wrong');
     }
-
-    if (!formData.purpose) {
-      Alert.alert('Error', 'Please select a purpose for your donation');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const userId = auth.currentUser?.uid;
-      const userEmail = auth.currentUser?.email;
-
-      await addDoc(collection(db, 'donations'), {
-        memberId: userId,
-        amount: parseFloat(formData.amount),
-        purpose: formData.purpose,
-        donorName: formData.name || 'Working Member',
-        donorEmail: formData.email || userEmail || '',
-        donorPhone: formData.phone || '',
-        message: formData.message || '',
-        status: 'completed',
-        createdAt: new Date().toISOString()
-      });
-
-      Alert.alert(
-        'Thank You!',
-        `Your donation of ₹${parseFloat(formData.amount).toLocaleString()} has been successfully processed.`,
-        [
-          { text: 'OK', onPress: () => {
-            setFormData(prev => ({ ...prev, amount: '', purpose: '', message: '' }));
-            navigation.navigate('WorkingMemberDashboard');
-          }}
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error) {
+    console.error('Donation error:', error);
+    Alert.alert('Error', 'Failed to process donation. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -173,9 +277,113 @@ export default function WorkingMemberDonation({ navigation }) {
     </TouchableOpacity>
   );
 
+  // Success Modal
+  // Success Modal
+const SuccessModal = () => (
+  <Modal
+    animationType="fade"
+    transparent={true}
+    visible={showSuccessModal}
+    onRequestClose={() => setShowSuccessModal(false)}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <View style={styles.successIconContainer}>
+          <View style={styles.successIconCircle}>
+            <MaterialIcons name="check" size={40} color="#10b981" />
+          </View>
+        </View>
+        <Text style={styles.modalTitle}>Thank you for your</Text>
+        <Text style={styles.modalTitle}>donation! 🙏</Text>
+        <Text style={styles.modalSubtext}>
+          Your generous donation of ₹{donationData?.amount?.toLocaleString()} 
+          for {donationData?.purpose} has been received.
+        </Text>
+        {donationData?.certificateNumber && (
+          <Text style={styles.modalCertNumber}>
+            🏆 Certificate: {donationData.certificateNumber}
+          </Text>
+        )}
+        {donationData?.paymentId && (
+          <Text style={styles.modalPaymentId}>
+            Payment ID: {donationData.paymentId.slice(-12)}
+          </Text>
+        )}
+        
+        <View style={styles.modalButtonRow}>
+          <TouchableOpacity 
+            style={[styles.modalButton, styles.modalButtonSecondary]}
+            onPress={() => {
+              setShowSuccessModal(false);
+              navigation.goBack();
+            }}
+          >
+            <Text style={styles.modalButtonTextSecondary}>Done</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.modalButton, styles.modalButtonPrimary]}
+            onPress={() => {
+              setShowSuccessModal(false);
+              // Navigate to the certificate screen with the certificate data
+              navigation.navigate('WorkingMemberCertificate', {
+                certificate: {
+                  id: donationData?.certificateNumber || '',
+                  title: `${donationData?.purpose} Donation Certificate`,
+                  type: 'donation',
+                  amount: donationData?.amount,
+                  purpose: donationData?.purpose,
+                  donorName: donationData?.name,
+                  certificateNumber: donationData?.certificateNumber,
+                  paymentId: donationData?.paymentId,
+                  issuedDate: new Date().toISOString(),
+                  status: 'issued'
+                }
+              });
+            }}
+          >
+            <MaterialIcons name="verified" size={18} color="#ffffff" />
+            <Text style={styles.modalButtonText}>View Certificate</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
+  // Helper to render donation history if needed
+  const renderDonationHistory = () => {
+    if (donations.length === 0) return null;
+    
+    return (
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <Text style={styles.cardTitle}>Recent Donations</Text>
+        {donations.slice(0, 3).map((donation, index) => (
+          <View key={donation.id || index} style={styles.historyItem}>
+            <View style={styles.historyLeft}>
+              <Text style={styles.historyPurpose}>{donation.purpose}</Text>
+              <Text style={styles.historyDate}>
+                {donation.createdAt ? new Date(donation.createdAt).toLocaleDateString() : 'N/A'}
+              </Text>
+            </View>
+            <Text style={styles.historyAmount}>₹{donation.amount?.toLocaleString()}</Text>
+          </View>
+        ))}
+        {donations.length > 3 && (
+          <TouchableOpacity 
+            style={styles.viewAllButton}
+            onPress={() => navigation.navigate('WorkingMemberDonationHistory')}
+          >
+            <Text style={styles.viewAllText}>View All ({donations.length})</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      {/* Blue Header */}
+      {/* Purple Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -188,7 +396,7 @@ export default function WorkingMemberDonation({ navigation }) {
 
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Stats */}
@@ -203,7 +411,7 @@ export default function WorkingMemberDonation({ navigation }) {
             label="Donations" 
             value={donationCount} 
             icon="favorite" 
-            color="#3b82f6" 
+            color="#8b5cf6" 
           />
         </View>
 
@@ -211,6 +419,17 @@ export default function WorkingMemberDonation({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Make a Donation</Text>
           
+          {/* Anonymous Toggle */}
+          <TouchableOpacity 
+            style={styles.anonymousToggle}
+            onPress={() => setFormData({...formData, anonymous: !formData.anonymous})}
+          >
+            <View style={[styles.checkbox, formData.anonymous && styles.checkboxChecked]}>
+              {formData.anonymous && <MaterialIcons name="check" size={16} color="#ffffff" />}
+            </View>
+            <Text style={styles.anonymousText}>Donate Anonymously</Text>
+          </TouchableOpacity>
+
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Amount (₹) *</Text>
             <TextInput
@@ -225,60 +444,52 @@ export default function WorkingMemberDonation({ navigation }) {
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Purpose *</Text>
             <View style={styles.purposeContainer}>
-              <PurposeButton 
-                label="General" 
-                selected={formData.purpose === 'General'}
-                onPress={() => setFormData({...formData, purpose: 'General'})}
-              />
-              <PurposeButton 
-                label="Education" 
-                selected={formData.purpose === 'Education'}
-                onPress={() => setFormData({...formData, purpose: 'Education'})}
-              />
-              <PurposeButton 
-                label="Healthcare" 
-                selected={formData.purpose === 'Healthcare'}
-                onPress={() => setFormData({...formData, purpose: 'Healthcare'})}
-              />
-              <PurposeButton 
-                label="Relief" 
-                selected={formData.purpose === 'Relief'}
-                onPress={() => setFormData({...formData, purpose: 'Relief'})}
-              />
+              {purposes.map((p) => (
+                <PurposeButton 
+                  key={p}
+                  label={p} 
+                  selected={formData.purpose === p}
+                  onPress={() => setFormData({...formData, purpose: p})}
+                />
+              ))}
             </View>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Full Name</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={formData.name}
-              onChangeText={(text) => setFormData({...formData, name: text})}
-              placeholder="Enter your name"
-            />
-          </View>
+          {!formData.anonymous && (
+            <>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={formData.name}
+                  onChangeText={(text) => setFormData({...formData, name: text})}
+                  placeholder="Enter your name"
+                />
+              </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={formData.email}
-              onChangeText={(text) => setFormData({...formData, email: text})}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-            />
-          </View>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({...formData, email: text})}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                />
+              </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Phone</Text>
-            <TextInput
-              style={styles.fieldInput}
-              value={formData.phone}
-              onChangeText={(text) => setFormData({...formData, phone: text})}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-            />
-          </View>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Phone</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={formData.phone}
+                  onChangeText={(text) => setFormData({...formData, phone: text})}
+                  placeholder="Enter your phone number"
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </>
+          )}
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>Message</Text>
@@ -293,23 +504,32 @@ export default function WorkingMemberDonation({ navigation }) {
           </View>
 
           <TouchableOpacity 
-            style={styles.donateButton}
+            style={[styles.donateButton, loading && styles.donateButtonDisabled]}
             onPress={handleDonate}
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <>
                 <MaterialIcons name="favorite" size={20} color="#ffffff" />
-                <Text style={styles.donateButtonText}>Donate Now</Text>
+                <Text style={styles.donateButtonText}>
+                  Donate ₹{parseFloat(formData.amount) || 0}
+                </Text>
               </>
             )}
           </TouchableOpacity>
+
+          <Text style={styles.paymentNote}>🔒 Secure payment powered by Razorpay</Text>
         </View>
+
+        {/* Donation History */}
+        {renderDonationHistory()}
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <SuccessModal />
     </View>
   );
 }
@@ -320,9 +540,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
-  // Blue Header
+  // Purple Header
   headerCard: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
@@ -397,6 +617,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  anonymousToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
+  },
+  anonymousText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+
   field: {
     marginBottom: 14,
   },
@@ -435,8 +680,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   purposeButtonActive: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: '#8b5cf6',
+    borderColor: '#8b5cf6',
   },
   purposeButtonText: {
     fontFamily: Fonts.SemiBold,
@@ -457,7 +702,147 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
   },
+modalButtonRow: {
+  flexDirection: 'row',
+  gap: 10,
+  width: '100%',
+  marginTop: 8,
+},
+modalButtonSecondary: {
+  backgroundColor: '#6b7280',
+  flex: 1,
+},
+modalButtonPrimary: {
+  backgroundColor: '#8b5cf6',
+  flex: 1,
+  flexDirection: 'row',
+  justifyContent: 'center',
+  alignItems: 'center',
+  gap: 6,
+},
+modalButtonTextSecondary: {
+  fontFamily: Fonts.SemiBold,
+  color: '#ffffff',
+  fontSize: 14,
+},
+modalCertNumber: {
+  fontFamily: Fonts.SemiBold,
+  fontSize: 13,
+  color: '#8b5cf6',
+  marginBottom: 4,
+},
+  donateButtonDisabled: {
+    opacity: 0.6,
+  },
   donateButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 16,
+  },
+  paymentNote: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+
+  // History Items
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  historyLeft: {
+    flex: 1,
+  },
+  historyPurpose: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  historyDate: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  historyAmount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#10b981',
+  },
+  viewAllButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  viewAllText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#8b5cf6',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 340,
+  },
+  successIconContainer: {
+    marginBottom: 16,
+  },
+  successIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#d1fae5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 22,
+    color: '#1f2937',
+    textAlign: 'center',
+    lineHeight: 30,
+  },
+  modalSubtext: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalPaymentId: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#9ca3af',
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: '#8b5cf6',
+    paddingHorizontal: 40,
+    paddingVertical: 12,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,

@@ -28,6 +28,7 @@ import {
   orderBy,
   limit,
   onSnapshot,
+addDoc,
   runTransaction,
   Timestamp,
   increment
@@ -35,7 +36,13 @@ import {
 import { Fonts } from '../../config/fonts';
 import { CommissionService } from '../../services/CommissionService';
 import { WalletService } from '../../services/WalletService';
-import { getLevelDetails, LEVELS } from '../../config/commissionLevels';
+import { 
+  getLevelDetails, 
+  LEVELS,
+  getLevelByDonations,
+  isEligibleForPromotion,
+  getPromotionRequirements
+} from '../../config/commissionLevels';
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +53,7 @@ export default function CommissionManagement({ navigation }) {
   const [saving, setSaving] = useState(false);
   const [commissionData, setCommissionData] = useState(null);
   const [pendingPayouts, setPendingPayouts] = useState([]);
+  const [pendingPromotions, setPendingPromotions] = useState([]);
   const [selectedPayout, setSelectedPayout] = useState(null);
   const [payoutModalVisible, setPayoutModalVisible] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState('');
@@ -55,15 +63,23 @@ export default function CommissionManagement({ navigation }) {
     totalCommissionPaid: 0,
     pendingCommission: 0,
     totalPayoutsThisMonth: 0,
-    topEarners: []
+    topEarners: [],
+    totalDonationCommission: 0
   });
   const [selectedLevel, setSelectedLevel] = useState(null);
   const [levelModalVisible, setLevelModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [selectedWorkingMember, setSelectedWorkingMember] = useState(null);
   const [memberPayoutModalVisible, setMemberPayoutModalVisible] = useState(false);
+const [promotionConfirmVisible, setPromotionConfirmVisible] = useState(false);
+const [pendingApproveData, setPendingApproveData] = useState(null);
   const [memberPayoutAmount, setMemberPayoutAmount] = useState('');
   const [editingLevelIndex, setEditingLevelIndex] = useState(null);
+  const [donationStats, setDonationStats] = useState({
+    totalDonationCommission: 0,
+    totalDonations: 0,
+    totalTransactions: 0
+  });
   
   const [formData, setFormData] = useState({
     levels: [
@@ -71,64 +87,64 @@ export default function CommissionManagement({ navigation }) {
         id: 'I', 
         name: 'Customer', 
         directCommission: 25, 
-        secondaryCommission: 0, 
-        minMembers: 0, 
-        maxMembers: 4,
-        membersRequiredForPromotion: 5
+        secondaryCommission: 10, 
+        minDonations: 0,
+        maxDonations: 9999,
+        donationsRequiredForPromotion: 10000
       },
       { 
         id: 'II', 
         name: 'Executive', 
         directCommission: 35, 
-        secondaryCommission: 10, 
-        minMembers: 5, 
-        maxMembers: 9,
-        membersRequiredForPromotion: 10
+        secondaryCommission: 5, 
+        minDonations: 10000,
+        maxDonations: 24999,
+        donationsRequiredForPromotion: 25000
       },
       { 
         id: 'III', 
         name: 'Manager', 
         directCommission: 40, 
-        secondaryCommission: 5, 
-        minMembers: 10, 
-        maxMembers: 24,
-        membersRequiredForPromotion: 25
+        secondaryCommission: 2.5, 
+        minDonations: 25000,
+        maxDonations: 49999,
+        donationsRequiredForPromotion: 50000
       },
       { 
         id: 'IV', 
         name: 'Coordinator', 
         directCommission: 42.5, 
-        secondaryCommission: 2.5, 
-        minMembers: 25, 
-        maxMembers: 49,
-        membersRequiredForPromotion: 50
+        secondaryCommission: 1.25, 
+        minDonations: 50000,
+        maxDonations: 99999,
+        donationsRequiredForPromotion: 100000
       },
       { 
         id: 'V', 
         name: 'Guide', 
         directCommission: 43.75, 
         secondaryCommission: 1.25, 
-        minMembers: 50, 
-        maxMembers: 99,
-        membersRequiredForPromotion: 100
+        minDonations: 100000,
+        maxDonations: 249999,
+        donationsRequiredForPromotion: 250000
       },
       { 
         id: 'VI', 
         name: 'Leader', 
         directCommission: 44.5, 
         secondaryCommission: 0.75, 
-        minMembers: 100, 
-        maxMembers: 199,
-        membersRequiredForPromotion: 200
+        minDonations: 250000,
+        maxDonations: 499999,
+        donationsRequiredForPromotion: 500000
       },
       { 
         id: 'VII', 
         name: 'Crown', 
         directCommission: 45, 
         secondaryCommission: 0.50, 
-        minMembers: 200, 
-        maxMembers: Infinity,
-        membersRequiredForPromotion: Infinity
+        minDonations: 500000,
+        maxDonations: Infinity,
+        donationsRequiredForPromotion: Infinity
       }
     ],
     registrationFee: 1000,
@@ -138,6 +154,8 @@ export default function CommissionManagement({ navigation }) {
     promotionNotificationEnabled: true,
     autoPayoutEnabled: false,
     payoutThreshold: 500,
+    donationCommissionEnabled: true,
+    donationCommissionRate: 25,
     lastUpdated: null
   });
 
@@ -145,6 +163,8 @@ export default function CommissionManagement({ navigation }) {
     fetchCommissionData();
     fetchStats();
     setupPendingPayoutsListener();
+    fetchDonationCommissionStats();
+    fetchPendingPromotions();
   }, []);
 
   const setupPendingPayoutsListener = () => {
@@ -185,6 +205,8 @@ export default function CommissionManagement({ navigation }) {
           promotionNotificationEnabled: data.promotionNotificationEnabled !== undefined ? data.promotionNotificationEnabled : true,
           autoPayoutEnabled: data.autoPayoutEnabled !== undefined ? data.autoPayoutEnabled : false,
           payoutThreshold: data.payoutThreshold || 500,
+          donationCommissionEnabled: data.donationCommissionEnabled !== undefined ? data.donationCommissionEnabled : true,
+          donationCommissionRate: data.donationCommissionRate || 25,
           lastUpdated: data.lastUpdated || null
         });
       } else {
@@ -200,7 +222,10 @@ export default function CommissionManagement({ navigation }) {
 
   const fetchStats = async () => {
     try {
-      const usersQuery = query(collection(db, 'users'), where('role', '==', 'workingMember'));
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('role', 'in', ['working', 'workingMember'])
+      );
       const usersSnap = await getDocs(usersQuery);
       const workingMembers = usersSnap.size;
 
@@ -250,6 +275,231 @@ export default function CommissionManagement({ navigation }) {
     }
   };
 
+  const fetchDonationCommissionStats = async () => {
+    try {
+      console.log('📊 Fetching donation commission stats...');
+      
+      const q = query(
+        collection(db, 'commissionLogs'),
+        where('type', '==', 'donation_commission')
+      );
+      
+      const snapshot = await getDocs(q);
+      let totalDonationCommission = 0;
+      let totalDonations = 0;
+      let count = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        totalDonationCommission += data.commissionAmount || 0;
+        totalDonations += data.donationAmount || 0;
+        count++;
+      });
+      
+      setDonationStats({
+        totalDonationCommission,
+        totalDonations,
+        totalTransactions: count
+      });
+      
+      const topEarners = await CommissionService.getTopEarners(5);
+      setStats(prev => ({
+        ...prev,
+        topEarners
+      }));
+      
+    } catch (error) {
+      console.error('Error fetching donation stats:', error);
+    }
+  };
+
+  const fetchPendingPromotions = async () => {
+  try {
+    console.log('📊 Fetching pending promotions...');
+    
+    // Get the latest levels from Firestore
+    const settingsRef = doc(db, 'settings', 'commission');
+    const settingsSnap = await getDoc(settingsRef);
+    let dynamicLevels = null;
+    
+    if (settingsSnap.exists()) {
+      const settingsData = settingsSnap.data();
+      if (settingsData.levels) {
+        dynamicLevels = settingsData.levels;
+      }
+    }
+    
+    // If no dynamic levels, use formData.levels
+    const levelsToUse = dynamicLevels || formData.levels;
+    console.log('📊 Levels to use:', levelsToUse);
+    
+    // Get all working members
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('role', 'in', ['working', 'workingMember'])
+    );
+    const usersSnap = await getDocs(usersQuery);
+    
+    const promotions = [];
+    
+    for (const userDoc of usersSnap.docs) {
+      const userData = userDoc.data();
+      const userId = userDoc.id;
+      
+      // Get total donations from this working member's registered members
+      const donations = await CommissionService.getTotalDonationsByMember(userId);
+      
+      // Get current level
+      const currentLevel = userData.level || 'I';
+      
+      // Find the current level in the dynamic levels
+      const currentLevelIndex = levelsToUse.findIndex(l => l.id === currentLevel);
+      const currentLevelData = currentLevelIndex !== -1 ? levelsToUse[currentLevelIndex] : null;
+      
+      if (!currentLevelData) {
+        console.log(`⚠️ Level ${currentLevel} not found in levels data`);
+        continue;
+      }
+      
+      // Get next level
+      const nextLevelIndex = currentLevelIndex + 1;
+      const nextLevel = nextLevelIndex < levelsToUse.length ? levelsToUse[nextLevelIndex] : null;
+      
+      if (!nextLevel) {
+        console.log(`⚠️ No next level for ${currentLevel}`);
+        continue;
+      }
+      
+      // ✅ Check if eligible based on donationsRequiredForPromotion from current level
+      const donationsRequired = currentLevelData.donationsRequiredForPromotion || 0;
+      const isEligible = donations >= donationsRequired;
+      
+      console.log(`📊 ${userData.fullName}: Level ${currentLevel}, Donations: ₹${donations}, Required: ₹${donationsRequired}, Eligible: ${isEligible}`);
+      
+      if (isEligible) {
+        promotions.push({
+          id: userId,
+          name: userData.fullName || userData.name || 'Unknown',
+          currentLevel: currentLevel,
+          nextLevel: nextLevel.id,
+          nextLevelName: nextLevel.name,
+          totalDonations: donations,
+          requiredDonations: donationsRequired,
+          progress: Math.min((donations / (donationsRequired || 1)) * 100, 100),
+          email: userData.email || '',
+          phone: userData.phone || '',
+          joinedDate: userData.createdAt || new Date().toISOString()
+        });
+      }
+    }
+    
+    // Sort by progress (highest first)
+    promotions.sort((a, b) => b.progress - a.progress);
+    
+    setPendingPromotions(promotions);
+    console.log(`✅ Found ${promotions.length} pending promotions`);
+    
+  } catch (error) {
+    console.error('Error fetching pending promotions:', error);
+  }
+};
+
+  const approvePromotion = (memberId, nextLevel) => {
+  console.log('🔍 approvePromotion called with:', { memberId, nextLevel });
+  
+  if (!memberId || !nextLevel) {
+    Alert.alert('Error', 'Missing member ID or level');
+    return;
+  }
+
+  // Show custom modal instead of Alert
+  setPendingApproveData({ memberId, nextLevel });
+  setPromotionConfirmVisible(true);
+};
+const confirmApprovePromotion = async () => {
+  if (!pendingApproveData) return;
+  
+  const { memberId, nextLevel } = pendingApproveData;
+  console.log('✅ Confirming promotion for:', memberId, 'to:', nextLevel);
+  
+  setSaving(true);
+  setPromotionConfirmVisible(false);
+  
+  try {
+    console.log('📝 Updating user level...');
+    const userRef = doc(db, 'users', memberId);
+    await updateDoc(userRef, {
+      level: nextLevel,
+      promotedAt: new Date().toISOString(),
+      promotionApprovedBy: auth.currentUser?.uid || 'admin',
+      updatedAt: new Date().toISOString()
+    });
+    console.log('✅ User level updated');
+
+    console.log('📝 Creating promotion log...');
+    const promotionLogRef = collection(db, 'promotionLogs');
+    await addDoc(promotionLogRef, {
+      userId: memberId,
+      newLevel: nextLevel,
+      approvedBy: auth.currentUser?.uid || 'admin',
+      approvedAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      status: 'approved'
+    });
+    console.log('✅ Promotion log created');
+
+    Alert.alert('Success', `Member promoted to Level ${nextLevel} successfully`);
+    await fetchPendingPromotions();
+    await fetchStats();
+    
+  } catch (error) {
+    console.error('❌ Error approving promotion:', error);
+    Alert.alert('Error', error.message || 'Failed to approve promotion');
+  } finally {
+    setSaving(false);
+    setPendingApproveData(null);
+  }
+};
+
+  const rejectPromotion = async (memberId) => {
+  Alert.alert(
+    'Reject Promotion',
+    'Are you sure you want to reject this promotion?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          setSaving(true);
+          try {
+            console.log('📝 Rejecting promotion for:', memberId);
+            
+            // Log rejection - using addDoc
+            const rejectionRef = collection(db, 'promotionLogs');
+            await addDoc(rejectionRef, {
+              userId: memberId,
+              status: 'rejected',
+              rejectedBy: auth.currentUser?.uid || 'admin',
+              rejectedAt: new Date().toISOString(),
+              timestamp: new Date().toISOString()
+            });
+            
+            Alert.alert('Success', 'Promotion rejected');
+            await fetchPendingPromotions();
+            
+          } catch (error) {
+            console.error('Error rejecting promotion:', error);
+            Alert.alert('Error', error.message || 'Failed to reject promotion');
+          } finally {
+            setSaving(false);
+          }
+        }
+      }
+    ]
+  );
+};
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -262,6 +512,8 @@ export default function CommissionManagement({ navigation }) {
         promotionNotificationEnabled: formData.promotionNotificationEnabled,
         autoPayoutEnabled: formData.autoPayoutEnabled,
         payoutThreshold: formData.payoutThreshold,
+        donationCommissionEnabled: formData.donationCommissionEnabled,
+        donationCommissionRate: formData.donationCommissionRate,
         lastUpdated: new Date().toISOString(),
         updatedBy: auth.currentUser?.uid || 'admin'
       };
@@ -508,11 +760,13 @@ export default function CommissionManagement({ navigation }) {
   };
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchCommissionData();
-    await fetchStats();
-    setRefreshing(false);
-  };
+  setRefreshing(true);
+  await fetchCommissionData();
+  await fetchStats();
+  await fetchDonationCommissionStats();
+  await fetchPendingPromotions();
+  setRefreshing(false);
+};
 
   // ============ Level Edit Functions ============
   const openLevelEditor = (index) => {
@@ -523,28 +777,87 @@ export default function CommissionManagement({ navigation }) {
 
   const updateLevelField = (field, value) => {
     if (!selectedLevel) return;
-    let parsedValue = value;
-    if (field === 'directCommission' || field === 'secondaryCommission') {
-      parsedValue = parseFloat(value) || 0;
-    } else if (field === 'minMembers' || field === 'maxMembers' || field === 'membersRequiredForPromotion') {
-      if (value === '∞' || value === '') {
-        parsedValue = Infinity;
-      } else {
-        parsedValue = parseInt(value) || 0;
-      }
+    
+    const updatedLevel = { ...selectedLevel };
+    
+    if (field === 'name') {
+      updatedLevel.name = value;
+      setSelectedLevel(updatedLevel);
+      return;
     }
-    setSelectedLevel({ ...selectedLevel, [field]: parsedValue });
+    
+    if (value === '∞') {
+      updatedLevel[field] = Infinity;
+      setSelectedLevel(updatedLevel);
+      return;
+    }
+    
+    if (value === '' || value === null || value === undefined) {
+      updatedLevel[field] = '';
+      setSelectedLevel(updatedLevel);
+      return;
+    }
+    
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      updatedLevel[field] = numValue;
+    } else {
+      updatedLevel[field] = value;
+    }
+    
+    setSelectedLevel(updatedLevel);
   };
 
-  const saveLevelChanges = () => {
+  const saveLevelChanges = async () => {
     if (!selectedLevel || editingLevelIndex === null) return;
     
-    const newLevels = [...formData.levels];
-    newLevels[editingLevelIndex] = selectedLevel;
-    setFormData({ ...formData, levels: newLevels });
-    setLevelModalVisible(false);
-    setEditingLevelIndex(null);
-    Alert.alert('Success', 'Level updated successfully');
+    setSaving(true);
+    try {
+      const level = { ...selectedLevel };
+      const numericFields = ['directCommission', 'secondaryCommission', 'minDonations', 'maxDonations', 'donationsRequiredForPromotion'];
+      
+      for (const field of numericFields) {
+        if (level[field] === '' || level[field] === null || level[field] === undefined) {
+          level[field] = 0;
+        }
+        if (typeof level[field] === 'string' && level[field] !== '∞') {
+          level[field] = parseFloat(level[field]) || 0;
+        }
+      }
+      
+      const newLevels = [...formData.levels];
+      newLevels[editingLevelIndex] = level;
+      
+      setFormData(prev => ({
+        ...prev,
+        levels: newLevels
+      }));
+      
+      setCommissionData(prev => ({
+        ...prev,
+        levels: newLevels,
+        lastUpdated: new Date().toISOString()
+      }));
+      
+      const docRef = doc(db, 'settings', 'commission');
+      await updateDoc(docRef, {
+        levels: newLevels,
+        lastUpdated: new Date().toISOString()
+      });
+      
+      setLevelModalVisible(false);
+      setEditingLevelIndex(null);
+      setSelectedLevel(null);
+      
+      Alert.alert('Success', 'Level updated successfully');
+      await fetchCommissionData();
+      
+    } catch (error) {
+      console.error('Error saving level:', error);
+      Alert.alert('Error', error.message || 'Failed to save level');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // ============ Stats Components ============
@@ -558,6 +871,32 @@ export default function CommissionManagement({ navigation }) {
     </View>
   );
 
+  // Donation Stats Card
+  const DonationStatsCard = () => (
+    <View style={styles.donationStatsCard}>
+      <View style={styles.donationStatsHeader}>
+        <MaterialIcons name="volunteer-activism" size={20} color="#f59e0b" />
+        <Text style={styles.donationStatsTitle}>Donation Commission Stats</Text>
+      </View>
+      <View style={styles.donationStatsGrid}>
+        <View style={styles.donationStatItem}>
+          <Text style={styles.donationStatValue}>₹{donationStats.totalDonationCommission.toLocaleString()}</Text>
+          <Text style={styles.donationStatLabel}>Total Commission</Text>
+        </View>
+        <View style={styles.donationStatDivider} />
+        <View style={styles.donationStatItem}>
+          <Text style={styles.donationStatValue}>₹{donationStats.totalDonations.toLocaleString()}</Text>
+          <Text style={styles.donationStatLabel}>Total Donations</Text>
+        </View>
+        <View style={styles.donationStatDivider} />
+        <View style={styles.donationStatItem}>
+          <Text style={styles.donationStatValue}>{donationStats.totalTransactions}</Text>
+          <Text style={styles.donationStatLabel}>Transactions</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const PayoutCard = ({ item }) => {
     const [userName, setUserName] = useState('Loading...');
     
@@ -566,7 +905,7 @@ export default function CommissionManagement({ navigation }) {
         try {
           const userDoc = await getDoc(doc(db, 'users', item.userId));
           if (userDoc.exists()) {
-            setUserName(userDoc.data().name || 'Unknown');
+            setUserName(userDoc.data().fullName || userDoc.data().name || 'Unknown');
           }
         } catch (error) {
           console.error('Error fetching user:', error);
@@ -576,32 +915,35 @@ export default function CommissionManagement({ navigation }) {
     }, [item.userId]);
 
     const isDirect = item.type === 'direct_commission';
+    const isDonation = item.description?.toLowerCase().includes('donation') || false;
 
     return (
-      <View style={styles.payoutCard}>
+      <View style={[styles.payoutCard, isDonation && styles.donationPayoutCard]}>
         <View style={styles.payoutHeader}>
           <View style={styles.payoutUser}>
-            <View style={[styles.payoutIcon, { backgroundColor: isDirect ? '#8b5cf615' : '#10b98115' }]}>
+            <View style={[styles.payoutIcon, { backgroundColor: isDonation ? '#fef3c7' : (isDirect ? '#8b5cf615' : '#10b98115') }]}>
               <MaterialIcons 
-                name={isDirect ? 'person-add' : 'share'} 
+                name={isDonation ? 'volunteer-activism' : (isDirect ? 'person-add' : 'share')} 
                 size={18} 
-                color={isDirect ? '#8b5cf6' : '#10b981'} 
+                color={isDonation ? '#f59e0b' : (isDirect ? '#8b5cf6' : '#10b981')} 
               />
             </View>
             <View>
               <Text style={styles.payoutUserName}>{userName}</Text>
-              <Text style={styles.payoutType}>{isDirect ? 'Direct Commission' : 'Secondary Commission'}</Text>
+              <Text style={styles.payoutType}>
+                {isDonation ? 'Donation Commission' : (isDirect ? 'Direct Commission' : 'Secondary Commission')}
+              </Text>
             </View>
           </View>
           <View style={styles.payoutAmountContainer}>
-            <Text style={styles.payoutAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
+            <Text style={[styles.payoutAmount, isDonation && styles.donationAmount]}>₹{item.amount?.toLocaleString() || 0}</Text>
             <Text style={styles.payoutDate}>
               {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
             </Text>
           </View>
         </View>
         <TouchableOpacity
-          style={styles.payoutButton}
+          style={[styles.payoutButton, isDonation && styles.donationPayoutButton]}
           onPress={() => {
             setSelectedPayout(item);
             setPayoutAmount(String(item.amount || 0));
@@ -626,7 +968,13 @@ export default function CommissionManagement({ navigation }) {
       <Text style={styles.topEarnerRank}>#{index + 1}</Text>
       <View style={styles.topEarnerInfo}>
         <Text style={styles.topEarnerName}>{item.name || 'Unknown'}</Text>
-        <Text style={styles.topEarnerLevel}>Level {item.level || 'I'} • {item.directReferrals || 0} members</Text>
+        <Text style={styles.topEarnerLevel}>Level {item.level || 'I'}</Text>
+        {item.donationCommission > 0 && (
+          <Text style={styles.topEarnerDonation}>❤️ Donation Comm: ₹{item.donationCommission.toLocaleString()}</Text>
+        )}
+        {item.totalDonationsFromMembers > 0 && (
+          <Text style={styles.topEarnerTotalDonations}>💰 Total Donations: ₹{item.totalDonationsFromMembers.toLocaleString()}</Text>
+        )}
       </View>
       <View style={styles.topEarnerRight}>
         <Text style={styles.topEarnerAmount}>₹{item.totalEarned?.toLocaleString() || 0}</Text>
@@ -644,22 +992,32 @@ export default function CommissionManagement({ navigation }) {
     </TouchableOpacity>
   );
 
-  // ============ Edit Modals ============
   const LevelEditModal = () => {
     if (!selectedLevel) return null;
+
+    const nextLevelIndex = formData.levels.findIndex(l => l.id === selectedLevel.id) + 1;
+    const nextLevel = nextLevelIndex < formData.levels.length ? formData.levels[nextLevelIndex] : null;
 
     return (
       <Modal
         animationType="slide"
         transparent={true}
         visible={levelModalVisible}
-        onRequestClose={() => setLevelModalVisible(false)}
+        onRequestClose={() => {
+          setLevelModalVisible(false);
+          setEditingLevelIndex(null);
+          setSelectedLevel(null);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Edit Level: {selectedLevel.id}</Text>
-              <TouchableOpacity onPress={() => setLevelModalVisible(false)}>
+              <TouchableOpacity onPress={() => {
+                setLevelModalVisible(false);
+                setEditingLevelIndex(null);
+                setSelectedLevel(null);
+              }}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -670,7 +1028,7 @@ export default function CommissionManagement({ navigation }) {
                   <Text style={styles.fieldLabel}>Level Name</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={selectedLevel.name}
+                    value={selectedLevel.name || ''}
                     onChangeText={(text) => updateLevelField('name', text)}
                     placeholder="Enter level name"
                     placeholderTextColor="#9ca3af"
@@ -681,7 +1039,7 @@ export default function CommissionManagement({ navigation }) {
                   <Text style={styles.fieldLabel}>Direct Commission (%)</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={String(selectedLevel.directCommission)}
+                    value={selectedLevel.directCommission !== undefined && selectedLevel.directCommission !== null ? String(selectedLevel.directCommission) : ''}
                     onChangeText={(text) => updateLevelField('directCommission', text)}
                     keyboardType="numeric"
                     placeholder="Enter direct commission"
@@ -693,7 +1051,7 @@ export default function CommissionManagement({ navigation }) {
                   <Text style={styles.fieldLabel}>Secondary Commission (%)</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={String(selectedLevel.secondaryCommission)}
+                    value={selectedLevel.secondaryCommission !== undefined && selectedLevel.secondaryCommission !== null ? String(selectedLevel.secondaryCommission) : ''}
                     onChangeText={(text) => updateLevelField('secondaryCommission', text)}
                     keyboardType="numeric"
                     placeholder="Enter secondary commission"
@@ -701,38 +1059,47 @@ export default function CommissionManagement({ navigation }) {
                   />
                 </View>
 
+                <View style={styles.sectionDivider}>
+                  <Text style={styles.sectionDividerText}>💰 Donation Requirements</Text>
+                </View>
+
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Min Members</Text>
+                  <Text style={styles.fieldLabel}>Min Donations (₹)</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={String(selectedLevel.minMembers)}
-                    onChangeText={(text) => updateLevelField('minMembers', text)}
+                    value={selectedLevel.minDonations !== undefined && selectedLevel.minDonations !== null ? String(selectedLevel.minDonations) : ''}
+                    onChangeText={(text) => updateLevelField('minDonations', text)}
                     keyboardType="numeric"
-                    placeholder="Enter min members"
+                    placeholder="Enter min donations"
                     placeholderTextColor="#9ca3af"
                   />
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Max Members</Text>
+                  <Text style={styles.fieldLabel}>Max Donations (₹)</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={String(selectedLevel.maxMembers === Infinity ? '∞' : selectedLevel.maxMembers)}
-                    onChangeText={(text) => updateLevelField('maxMembers', text)}
-                    placeholder="Enter max members (∞ for unlimited)"
+                    value={selectedLevel.maxDonations === Infinity ? '∞' : (selectedLevel.maxDonations !== undefined && selectedLevel.maxDonations !== null ? String(selectedLevel.maxDonations) : '')}
+                    onChangeText={(text) => updateLevelField('maxDonations', text)}
+                    placeholder="Enter max donations (∞ for unlimited)"
                     placeholderTextColor="#9ca3af"
                   />
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Members Required for Promotion</Text>
+                  <Text style={styles.fieldLabel}>Donations Required for Promotion (₹)</Text>
                   <TextInput
                     style={styles.fieldInput}
-                    value={String(selectedLevel.membersRequiredForPromotion === Infinity ? '∞' : selectedLevel.membersRequiredForPromotion)}
-                    onChangeText={(text) => updateLevelField('membersRequiredForPromotion', text)}
-                    placeholder="Enter members required (∞ for no promotion)"
+                    value={selectedLevel.donationsRequiredForPromotion === Infinity ? '∞' : (selectedLevel.donationsRequiredForPromotion !== undefined && selectedLevel.donationsRequiredForPromotion !== null ? String(selectedLevel.donationsRequiredForPromotion) : '')}
+                    onChangeText={(text) => updateLevelField('donationsRequiredForPromotion', text)}
+                    placeholder="Enter donations required (∞ for no promotion)"
                     placeholderTextColor="#9ca3af"
                   />
+                  {nextLevel && (
+                    <Text style={styles.helperText}>
+                      Next level ({nextLevel.name}) requires ₹{nextLevel.minDonations?.toLocaleString()} in donations
+                    </Text>
+                  )}
                 </View>
 
                 <TouchableOpacity
@@ -817,6 +1184,22 @@ export default function CommissionManagement({ navigation }) {
                   />
                 </View>
 
+                <View style={styles.sectionDivider}>
+                  <Text style={styles.sectionDividerText}>💝 Donation Commission</Text>
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Donation Commission Rate (%)</Text>
+                  <TextInput
+                    style={styles.fieldInput}
+                    value={String(formData.donationCommissionRate)}
+                    onChangeText={(text) => setFormData({ ...formData, donationCommissionRate: parseFloat(text) || 0 })}
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
+                  />
+                  <Text style={styles.helperText}>Percentage of donation amount given as commission</Text>
+                </View>
+
                 <View style={styles.switchRow}>
                   <Text style={styles.switchLabel}>Auto Promotion</Text>
                   <TouchableOpacity
@@ -834,6 +1217,16 @@ export default function CommissionManagement({ navigation }) {
                     onPress={() => setFormData({ ...formData, autoPayoutEnabled: !formData.autoPayoutEnabled })}
                   >
                     <View style={[styles.switchThumb, formData.autoPayoutEnabled && styles.switchThumbActive]} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.switchRow}>
+                  <Text style={styles.switchLabel}>Donation Commission</Text>
+                  <TouchableOpacity
+                    style={[styles.switch, formData.donationCommissionEnabled && styles.switchActive]}
+                    onPress={() => setFormData({ ...formData, donationCommissionEnabled: !formData.donationCommissionEnabled })}
+                  >
+                    <View style={[styles.switchThumb, formData.donationCommissionEnabled && styles.switchThumbActive]} />
                   </TouchableOpacity>
                 </View>
 
@@ -924,6 +1317,9 @@ export default function CommissionManagement({ navigation }) {
           />
         </View>
 
+        {/* Donation Stats Card */}
+        <DonationStatsCard />
+
         {/* Pending Payouts Section */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
@@ -953,6 +1349,74 @@ export default function CommissionManagement({ navigation }) {
           )}
         </View>
 
+        {/* Pending Promotions Section */}
+        {pendingPromotions.length > 0 && (
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="stars" size={20} color="#fbbf24" />
+              <Text style={styles.sectionTitle}>Pending Promotions ({pendingPromotions.length})</Text>
+            </View>
+
+            {pendingPromotions.map((item) => (
+              <View key={item.id} style={styles.promotionCard}>
+                <View style={styles.promotionHeader}>
+                  <View style={styles.promotionUser}>
+                    <View style={styles.promotionAvatar}>
+                      <Text style={styles.promotionAvatarText}>
+                        {item.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={styles.promotionName}>{item.name}</Text>
+                      <Text style={styles.promotionDetails}>
+                        Level {item.currentLevel} → Level {item.nextLevel} ({item.nextLevelName})
+                      </Text>
+                      <Text style={styles.promotionDonations}>
+                        ₹{item.totalDonations.toLocaleString()} / ₹{item.requiredDonations.toLocaleString()} donations
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.promotionProgressContainer}>
+                    <Text style={styles.promotionProgressText}>
+                      {Math.round(item.progress)}%
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Progress Bar */}
+                <View style={styles.promotionProgressBar}>
+                  <View 
+                    style={[
+                      styles.promotionProgressFill, 
+                      { width: `${Math.min(item.progress, 100)}%` }
+                    ]} 
+                  />
+                </View>
+
+                <View style={styles.promotionActions}>
+                  <TouchableOpacity
+                    style={[styles.promotionActionButton, styles.promotionRejectButton]}
+                    onPress={() => rejectPromotion(item.id)}
+                    disabled={saving}
+                  >
+                    <MaterialIcons name="close" size={16} color="#ef4444" />
+                    <Text style={styles.promotionRejectText}>Reject</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.promotionActionButton, styles.promotionApproveButton]}
+                    onPress={() => approvePromotion(item.id, item.nextLevel)}
+                    disabled={saving}
+                  >
+                    <MaterialIcons name="check" size={16} color="#ffffff" />
+                    <Text style={styles.promotionApproveText}>Approve</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Top Earners */}
         {stats.topEarners.length > 0 && (
           <View style={styles.card}>
@@ -967,7 +1431,7 @@ export default function CommissionManagement({ navigation }) {
           </View>
         )}
 
-        {/* Membership Levels Table - EDITABLE */}
+        {/* Membership Levels Table */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <MaterialIcons name="workspace-premium" size={20} color="#FF7722" />
@@ -985,7 +1449,7 @@ export default function CommissionManagement({ navigation }) {
             <Text style={[styles.tableHeaderText, styles.nameCol]}>Type</Text>
             <Text style={[styles.tableHeaderText, styles.percentageCol]}>Direct</Text>
             <Text style={[styles.tableHeaderText, styles.percentageCol]}>Secondary</Text>
-            <Text style={[styles.tableHeaderText, styles.membersCol]}>Promotion</Text>
+            <Text style={[styles.tableHeaderText, styles.donationsCol]}>Donations Req</Text>
           </View>
 
           {formData.levels.map((level, index) => (
@@ -1007,8 +1471,8 @@ export default function CommissionManagement({ navigation }) {
               <Text style={[styles.tableCell, styles.percentageCol, styles.secondaryText]}>
                 {level.secondaryCommission}%
               </Text>
-              <Text style={[styles.tableCell, styles.membersCol]}>
-                {level.membersRequiredForPromotion === Infinity ? '∞' : level.membersRequiredForPromotion}
+              <Text style={[styles.tableCell, styles.donationsCol, styles.donationText]}>
+                {level.donationsRequiredForPromotion === Infinity ? '∞' : `₹${(level.donationsRequiredForPromotion || 0).toLocaleString()}`}
               </Text>
               <View style={styles.editIconContainer}>
                 <MaterialIcons name="edit" size={16} color="#FF7722" />
@@ -1016,10 +1480,6 @@ export default function CommissionManagement({ navigation }) {
             </TouchableOpacity>
           ))}
 
-          <View style={styles.editHint}>
-            <MaterialIcons name="tap" size={16} color="#FF7722" />
-            <Text style={styles.editHintText}>Tap any level to edit</Text>
-          </View>
         </View>
 
         {/* Quick Settings */}
@@ -1050,8 +1510,10 @@ export default function CommissionManagement({ navigation }) {
               </Text>
             </View>
             <View style={styles.settingItem}>
-              <Text style={styles.settingLabel}>Payout Threshold</Text>
-              <Text style={styles.settingValue}>₹{formData.payoutThreshold}</Text>
+              <Text style={styles.settingLabel}>Donation Commission</Text>
+              <Text style={[styles.settingValue, { color: formData.donationCommissionEnabled ? '#10b981' : '#ef4444' }]}>
+                {formData.donationCommissionEnabled ? 'Enabled' : 'Disabled'}
+              </Text>
             </View>
           </View>
         </View>
@@ -1135,7 +1597,64 @@ export default function CommissionManagement({ navigation }) {
           </View>
         </View>
       </Modal>
+{/* Promotion Confirmation Modal */}
+<Modal
+  animationType="fade"
+  transparent={true}
+  visible={promotionConfirmVisible}
+  onRequestClose={() => {
+    setPromotionConfirmVisible(false);
+    setPendingApproveData(null);
+  }}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.confirmModalContent}>
+      <View style={styles.confirmModalHeader}>
+        <MaterialIcons name="stars" size={28} color="#fbbf24" />
+        <Text style={styles.confirmModalTitle}>Approve Promotion</Text>
+      </View>
+      
+      <View style={styles.confirmModalBody}>
+        <Text style={styles.confirmModalText}>
+          Are you sure you want to promote this member to
+        </Text>
+        <Text style={styles.confirmModalLevel}>
+          Level {pendingApproveData?.nextLevel}
+        </Text>
+        <Text style={styles.confirmModalSubtext}>
+          This action will update the member's level and grant them new commission rates.
+        </Text>
+      </View>
 
+      <View style={styles.confirmModalActions}>
+        <TouchableOpacity
+          style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+          onPress={() => {
+            setPromotionConfirmVisible(false);
+            setPendingApproveData(null);
+          }}
+        >
+          <Text style={styles.confirmModalCancelText}>Cancel</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.confirmModalButton, styles.confirmModalApproveButton]}
+          onPress={confirmApprovePromotion}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <>
+              <MaterialIcons name="check" size={18} color="#ffffff" />
+              <Text style={styles.confirmModalApproveText}>Approve</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
       {/* Member Payout Modal */}
       <Modal
         animationType="slide"
@@ -1159,6 +1678,16 @@ export default function CommissionManagement({ navigation }) {
                 <Text style={styles.memberInfoEarned}>
                   Total Earned: ₹{selectedWorkingMember?.totalEarned?.toLocaleString() || 0}
                 </Text>
+                {selectedWorkingMember?.donationCommission > 0 && (
+                  <Text style={styles.memberInfoDonation}>
+                    ❤️ Donation Commission: ₹{selectedWorkingMember.donationCommission.toLocaleString()}
+                  </Text>
+                )}
+                {selectedWorkingMember?.totalDonationsFromMembers > 0 && (
+                  <Text style={styles.memberInfoTotalDonations}>
+                    💰 Total Donations: ₹{selectedWorkingMember.totalDonationsFromMembers.toLocaleString()}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.field}>
@@ -1207,7 +1736,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fdf8f3',
   },
 
-  // Header
   headerCard: {
     backgroundColor: '#FF7722',
     paddingHorizontal: 20,
@@ -1261,7 +1789,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Stats
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1299,7 +1826,54 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Card
+  donationStatsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  donationStatsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  donationStatsTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  donationStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  donationStatItem: {
+    alignItems: 'center',
+  },
+  donationStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#f59e0b',
+  },
+  donationStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  donationStatDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+  },
+
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -1346,7 +1920,6 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 
-  // Table
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
@@ -1384,14 +1957,14 @@ const styles = StyleSheet.create({
     width: '12%',
   },
   nameCol: {
-    width: '26%',
+    width: '28%',
   },
   percentageCol: {
-    width: '16%',
+    width: '18%',
     alignItems: 'flex-end',
   },
-  membersCol: {
-    width: '22%',
+  donationsCol: {
+    width: '30%',
     alignItems: 'flex-end',
   },
   levelBadge: {
@@ -1406,8 +1979,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     color: '#8b5cf6',
   },
+  donationText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#f59e0b',
+  },
   editIconContainer: {
-    width: '8%',
+    width: '6%',
     alignItems: 'center',
   },
   editHint: {
@@ -1429,6 +2006,108 @@ const styles = StyleSheet.create({
     padding: 2,
   },
 
+  // Promotion Cards
+  promotionCard: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  promotionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  promotionUser: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  promotionAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fef3c7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promotionAvatarText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#f59e0b',
+  },
+  promotionName: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  promotionDetails: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  promotionDonations: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#f59e0b',
+    marginTop: 2,
+  },
+  promotionProgressContainer: {
+    alignItems: 'flex-end',
+  },
+  promotionProgressText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    color: '#f59e0b',
+  },
+  promotionProgressBar: {
+    height: 6,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  promotionProgressFill: {
+    height: '100%',
+    backgroundColor: '#f59e0b',
+    borderRadius: 3,
+  },
+  promotionActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  promotionActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+  },
+  promotionApproveButton: {
+    backgroundColor: '#10b981',
+  },
+  promotionRejectButton: {
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  promotionApproveText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#ffffff',
+  },
+  promotionRejectText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#ef4444',
+  },
+
   // Payout Cards
   payoutCard: {
     backgroundColor: '#f9fafb',
@@ -1437,6 +2116,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  donationPayoutCard: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fef3c7',
   },
   payoutHeader: {
     flexDirection: 'row',
@@ -1474,6 +2157,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#10b981',
   },
+  donationAmount: {
+    color: '#f59e0b',
+  },
   payoutDate: {
     fontFamily: Fonts.Regular,
     fontSize: 10,
@@ -1488,13 +2174,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 6,
   },
+  donationPayoutButton: {
+    backgroundColor: '#f59e0b',
+  },
   payoutButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#ffffff',
   },
 
-  // Top Earners
   topEarnerItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1521,6 +2209,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
   },
+  topEarnerDonation: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#f59e0b',
+    marginTop: 2,
+  },
+  topEarnerTotalDonations: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#10b981',
+    marginTop: 2,
+  },
   topEarnerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1543,7 +2243,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  // Settings
   settingsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1567,8 +2266,25 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginTop: 2,
   },
+  helperText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  sectionDivider: {
+    marginTop: 12,
+    marginBottom: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  sectionDividerText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
 
-  // Empty State
   emptyState: {
     alignItems: 'center',
     paddingVertical: 20,
@@ -1585,7 +2301,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Update Info
   updateInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1598,7 +2313,82 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9ca3af',
   },
-
+// Add to styles object
+confirmModalContent: {
+  backgroundColor: '#ffffff',
+  borderRadius: 20,
+  padding: 24,
+  width: '90%',
+  maxWidth: 400,
+  alignSelf: 'center',
+},
+confirmModalHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+  marginBottom: 16,
+},
+confirmModalTitle: {
+  fontFamily: Fonts.Bold,
+  fontSize: 20,
+  color: '#1f2937',
+},
+confirmModalBody: {
+  alignItems: 'center',
+  marginBottom: 24,
+},
+confirmModalText: {
+  fontFamily: Fonts.Regular,
+  fontSize: 14,
+  color: '#6b7280',
+  textAlign: 'center',
+  marginBottom: 8,
+},
+confirmModalLevel: {
+  fontFamily: Fonts.Bold,
+  fontSize: 28,
+  color: '#f59e0b',
+  marginVertical: 8,
+},
+confirmModalSubtext: {
+  fontFamily: Fonts.Regular,
+  fontSize: 12,
+  color: '#9ca3af',
+  textAlign: 'center',
+  marginTop: 4,
+},
+confirmModalActions: {
+  flexDirection: 'row',
+  gap: 10,
+},
+confirmModalButton: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 10,
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexDirection: 'row',
+  gap: 6,
+},
+confirmModalCancelButton: {
+  backgroundColor: '#f3f4f6',
+  borderWidth: 1,
+  borderColor: '#e5e7eb',
+},
+confirmModalApproveButton: {
+  backgroundColor: '#10b981',
+},
+confirmModalCancelText: {
+  fontFamily: Fonts.SemiBold,
+  fontSize: 14,
+  color: '#6b7280',
+},
+confirmModalApproveText: {
+  fontFamily: Fonts.SemiBold,
+  fontSize: 14,
+  color: '#ffffff',
+},
   versionContainer: {
     alignItems: 'center',
     marginBottom: 10,
@@ -1609,7 +2399,6 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
 
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1678,7 +2467,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // Payout Summary
   payoutSummary: {
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
@@ -1698,7 +2486,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Member Info
   memberInfo: {
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
@@ -1723,8 +2510,19 @@ const styles = StyleSheet.create({
     color: '#10b981',
     marginTop: 4,
   },
+  memberInfoDonation: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#f59e0b',
+    marginTop: 2,
+  },
+  memberInfoTotalDonations: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 12,
+    color: '#10b981',
+    marginTop: 2,
+  },
 
-  // Level Edit
   updateLevelButton: {
     backgroundColor: '#FF7722',
     paddingVertical: 14,
@@ -1738,7 +2536,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  // Switches
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1777,7 +2574,6 @@ const styles = StyleSheet.create({
     transform: [{ translateX: 20 }],
   },
 
-  // Save Button
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',

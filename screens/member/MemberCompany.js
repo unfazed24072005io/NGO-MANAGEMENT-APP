@@ -1,17 +1,28 @@
+// screens/member/MemberCompany.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator, RefreshControl, Linking, Alert } from 'react-native';
+import { 
+  View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, 
+  ActivityIndicator, RefreshControl, Linking, Alert 
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db } from '../../config/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getTotalDonations, getDonationCount } from '../../services/paymentService';
 
 export default function MemberCompany({ navigation }) {
   const [companyData, setCompanyData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [donationStats, setDonationStats] = useState({
+    totalAmount: 0,
+    totalDonations: 0,
+    totalCampaigns: 0,
+  });
 
   useEffect(() => {
     fetchCompanyData();
+    fetchDonationStats();
   }, []);
 
   const fetchCompanyData = async () => {
@@ -33,9 +44,44 @@ export default function MemberCompany({ navigation }) {
     }
   };
 
+  const fetchDonationStats = async () => {
+    try {
+      // Get total donations from Firebase
+      const donationsSnap = await getDocs(query(
+        collection(db, 'donations'),
+        where('status', '==', 'completed')
+      ));
+      
+      let totalAmount = 0;
+      let totalDonations = 0;
+      donationsSnap.forEach(doc => {
+        const data = doc.data();
+        totalAmount += data.amount || 0;
+        totalDonations++;
+      });
+
+      // Add Razorpay donations
+      const razorpayTotal = getTotalDonations();
+      const razorpayCount = getDonationCount();
+
+      // Get campaigns count
+      const campaignsSnap = await getDocs(collection(db, 'campaigns'));
+      const campaignsCount = campaignsSnap.size;
+
+      setDonationStats({
+        totalAmount: totalAmount + razorpayTotal,
+        totalDonations: totalDonations + razorpayCount,
+        totalCampaigns: campaignsCount || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching donation stats:', error);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchCompanyData();
+    await fetchDonationStats();
     setRefreshing(false);
   };
 
@@ -186,6 +232,39 @@ export default function MemberCompany({ navigation }) {
           {getField('description') && getField('description') !== 'Not provided' && (
             <Text style={styles.description}>{getField('description')}</Text>
           )}
+        </View>
+
+        {/* Donation Stats Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="favorite" size={20} color="#ef4444" />
+            <Text style={styles.sectionTitle}>Donation Impact</Text>
+          </View>
+
+          <View style={styles.donationStatsContainer}>
+            <View style={styles.donationStatItem}>
+              <Text style={styles.donationStatValue}>₹{donationStats.totalAmount.toLocaleString()}</Text>
+              <Text style={styles.donationStatLabel}>Total Donations</Text>
+            </View>
+            <View style={styles.donationStatDivider} />
+            <View style={styles.donationStatItem}>
+              <Text style={styles.donationStatValue}>{donationStats.totalDonations}</Text>
+              <Text style={styles.donationStatLabel}>Donors</Text>
+            </View>
+            <View style={styles.donationStatDivider} />
+            <View style={styles.donationStatItem}>
+              <Text style={styles.donationStatValue}>{donationStats.totalCampaigns}</Text>
+              <Text style={styles.donationStatLabel}>Campaigns</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.donateNowButton}
+            onPress={() => navigation.navigate('DonationScreen')}
+          >
+            <MaterialIcons name="favorite" size={20} color="#ffffff" />
+            <Text style={styles.donateNowText}>Donate Now</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Organization Details */}
@@ -419,7 +498,7 @@ export default function MemberCompany({ navigation }) {
           )}
         </View>
 
-                {/* Footer */}
+        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             © {new Date().getFullYear()} {getField('organizationName')}. All rights reserved.
@@ -432,460 +511,61 @@ export default function MemberCompany({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-
-  // Header
-  headerCard: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: {
+// Add these styles to the existing styles
+const additionalStyles = {
+  // Donation Stats
+  donationStatsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#ffffff',
-    flex: 1,
-    textAlign: 'center',
-  },
-
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingText: {
-    fontFamily: Fonts.Regular,
-    marginTop: 10,
-    color: '#6b7280',
-    fontSize: 14,
-  },
-
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 30,
-  },
-  emptyTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#1f2937',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 32,
+    justifyContent: 'space-around',
     paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-
-  // Cover
-  coverSection: {
-    marginTop: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#f3f4f6',
-    height: 160,
-  },
-  coverImage: {
-    width: '100%',
-    height: 160,
-    resizeMode: 'cover',
-  },
-  coverPlaceholder: {
-    width: '100%',
-    height: 160,
-    backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  coverPlaceholderText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-
-  // Logo
-  logoSection: {
-    alignItems: 'center',
-    marginTop: -40,
-  },
-  logoContainer: {
-    padding: 4,
-    backgroundColor: '#ffffff',
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  logoImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoText: {
-    fontFamily: Fonts.Bold,
-    fontSize: 36,
-    color: '#ffffff',
-  },
-
-  // Card
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  // Organization Info
-  companyName: {
-    fontFamily: Fonts.Bold,
-    fontSize: 22,
-    color: '#1f2937',
-    textAlign: 'center',
-  },
-  tagline: {
-    fontFamily: Fonts.Italic,
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  description: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#4b5563',
-    textAlign: 'center',
-    marginTop: 12,
-    lineHeight: 22,
-  },
-
-  // Status
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    gap: 12,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981',
-    marginRight: 6,
-  },
-  statusText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#10b981',
-    fontSize: 12,
-  },
-  establishedText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 13,
-    color: '#6b7280',
-  },
-
-  // Section Header
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-
-  // Detail Row
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: '#6b7280',
-  },
-  detailValue: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Services
-  serviceCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 10,
-    padding: 12,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
-  serviceHeader: {
-    flexDirection: 'row',
+  donationStatItem: {
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  serviceTitle: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
-  },
-  serviceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  serviceLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 13,
-    color: '#6b7280',
     flex: 1,
   },
-  serviceValue: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#1f2937',
+  donationStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#ef4444',
   },
-  serviceDescription: {
-    flex: 1,
-    textAlign: 'right',
-    fontSize: 13,
-  },
-
-  // About
-  aboutText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#1f2937',
-    lineHeight: 24,
-  },
-
-  // Mission & Vision
-  missionVisionContainer: {
-    gap: 12,
-  },
-  mvItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  mvItemBorder: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  mvIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  mvContent: {
-    flex: 1,
-  },
-  mvTitle: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 13,
-    color: '#1f2937',
-  },
-  mvText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#4b5563',
-    lineHeight: 22,
-    marginTop: 2,
-  },
-
-  // Leadership
-  leaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 14,
-  },
-  leaderRowBorder: {
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  leaderIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  leaderContent: {
-    flex: 1,
-  },
-  leaderRole: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  leaderName: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-
-  // Contact
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  contactIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contactText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#1f2937',
-    flex: 1,
-  },
-  linkText: {
-    color: '#3b82f6',
-  },
-
-  // Social Media
-  socialGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  socialIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  socialLabel: {
+  donationStatLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    marginTop: 2,
   },
-
-  // Footer
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+  donationStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e5e7eb',
+  },
+  donateNowButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ef4444',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginTop: 4,
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  footerText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'center',
+  donateNowText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#ffffff',
   },
+};
+
+// Merge styles
+const styles = StyleSheet.create({
+  ...require('./MemberCompany').styles,
+  ...additionalStyles,
 });

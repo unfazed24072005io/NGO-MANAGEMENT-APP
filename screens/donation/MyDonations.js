@@ -1,19 +1,26 @@
 // screens/donation/MyDonations.js
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import { 
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
+  RefreshControl, ActivityIndicator, Modal 
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getDonationHistory } from '../../services/paymentService';
 
 export default function MyDonations({ navigation }) {
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDonation, setSelectedDonation] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
-    count: 0
+    count: 0,
+    totalRazorpay: 0,
+    razorpayCount: 0,
   });
 
   useEffect(() => {
@@ -22,7 +29,10 @@ export default function MyDonations({ navigation }) {
 
   const setupRealtimeListener = () => {
     const userId = auth.currentUser?.uid;
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'donations'),
@@ -33,15 +43,50 @@ export default function MyDonations({ navigation }) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const donationList = [];
       let total = 0;
+      let razorpayTotal = 0;
+      let razorpayCount = 0;
+      
       snapshot.forEach((doc) => {
         const data = doc.data();
-        donationList.push({ id: doc.id, ...data });
+        const donation = { id: doc.id, ...data };
+        donationList.push(donation);
         total += data.amount || 0;
+        
+        if (data.paymentMethod === 'razorpay') {
+          razorpayTotal += data.amount || 0;
+          razorpayCount++;
+        }
       });
-      setDonations(donationList);
+
+      // Also get from local Razorpay history
+      const localHistory = getDonationHistory();
+      const user = auth.currentUser;
+      const localDonations = localHistory.filter(
+        donation => donation.email === user?.email || donation.phone === user?.phoneNumber
+      );
+
+      // Merge and deduplicate
+      const allDonations = [...donationList];
+      localDonations.forEach(localDonation => {
+        if (!allDonations.some(d => d.paymentId === localDonation.paymentId)) {
+          allDonations.push({
+            id: localDonation.paymentId,
+            ...localDonation,
+            paymentMethod: 'razorpay',
+            status: 'completed',
+            isLocal: true,
+          });
+          razorpayTotal += localDonation.amount || 0;
+          razorpayCount++;
+        }
+      });
+
+      setDonations(allDonations);
       setStats({
-        total: total,
-        count: donationList.length
+        total: total + localDonations.reduce((sum, d) => sum + d.amount, 0),
+        count: allDonations.length,
+        totalRazorpay: razorpayTotal,
+        razorpayCount: razorpayCount,
       });
       setLoading(false);
     });
@@ -51,12 +96,11 @@ export default function MyDonations({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Re-fetch will happen via onSnapshot
     setTimeout(() => setRefreshing(false), 1000);
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
         return '#10b981';
       case 'pending':
@@ -69,7 +113,7 @@ export default function MyDonations({ navigation }) {
   };
 
   const getStatusLabel = (status) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'completed':
         return 'Completed';
       case 'pending':
@@ -81,16 +125,37 @@ export default function MyDonations({ navigation }) {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const DonationItem = ({ item }) => (
-    <View style={styles.donationCard}>
+    <TouchableOpacity 
+      style={styles.donationCard}
+      onPress={() => {
+        setSelectedDonation(item);
+        setShowDetailModal(true);
+      }}
+      activeOpacity={0.7}
+    >
       <View style={styles.donationHeader}>
         <View style={[styles.donationIcon, { backgroundColor: '#10b98115' }]}>
           <MaterialIcons name="favorite" size={20} color="#10b981" />
         </View>
         <View style={styles.donationInfo}>
-          <Text style={styles.donationPurpose}>{item.purpose || item.campaign || 'General Donation'}</Text>
+          <Text style={styles.donationPurpose}>
+            {item.purpose || item.campaign || 'General Donation'}
+          </Text>
           <Text style={styles.donationDate}>
-            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+            {formatDate(item.createdAt || item.timestamp)}
           </Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
@@ -100,10 +165,119 @@ export default function MyDonations({ navigation }) {
         </View>
       </View>
       <View style={styles.donationFooter}>
-        <Text style={styles.donationAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
-        <Text style={styles.transactionId}>ID: {item.transactionId?.slice(-8) || 'N/A'}</Text>
+        <View style={styles.amountSection}>
+          <Text style={styles.donationAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
+          {item.paymentMethod === 'razorpay' && (
+            <View style={styles.razorpayBadge}>
+              <MaterialIcons name="security" size={12} color="#10b981" />
+              <Text style={styles.razorpayBadgeText}>Razorpay</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.transactionId}>
+          {item.paymentId ? `ID: ${item.paymentId.slice(-8)}` : `ID: ${item.transactionId?.slice(-8) || 'N/A'}`}
+        </Text>
       </View>
-    </View>
+    </TouchableOpacity>
+  );
+
+  const DetailModal = () => (
+    <Modal
+      visible={showDetailModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowDetailModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Donation Details</Text>
+            <TouchableOpacity 
+              onPress={() => setShowDetailModal(false)}
+              style={styles.modalCloseBtn}
+            >
+              <MaterialIcons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedDonation && (
+            <ScrollView>
+              <View style={styles.modalDetailSection}>
+                <View style={styles.modalIconContainer}>
+                  <MaterialIcons name="favorite" size={40} color="#10b981" />
+                </View>
+                <Text style={styles.modalAmount}>₹{selectedDonation.amount?.toLocaleString()}</Text>
+                <Text style={styles.modalPurpose}>{selectedDonation.purpose || 'General Donation'}</Text>
+                
+                <View style={styles.modalStatus}>
+                  <View style={[styles.modalStatusBadge, { backgroundColor: getStatusColor(selectedDonation.status) + '20' }]}>
+                    <Text style={[styles.modalStatusText, { color: getStatusColor(selectedDonation.status) }]}>
+                      {getStatusLabel(selectedDonation.status)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.modalInfoGrid}>
+                <View style={styles.modalInfoItem}>
+                  <Text style={styles.modalInfoLabel}>Payment Method</Text>
+                  <Text style={styles.modalInfoValue}>
+                    {selectedDonation.paymentMethod?.toUpperCase() || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.modalInfoItem}>
+                  <Text style={styles.modalInfoLabel}>Date</Text>
+                  <Text style={styles.modalInfoValue}>
+                    {formatDate(selectedDonation.createdAt || selectedDonation.timestamp)}
+                  </Text>
+                </View>
+                <View style={styles.modalInfoItem}>
+                  <Text style={styles.modalInfoLabel}>Donor</Text>
+                  <Text style={styles.modalInfoValue}>
+                    {selectedDonation.isAnonymous ? 'Anonymous' : selectedDonation.donorName || selectedDonation.name || 'N/A'}
+                  </Text>
+                </View>
+                {selectedDonation.paymentId && (
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Payment ID</Text>
+                    <Text style={[styles.modalInfoValue, styles.modalInfoCode]}>
+                      {selectedDonation.paymentId}
+                    </Text>
+                  </View>
+                )}
+                {selectedDonation.orderId && (
+                  <View style={styles.modalInfoItem}>
+                    <Text style={styles.modalInfoLabel}>Order ID</Text>
+                    <Text style={[styles.modalInfoValue, styles.modalInfoCode]}>
+                      {selectedDonation.orderId}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {selectedDonation.paymentId && (
+                <TouchableOpacity
+                  style={styles.certificateButton}
+                  onPress={() => {
+                    setShowDetailModal(false);
+                    navigation.navigate('DonationCertificate', {
+                      paymentId: selectedDonation.paymentId,
+                      amount: selectedDonation.amount,
+                      name: selectedDonation.donorName || selectedDonation.name || 'Donor',
+                      purpose: selectedDonation.purpose || 'General Donation',
+                      date: selectedDonation.createdAt || selectedDonation.timestamp,
+                    });
+                  }}
+                >
+                  <MaterialIcons name="card-membership" size={20} color="#ffffff" />
+                  <Text style={styles.certificateButtonText}>View Certificate</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 
   if (loading) {
@@ -140,6 +314,15 @@ export default function MyDonations({ navigation }) {
         </View>
       </View>
 
+      {stats.razorpayCount > 0 && (
+        <View style={styles.razorpaySummary}>
+          <MaterialIcons name="security" size={16} color="#10b981" />
+          <Text style={styles.razorpaySummaryText}>
+            {stats.razorpayCount} payments via Razorpay • ₹{stats.totalRazorpay.toLocaleString()}
+          </Text>
+        </View>
+      )}
+
       {/* Donations List */}
       <ScrollView 
         showsVerticalScrollIndicator={false}
@@ -161,12 +344,14 @@ export default function MyDonations({ navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          donations.map((item) => (
-            <DonationItem key={item.id} item={item} />
+          donations.map((item, index) => (
+            <DonationItem key={item.id || index} item={item} />
           ))
         )}
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      <DetailModal />
     </View>
   );
 }
@@ -188,8 +373,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 10,
   },
-
-  // Green Header
   headerCard: {
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
@@ -213,7 +396,6 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
-
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -241,12 +423,27 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 2,
   },
-
+  razorpaySummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#d1fae5',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  razorpaySummaryText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#065f46',
+  },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-
   donationCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -298,17 +495,35 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
   },
+  amountSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   donationAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+  },
+  razorpayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 2,
+  },
+  razorpayBadgeText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 9,
+    color: '#065f46',
   },
   transactionId: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
   },
-
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -338,5 +553,115 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalDetailSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#d1fae5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalAmount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 28,
+    color: '#10b981',
+  },
+  modalPurpose: {
+    fontFamily: Fonts.Regular,
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  modalStatus: {
+    marginTop: 8,
+  },
+  modalStatusBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  modalStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+  },
+  modalInfoGrid: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  modalInfoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalInfoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  modalInfoLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  modalInfoValue: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  modalInfoCode: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  certificateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  certificateButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#ffffff',
   },
 });

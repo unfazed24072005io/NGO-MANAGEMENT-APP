@@ -14,7 +14,8 @@ import {
   Modal,
   Dimensions,
   Share,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
@@ -36,6 +37,7 @@ import { Fonts } from '../../config/fonts';
 import { WalletService } from '../../services/WalletService';
 import { getLevelDetails, getLevelByMemberCount } from '../../config/commissionLevels';
 import { LevelUpdateService } from '../../services/LevelUpdateService';
+import { CommissionService } from '../../services/CommissionService';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +48,9 @@ export default function WorkingMemberWallet({ navigation }) {
     totalWithdrawn: 0,
     pendingCommission: 0,
     pendingWithdrawals: 0,
-    thisMonthEarnings: 0
+    thisMonthEarnings: 0,
+    lastMonthEarnings: 0,
+    donationCommissionTotal: 0
   });
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,13 +68,17 @@ export default function WorkingMemberWallet({ navigation }) {
   const [commissionSummary, setCommissionSummary] = useState({
     direct: 0,
     secondary: 0,
+    donation: 0,
     directCount: 0,
-    secondaryCount: 0
+    secondaryCount: 0,
+    donationCount: 0
   });
   const [userData, setUserData] = useState(null);
   const [levelDetails, setLevelDetails] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [showCommissionBreakdown, setShowCommissionBreakdown] = useState(false);
+  const [showLevelProgress, setShowLevelProgress] = useState(true);
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     fetchUserData();
@@ -78,7 +86,17 @@ export default function WorkingMemberWallet({ navigation }) {
     fetchWalletData();
     fetchCommissionSummary();
     calculateMonthlyEarnings();
+    fetchDonationCommissionTotal();
+    animateIn();
   }, []);
+
+  const animateIn = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true
+    }).start();
+  };
 
   const fetchUserData = async () => {
     try {
@@ -92,6 +110,10 @@ export default function WorkingMemberWallet({ navigation }) {
         setUserData(data);
         const level = data.level || 'I';
         setLevelDetails(getLevelDetails(level));
+        setWalletData(prev => ({
+          ...prev,
+          donationCommissionTotal: data.totalDonationCommission || 0
+        }));
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -113,19 +135,21 @@ export default function WorkingMemberWallet({ navigation }) {
       let totalEarned = 0;
       let pendingCommission = 0;
       let totalWithdrawn = 0;
+      let pendingWithdrawals = 0;
 
       snapshot.forEach((doc) => {
         const data = doc.data();
         const transaction = { id: doc.id, ...data };
         
-        // Convert timestamp if needed
         if (data.createdAt?.toDate) {
           transaction.createdAt = data.createdAt.toDate();
         }
         
+        const isDonation = data.description?.toLowerCase().includes('donation') || false;
+        transaction.isDonation = isDonation;
+        
         transactionsList.push(transaction);
 
-        // Calculate totals
         if (data.type === 'direct_commission' || data.type === 'secondary_commission') {
           if (data.status === 'pending' || data.status === 'partially_paid') {
             pendingCommission += data.amount || 0;
@@ -135,6 +159,8 @@ export default function WorkingMemberWallet({ navigation }) {
         } else if (data.type === 'withdrawal') {
           if (data.status === 'completed') {
             totalWithdrawn += data.amount || 0;
+          } else if (data.status === 'pending') {
+            pendingWithdrawals += data.amount || 0;
           }
         }
       });
@@ -144,7 +170,8 @@ export default function WorkingMemberWallet({ navigation }) {
         ...prev,
         totalEarned,
         pendingCommission,
-        totalWithdrawn
+        totalWithdrawn,
+        pendingWithdrawals
       }));
       setLoading(false);
     });
@@ -184,15 +211,24 @@ export default function WorkingMemberWallet({ navigation }) {
       const snapshot = await getDocs(q);
       let direct = 0;
       let secondary = 0;
+      let donation = 0;
       let directCount = 0;
       let secondaryCount = 0;
+      let donationCount = 0;
 
       snapshot.forEach((doc) => {
         const data = doc.data();
+        const isDonation = data.description?.toLowerCase().includes('donation') || false;
+        
         if (data.type === 'direct_commission') {
           if (data.status === 'completed' || data.status === 'paid') {
-            direct += data.amount || 0;
-            directCount++;
+            if (isDonation) {
+              donation += data.amount || 0;
+              donationCount++;
+            } else {
+              direct += data.amount || 0;
+              directCount++;
+            }
           }
         } else if (data.type === 'secondary_commission') {
           if (data.status === 'completed' || data.status === 'paid') {
@@ -202,9 +238,24 @@ export default function WorkingMemberWallet({ navigation }) {
         }
       });
 
-      setCommissionSummary({ direct, secondary, directCount, secondaryCount });
+      setCommissionSummary({ direct, secondary, donation, directCount, secondaryCount, donationCount });
     } catch (error) {
       console.error('Error fetching commission summary:', error);
+    }
+  };
+
+  const fetchDonationCommissionTotal = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const total = await CommissionService.getTotalDonationCommission(userId);
+      setWalletData(prev => ({
+        ...prev,
+        donationCommissionTotal: total
+      }));
+    } catch (error) {
+      console.error('Error fetching donation commission total:', error);
     }
   };
 
@@ -213,9 +264,9 @@ export default function WorkingMemberWallet({ navigation }) {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
 
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
       const q = query(
         collection(db, 'walletTransactions'),
@@ -225,17 +276,24 @@ export default function WorkingMemberWallet({ navigation }) {
       );
 
       const snapshot = await getDocs(q);
-      let monthlyEarnings = 0;
+      let thisMonth = 0;
+      let lastMonth = 0;
 
       snapshot.forEach((doc) => {
         const data = doc.data();
         const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
         if (createdAt >= startOfMonth) {
-          monthlyEarnings += data.amount || 0;
+          thisMonth += data.amount || 0;
+        } else if (createdAt >= startOfLastMonth && createdAt < startOfMonth) {
+          lastMonth += data.amount || 0;
         }
       });
 
-      setWalletData(prev => ({ ...prev, thisMonthEarnings: monthlyEarnings }));
+      setWalletData(prev => ({
+        ...prev,
+        thisMonthEarnings: thisMonth,
+        lastMonthEarnings: lastMonth
+      }));
     } catch (error) {
       console.error('Error calculating monthly earnings:', error);
     }
@@ -319,13 +377,13 @@ export default function WorkingMemberWallet({ navigation }) {
     await fetchWalletData();
     await fetchCommissionSummary();
     await calculateMonthlyEarnings();
+    await fetchDonationCommissionTotal();
     setRefreshing(false);
   };
 
   const getFilteredTransactions = () => {
     let filtered = transactions;
 
-    // Filter by type
     if (selectedTab === 'credit') {
       filtered = filtered.filter(t =>
         t.type === 'direct_commission' || t.type === 'secondary_commission'
@@ -334,7 +392,6 @@ export default function WorkingMemberWallet({ navigation }) {
       filtered = filtered.filter(t => t.type === 'withdrawal');
     }
 
-    // Filter by status if needed
     if (filterType === 'completed') {
       filtered = filtered.filter(t => t.status === 'completed' || t.status === 'paid');
     } else if (filterType === 'pending') {
@@ -344,22 +401,28 @@ export default function WorkingMemberWallet({ navigation }) {
     return filtered;
   };
 
-  const getTransactionTypeColor = (type) => {
-    if (type === 'direct_commission') return '#8b5cf6';
+  const getTransactionTypeColor = (type, isDonation = false) => {
+    if (type === 'direct_commission') {
+      return isDonation ? '#f59e0b' : '#8b5cf6';
+    }
     if (type === 'secondary_commission') return '#10b981';
     if (type === 'withdrawal') return '#ef4444';
     return '#6b7280';
   };
 
-  const getTransactionIcon = (type) => {
-    if (type === 'direct_commission') return 'person-add';
+  const getTransactionIcon = (type, isDonation = false) => {
+    if (type === 'direct_commission') {
+      return isDonation ? 'volunteer-activism' : 'person-add';
+    }
     if (type === 'secondary_commission') return 'share';
     if (type === 'withdrawal') return 'arrow-upward';
     return 'receipt';
   };
 
-  const getTransactionTitle = (type) => {
-    if (type === 'direct_commission') return 'Direct Commission';
+  const getTransactionTitle = (type, isDonation = false) => {
+    if (type === 'direct_commission') {
+      return isDonation ? 'Donation Commission' : 'Direct Commission';
+    }
     if (type === 'secondary_commission') return 'Secondary Commission';
     if (type === 'withdrawal') return 'Withdrawal';
     return 'Transaction';
@@ -367,12 +430,18 @@ export default function WorkingMemberWallet({ navigation }) {
 
   const handleShare = async () => {
     try {
+      const levelTitle = levelDetails?.title || 'N/A';
       const message = 
         `💰 My Wallet Summary\n\n` +
-        `Available Balance: ₹${walletData.balance.toLocaleString()}\n` +
-        `Total Earned: ₹${walletData.totalEarned.toLocaleString()}\n` +
-        `Pending Commission: ₹${walletData.pendingCommission.toLocaleString()}\n` +
-        `This Month: ₹${walletData.thisMonthEarnings.toLocaleString()}\n\n` +
+        `🏅 Level: ${levelTitle}\n` +
+        `💵 Available Balance: ₹${walletData.balance.toLocaleString()}\n` +
+        `📈 Total Earned: ₹${walletData.totalEarned.toLocaleString()}\n` +
+        `⏳ Pending Commission: ₹${walletData.pendingCommission.toLocaleString()}\n` +
+        `📊 This Month: ₹${walletData.thisMonthEarnings.toLocaleString()}\n` +
+        `📉 Last Month: ₹${walletData.lastMonthEarnings.toLocaleString()}\n` +
+        `❤️ Donation Commission: ₹${walletData.donationCommissionTotal.toLocaleString()}\n` +
+        `📤 Withdrawn: ₹${walletData.totalWithdrawn.toLocaleString()}\n` +
+        `🔄 Pending Withdrawals: ₹${walletData.pendingWithdrawals.toLocaleString()}\n\n` +
         `🚀 Keep referring more members to earn more!`;
       
       await Share.share({
@@ -398,11 +467,14 @@ export default function WorkingMemberWallet({ navigation }) {
   );
 
   const TransactionItem = ({ item }) => {
+    const isDonation = item.isDonation || false;
     const isCredit = item.type === 'direct_commission' || item.type === 'secondary_commission';
-    const color = getTransactionTypeColor(item.type);
+    const color = getTransactionTypeColor(item.type, isDonation);
+    const icon = getTransactionIcon(item.type, isDonation);
+    const title = getTransactionTitle(item.type, isDonation);
     
     let levelName = '';
-    if (item.levelId) {
+    if (item.levelId && !isDonation) {
       const level = getLevelDetails(item.levelId);
       levelName = level?.title || '';
     }
@@ -415,17 +487,18 @@ export default function WorkingMemberWallet({ navigation }) {
 
     return (
       <TouchableOpacity 
-        style={styles.transactionItem}
+        style={[styles.transactionItem, isDonation && styles.donationTransaction]}
         activeOpacity={0.7}
       >
         <View style={styles.transactionLeft}>
           <View style={[styles.transactionIcon, { backgroundColor: color + '15' }]}>
-            <MaterialIcons name={getTransactionIcon(item.type)} size={18} color={color} />
+            <MaterialIcons name={icon} size={18} color={color} />
           </View>
           <View style={styles.transactionInfo}>
             <Text style={styles.transactionTitle}>
-              {getTransactionTitle(item.type)}
-              {levelName && ` (${levelName})`}
+              {title}
+              {levelName && !isDonation && ` (${levelName})`}
+              {isDonation && ' ❤️'}
             </Text>
             <Text style={styles.transactionDescription} numberOfLines={1}>
               {item.description || (isCredit ? 'Commission earned' : 'Withdrawal')}
@@ -438,7 +511,7 @@ export default function WorkingMemberWallet({ navigation }) {
         <View style={styles.transactionRight}>
           <Text style={[
             styles.transactionAmount,
-            { color: isCredit ? '#10b981' : '#ef4444' }
+            { color: isDonation ? '#f59e0b' : (isCredit ? '#10b981' : '#ef4444') }
           ]}>
             {isCredit ? '+' : '-'}₹{item.amount?.toLocaleString() || 0}
           </Text>
@@ -454,7 +527,7 @@ export default function WorkingMemberWallet({ navigation }) {
     if (!showCommissionBreakdown) return null;
 
     return (
-      <View style={styles.breakdownContainer}>
+      <Animated.View style={[styles.breakdownContainer, { opacity: fadeAnim }]}>
         <View style={styles.breakdownHeader}>
           <Text style={styles.breakdownTitle}>Commission Breakdown</Text>
           <TouchableOpacity onPress={() => setShowCommissionBreakdown(false)}>
@@ -481,15 +554,45 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.breakdownCount}>({commissionSummary.secondaryCount} txns)</Text>
           </View>
         </View>
+        <View style={styles.breakdownItem}>
+          <View style={styles.breakdownLeft}>
+            <View style={[styles.breakdownDot, { backgroundColor: '#f59e0b' }]} />
+            <Text style={styles.breakdownLabel}>Donation Commission</Text>
+          </View>
+          <View style={styles.breakdownRight}>
+            <Text style={styles.breakdownValue}>₹{commissionSummary.donation.toLocaleString()}</Text>
+            <Text style={styles.breakdownCount}>({commissionSummary.donationCount} txns)</Text>
+          </View>
+        </View>
         <View style={styles.breakdownTotal}>
           <Text style={styles.breakdownTotalLabel}>Total Commission</Text>
           <Text style={styles.breakdownTotalValue}>
-            ₹{(commissionSummary.direct + commissionSummary.secondary).toLocaleString()}
+            ₹{(commissionSummary.direct + commissionSummary.secondary + commissionSummary.donation).toLocaleString()}
           </Text>
         </View>
-      </View>
+      </Animated.View>
     );
   };
+
+  // Donation Commission Card
+  const DonationCommissionCard = () => (
+    <View style={styles.donationCard}>
+      <View style={styles.donationCardHeader}>
+        <View style={styles.donationCardIcon}>
+          <MaterialIcons name="volunteer-activism" size={22} color="#f59e0b" />
+        </View>
+        <Text style={styles.donationCardTitle}>Donation Commission</Text>
+      </View>
+      <View style={styles.donationCardContent}>
+        <Text style={styles.donationCardAmount}>
+          ₹{walletData.donationCommissionTotal.toLocaleString()}
+        </Text>
+        <Text style={styles.donationCardSubtext}>
+          Earned from members' donations
+        </Text>
+      </View>
+    </View>
+  );
 
   // Level Progress Card
   const LevelProgressCard = () => {
@@ -497,7 +600,6 @@ export default function WorkingMemberWallet({ navigation }) {
 
     const directCount = userData.directReferrals?.length || 0;
     const level = userData.level || 'I';
-    const nextLevel = getNextLevel(level);
     
     const getNextLevel = (currentLevel) => {
       const levels = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -506,11 +608,21 @@ export default function WorkingMemberWallet({ navigation }) {
       return null;
     };
 
+    const nextLevel = getNextLevel(level);
     const nextLevelDetails = nextLevel ? getLevelDetails(nextLevel) : null;
     const progress = nextLevelDetails ? Math.min((directCount / nextLevelDetails.minMembers) * 100, 100) : 100;
 
+    if (!showLevelProgress) return null;
+
     return (
-      <View style={styles.levelProgressCard}>
+      <Animated.View style={[styles.levelProgressCard, { opacity: fadeAnim }]}>
+        <TouchableOpacity 
+          style={styles.levelProgressClose}
+          onPress={() => setShowLevelProgress(false)}
+        >
+          <MaterialIcons name="close" size={16} color="#6b7280" />
+        </TouchableOpacity>
+        
         <View style={styles.levelProgressHeader}>
           <View>
             <Text style={styles.levelProgressTitle}>Current Level</Text>
@@ -546,9 +658,39 @@ export default function WorkingMemberWallet({ navigation }) {
             </View>
           </>
         )}
-      </View>
+      </Animated.View>
     );
   };
+
+  // Monthly Comparison Card
+  const MonthlyComparison = () => (
+    <View style={styles.monthlyComparisonCard}>
+      <View style={styles.monthlyComparisonItem}>
+        <Text style={styles.monthlyComparisonLabel}>This Month</Text>
+        <Text style={[styles.monthlyComparisonValue, { color: '#10b981' }]}>
+          ₹{walletData.thisMonthEarnings.toLocaleString()}
+        </Text>
+      </View>
+      <View style={styles.monthlyComparisonDivider} />
+      <View style={styles.monthlyComparisonItem}>
+        <Text style={styles.monthlyComparisonLabel}>Last Month</Text>
+        <Text style={[styles.monthlyComparisonValue, { color: '#8b5cf6' }]}>
+          ₹{walletData.lastMonthEarnings.toLocaleString()}
+        </Text>
+      </View>
+      <View style={styles.monthlyComparisonDivider} />
+      <View style={styles.monthlyComparisonItem}>
+        <Text style={styles.monthlyComparisonLabel}>Difference</Text>
+        <Text style={[
+          styles.monthlyComparisonValue,
+          { color: walletData.thisMonthEarnings >= walletData.lastMonthEarnings ? '#10b981' : '#ef4444' }
+        ]}>
+          {walletData.thisMonthEarnings >= walletData.lastMonthEarnings ? '▲' : '▼'} 
+          ₹{(walletData.thisMonthEarnings - walletData.lastMonthEarnings).toLocaleString()}
+        </Text>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -586,7 +728,7 @@ export default function WorkingMemberWallet({ navigation }) {
           <Text style={styles.balanceAmount}>₹{walletData.balance.toLocaleString()}</Text>
           <View style={styles.balanceActions}>
             <TouchableOpacity
-              style={styles.withdrawButton}
+              style={[styles.withdrawButton, walletData.balance <= 0 && styles.withdrawButtonDisabled]}
               onPress={() => setWithdrawModalVisible(true)}
               disabled={walletData.balance <= 0}
             >
@@ -605,6 +747,14 @@ export default function WorkingMemberWallet({ navigation }) {
               </TouchableOpacity>
             )}
           </View>
+          {walletData.pendingWithdrawals > 0 && (
+            <View style={styles.pendingWithdrawalBadge}>
+              <MaterialIcons name="pending" size={14} color="#f59e0b" />
+              <Text style={styles.pendingWithdrawalText}>
+                {walletData.pendingWithdrawals} pending withdrawal{walletData.pendingWithdrawals > 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -636,6 +786,12 @@ export default function WorkingMemberWallet({ navigation }) {
         />
       </View>
 
+      {/* Donation Commission Card */}
+      <DonationCommissionCard />
+
+      {/* Monthly Comparison */}
+      <MonthlyComparison />
+
       {/* Level Progress */}
       <LevelProgressCard />
 
@@ -651,7 +807,7 @@ export default function WorkingMemberWallet({ navigation }) {
           </View>
           <View style={styles.commissionSummaryRight}>
             <Text style={styles.commissionSummaryTotal}>
-              ₹{(commissionSummary.direct + commissionSummary.secondary).toLocaleString()}
+              ₹{(commissionSummary.direct + commissionSummary.secondary + commissionSummary.donation).toLocaleString()}
             </Text>
             <MaterialIcons 
               name={showCommissionBreakdown ? 'expand-less' : 'expand-more'} 
@@ -663,7 +819,7 @@ export default function WorkingMemberWallet({ navigation }) {
         {showCommissionBreakdown && <CommissionBreakdown />}
       </View>
 
-      {/* Transaction History */}
+      {/* Transaction History - FIXED SCROLLING */}
       <View style={styles.historySection}>
         <View style={styles.historyHeader}>
           <Text style={styles.historyTitle}>Transaction History</Text>
@@ -712,11 +868,12 @@ export default function WorkingMemberWallet({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        {/* ✅ FIXED: FlatList with proper height for scrolling */}
         <FlatList
           data={filteredTransactions}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.id || Math.random().toString()}
           renderItem={({ item }) => <TransactionItem item={item} />}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#8b5cf6']} />
           }
@@ -728,6 +885,7 @@ export default function WorkingMemberWallet({ navigation }) {
             </View>
           }
           contentContainerStyle={styles.transactionList}
+          style={styles.flatList}
         />
       </View>
 
@@ -925,6 +1083,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 8,
   },
+  withdrawButtonDisabled: {
+    opacity: 0.5,
+  },
   withdrawButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
@@ -941,6 +1102,21 @@ const styles = StyleSheet.create({
   withdrawAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    color: '#ffffff',
+  },
+  pendingWithdrawalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+    gap: 4,
+  },
+  pendingWithdrawalText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
     color: '#ffffff',
   },
 
@@ -991,7 +1167,83 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  // Level Progress
+  donationCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  donationCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  donationCardIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fef3c7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  donationCardTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  donationCardContent: {
+    marginTop: 8,
+  },
+  donationCardAmount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 24,
+    color: '#f59e0b',
+  },
+  donationCardSubtext: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+
+  monthlyComparisonCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  monthlyComparisonItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  monthlyComparisonLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#6b7280',
+  },
+  monthlyComparisonValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  monthlyComparisonDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 6,
+  },
+
   levelProgressCard: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
@@ -1000,12 +1252,21 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    position: 'relative',
+  },
+  levelProgressClose: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 1,
   },
   levelProgressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 10,
+    paddingRight: 20,
   },
   levelProgressTitle: {
     fontFamily: Fonts.Regular,
@@ -1073,7 +1334,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
   },
 
-  // Commission Summary
   commissionSummaryWrapper: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
@@ -1251,8 +1511,13 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
 
+  flatList: {
+    flex: 1,
+    minHeight: 400,
+  },
   transactionList: {
     paddingBottom: 20,
+    flexGrow: 1,
   },
 
   transactionItem: {
@@ -1265,6 +1530,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  donationTransaction: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fef3c7',
   },
   transactionLeft: {
     flexDirection: 'row',
@@ -1347,7 +1616,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

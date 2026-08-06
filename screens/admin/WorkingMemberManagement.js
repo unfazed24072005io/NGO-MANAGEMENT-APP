@@ -60,6 +60,7 @@ export default function WorkingMemberManagement() {
   const [commissionHistory, setCommissionHistory] = useState([]);
   const [walletModalVisible, setWalletModalVisible] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState(null);
+  const [dynamicLevels, setDynamicLevels] = useState(null);
   const [promotionData, setPromotionData] = useState({
     memberId: '',
     memberName: '',
@@ -77,11 +78,32 @@ export default function WorkingMemberManagement() {
   });
 
   useEffect(() => {
+    fetchDynamicLevels();
     setupRealtimeListener();
   }, []);
 
+  const fetchDynamicLevels = async () => {
+    try {
+      const settingsRef = doc(db, 'settings', 'commission');
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+        const settingsData = settingsSnap.data();
+        if (settingsData.levels) {
+          setDynamicLevels(settingsData.levels);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching dynamic levels:', error);
+    }
+  };
+
   const setupRealtimeListener = () => {
-    const q = query(collection(db, 'users'), where('role', '==', 'workingMember'));
+    // ✅ Query BOTH 'working' AND 'workingMember' roles
+    const q = query(
+      collection(db, 'users'), 
+      where('role', 'in', ['working', 'workingMember'])
+    );
+    
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const membersList = [];
       for (const doc of snapshot.docs) {
@@ -102,7 +124,7 @@ export default function WorkingMemberManagement() {
         member.directReferralCount = directReferrals.length;
         member.directReferrals = directReferrals;
         
-        // Get registered members count (for display compatibility)
+        // Get registered members count
         const registeredQuery = query(
           collection(db, 'users'), 
           where('registeredBy', '==', doc.id)
@@ -127,16 +149,37 @@ export default function WorkingMemberManagement() {
           member.pendingCommission = 0;
         }
 
-        // Check promotion eligibility based on new system
-        const nextLevelId = getNextLevelId(level);
-        if (nextLevelId) {
-          const nextLevel = getLevelDetails(nextLevelId);
-          const requiredMembers = nextLevel.minMembers;
-          member.promotionEligible = directReferrals.length >= requiredMembers;
-          member.membersNeededForPromotion = Math.max(0, requiredMembers - directReferrals.length);
+        // ✅ Get total donations from members (for promotion eligibility)
+        try {
+          const totalDonations = await CommissionService.getTotalDonationsByMember(doc.id);
+          member.totalDonations = totalDonations;
+        } catch (error) {
+          member.totalDonations = 0;
+        }
+
+        // ✅ Check promotion eligibility based on DONATIONS (new system)
+        const levelsToUse = dynamicLevels || getDefaultLevels();
+        const currentLevelIndex = levelsToUse.findIndex(l => l.id === level);
+        const currentLevelData = currentLevelIndex !== -1 ? levelsToUse[currentLevelIndex] : null;
+        
+        if (currentLevelData) {
+          const donationsRequired = currentLevelData.donationsRequiredForPromotion || 0;
+          const isEligible = member.totalDonations >= donationsRequired && donationsRequired > 0;
+          member.promotionEligible = isEligible;
+          member.membersNeededForPromotion = Math.max(0, donationsRequired - member.totalDonations);
+          member.donationsRequired = donationsRequired;
         } else {
           member.promotionEligible = false;
           member.membersNeededForPromotion = 0;
+          member.donationsRequired = 0;
+        }
+
+        // Get next level
+        const nextLevelId = getNextLevelId(level);
+        member.nextLevel = nextLevelId;
+        if (nextLevelId) {
+          const nextLevel = getLevelDetails(nextLevelId);
+          member.nextLevelTitle = nextLevel.title;
         }
 
         member.promotionPending = data.promotionPending || false;
@@ -167,6 +210,18 @@ export default function WorkingMemberManagement() {
     });
 
     return () => unsubscribe();
+  };
+
+  const getDefaultLevels = () => {
+    return [
+      { id: 'I', name: 'Customer', directCommission: 25, secondaryCommission: 10, donationsRequiredForPromotion: 10000 },
+      { id: 'II', name: 'Executive', directCommission: 35, secondaryCommission: 5, donationsRequiredForPromotion: 25000 },
+      { id: 'III', name: 'Manager', directCommission: 40, secondaryCommission: 2.5, donationsRequiredForPromotion: 50000 },
+      { id: 'IV', name: 'Coordinator', directCommission: 42.5, secondaryCommission: 1.25, donationsRequiredForPromotion: 100000 },
+      { id: 'V', name: 'Guide', directCommission: 43.75, secondaryCommission: 1.25, donationsRequiredForPromotion: 250000 },
+      { id: 'VI', name: 'Leader', directCommission: 44.5, secondaryCommission: 0.75, donationsRequiredForPromotion: 500000 },
+      { id: 'VII', name: 'Crown', directCommission: 45, secondaryCommission: 0.50, donationsRequiredForPromotion: Infinity }
+    ];
   };
 
   const getNextLevelId = (currentLevelId) => {
@@ -265,6 +320,7 @@ export default function WorkingMemberManagement() {
 
       Alert.alert('Success', `${promotionData.memberName} promoted to ${getLevelDetails(promotionData.newLevel).title}`);
       setPromotionModalVisible(false);
+      onRefresh();
     } catch (error) {
       Alert.alert('Error', error.message);
     }
@@ -294,6 +350,7 @@ export default function WorkingMemberManagement() {
       Alert.alert('Success', `₹${amount} Commission added for ${commissionData.memberName}`);
       setCommissionModalVisible(false);
       resetCommissionForm();
+      onRefresh();
     } catch (error) {
       Alert.alert('Error', error.message);
     }
@@ -347,6 +404,7 @@ export default function WorkingMemberManagement() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    await fetchDynamicLevels();
     await new Promise(resolve => setTimeout(resolve, 1000));
     setRefreshing(false);
   };
@@ -465,6 +523,10 @@ export default function WorkingMemberManagement() {
             <Text style={styles.statValue}>₹{member.pendingCommission?.toLocaleString() || 0}</Text>
             <Text style={styles.statLabel}>Pending</Text>
           </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#f59e0b' }]}>₹{member.totalDonations?.toLocaleString() || 0}</Text>
+            <Text style={styles.statLabel}>Donations</Text>
+          </View>
         </View>
 
         <View style={styles.cardFooter}>
@@ -483,6 +545,11 @@ export default function WorkingMemberManagement() {
             <View style={styles.promotionBadge}>
               <MaterialIcons name="stars" size={12} color="#10b981" />
               <Text style={styles.promotionText}>Eligible</Text>
+            </View>
+          )}
+          {member.nextLevel && (
+            <View style={styles.nextLevelBadge}>
+              <Text style={styles.nextLevelText}>→ {member.nextLevelTitle}</Text>
             </View>
           )}
         </View>
@@ -625,6 +692,15 @@ export default function WorkingMemberManagement() {
     );
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF7722" />
+        <Text style={styles.loadingText}>Loading Working Members...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Saffron Header */}
@@ -703,7 +779,7 @@ export default function WorkingMemberManagement() {
               active={filterLevel === 'All'}
               onPress={() => handleFilterLevel('All')}
             />
-            {Object.keys(LEVELS).map((key) => {
+            {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((key) => {
               const level = getLevelDetails(key);
               return (
                 <StatCard 
@@ -796,6 +872,10 @@ export default function WorkingMemberManagement() {
                       <Text style={styles.detailStatValue}>₹{selectedMember.pendingCommission?.toLocaleString() || 0}</Text>
                       <Text style={styles.detailStatLabel}>Pending Commission</Text>
                     </View>
+                    <View style={styles.detailStat}>
+                      <Text style={[styles.detailStatValue, { color: '#f59e0b' }]}>₹{selectedMember.totalDonations?.toLocaleString() || 0}</Text>
+                      <Text style={styles.detailStatLabel}>Total Donations</Text>
+                    </View>
                   </View>
                 </View>
 
@@ -843,6 +923,18 @@ export default function WorkingMemberManagement() {
                     </Text>
                   </View>
                   <View style={styles.detailStatusRow}>
+                    <Text style={styles.detailLabel}>Next Level:</Text>
+                    <Text style={styles.detailValue}>
+                      {selectedMember.nextLevel ? getLevelDetails(selectedMember.nextLevel)?.title || 'N/A' : 'Max Level'}
+                    </Text>
+                  </View>
+                  <View style={styles.detailStatusRow}>
+                    <Text style={styles.detailLabel}>Donations Required:</Text>
+                    <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
+                      ₹{selectedMember.donationsRequired?.toLocaleString() || 0}
+                    </Text>
+                  </View>
+                  <View style={styles.detailStatusRow}>
                     <Text style={styles.detailLabel}>Wallet Balance:</Text>
                     <Text style={[styles.detailValue, { color: '#10b981' }]}>
                       ₹{selectedMember.walletBalance?.toLocaleString() || 0}
@@ -852,7 +944,15 @@ export default function WorkingMemberManagement() {
                     <View style={styles.detailStatusRow}>
                       <Text style={styles.detailLabel}>Promotion:</Text>
                       <Text style={[styles.detailValue, { color: '#10b981' }]}>
-                        Eligible ({selectedMember.membersNeededForPromotion || 0} more members needed)
+                        ✅ Eligible for promotion
+                      </Text>
+                    </View>
+                  )}
+                  {!selectedMember.promotionEligible && selectedMember.donationsRequired > 0 && (
+                    <View style={styles.detailStatusRow}>
+                      <Text style={styles.detailLabel}>Promotion:</Text>
+                      <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
+                        ₹{selectedMember.membersNeededForPromotion?.toLocaleString() || 0} more donations needed
                       </Text>
                     </View>
                   )}
@@ -1104,6 +1204,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fdf8f3',
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fdf8f3',
+  },
+  loadingText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 10,
   },
 
   // Saffron Header
@@ -1368,6 +1481,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#10b981',
+  },
+  nextLevelBadge: {
+    backgroundColor: '#ede9fe',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  nextLevelText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#8b5cf6',
   },
   cardActions: {
     flexDirection: 'row',

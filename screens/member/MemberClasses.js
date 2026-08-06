@@ -12,11 +12,17 @@ import {
   Linking,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, getDocs, query, where, doc, getDoc, onSnapshot, orderBy, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot, orderBy, addDoc, updateDoc, increment } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { 
+  initiateRazorpayPayment, 
+  createRazorpayOrder, 
+  verifyRazorpayPayment 
+} from '../../services/paymentService';
 
 export default function MemberClasses({ navigation }) {
   const [classes, setClasses] = useState([]);
@@ -28,6 +34,9 @@ export default function MemberClasses({ navigation }) {
   const [registeredClasses, setRegisteredClasses] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [classToRegister, setClassToRegister] = useState(null);
 
   useEffect(() => {
     setupClassesListener();
@@ -98,7 +107,7 @@ export default function MemberClasses({ navigation }) {
     applyFilters(classes, searchQuery, status);
   };
 
-  const handleRegister = async (classItem) => {
+  const initiateRegistration = (classItem) => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
       Alert.alert('Error', 'Please login first');
@@ -115,26 +124,100 @@ export default function MemberClasses({ navigation }) {
       return;
     }
 
+    // Check if class requires payment
+    if (classItem.fee && classItem.fee > 0) {
+      setClassToRegister(classItem);
+      setShowPaymentModal(true);
+    } else {
+      // Free registration
+      handleRegister(classItem);
+    }
+  };
+
+  const handleRegister = async (classItem, paymentData = null) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
     try {
-      await addDoc(collection(db, 'classRegistrations'), {
+      const registrationData = {
         classId: classItem.id,
         userId: userId,
         userName: auth.currentUser?.displayName || 'Member',
         userEmail: auth.currentUser?.email,
         className: classItem.title,
         registeredAt: new Date().toISOString(),
-        status: 'registered'
-      });
+        status: 'registered',
+        fee: classItem.fee || 0,
+        feePaid: classItem.fee ? true : false,
+      };
+
+      if (paymentData) {
+        registrationData.paymentId = paymentData.paymentId;
+        registrationData.orderId = paymentData.orderId;
+        registrationData.paymentAmount = classItem.fee;
+      }
+
+      await addDoc(collection(db, 'classRegistrations'), registrationData);
 
       // Update class registered count
-      // Note: You'll need to add a cloud function or update the count manually
-      // For now, we'll just update the local state
-      
+      const classRef = doc(db, 'onlineClasses', classItem.id);
+      await updateDoc(classRef, {
+        registeredCount: increment(1),
+      });
+
       setRegisteredClasses([...registeredClasses, classItem.id]);
-      Alert.alert('Success', 'Registered for class successfully');
+      
+      Alert.alert('Success', `Registered for ${classItem.title} successfully!`);
       setDetailModalVisible(false);
+      setShowPaymentModal(false);
     } catch (error) {
+      console.error('Registration error:', error);
       Alert.alert('Error', error.message);
+    }
+  };
+
+  const handlePaymentAndRegister = async () => {
+    if (!classToRegister) return;
+    
+    setPaymentLoading(true);
+    try {
+      const user = auth.currentUser;
+      const fee = classToRegister.fee || 0;
+
+      // Create Razorpay order
+      const orderData = await createRazorpayOrder(fee);
+
+      // Initiate Razorpay payment
+      const paymentResult = await initiateRazorpayPayment({
+        amount: fee,
+        name: user?.displayName || 'Member',
+        email: user?.email || '',
+        phone: user?.phoneNumber || '',
+        description: `Registration Fee for ${classToRegister.title}`,
+        orderId: orderData.orderId,
+      });
+
+      if (paymentResult.success) {
+        // Verify payment
+        const verificationResult = await verifyRazorpayPayment({
+          paymentId: paymentResult.paymentId,
+          orderId: paymentResult.orderId,
+          signature: paymentResult.signature,
+        });
+
+        if (verificationResult.success) {
+          await handleRegister(classToRegister, paymentResult);
+        } else {
+          Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+        }
+      } else {
+        Alert.alert('Payment Failed', paymentResult.error || 'Something went wrong');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'Payment failed. Please try again.');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -199,6 +282,7 @@ export default function MemberClasses({ navigation }) {
   const ClassCard = ({ classItem }) => {
     const isRegistered = registeredClasses.includes(classItem.id);
     const statusColor = getStatusColor(classItem.status);
+    const hasFee = classItem.fee && classItem.fee > 0;
     
     return (
       <TouchableOpacity 
@@ -240,10 +324,18 @@ export default function MemberClasses({ navigation }) {
         </View>
 
         <View style={styles.classFooter}>
-          <View style={[styles.levelBadge, { backgroundColor: getLevelColor(classItem.level) + '15' }]}>
-            <Text style={[styles.levelBadgeText, { color: getLevelColor(classItem.level) }]}>
-              {classItem.level || 'beginner'}
-            </Text>
+          <View style={styles.footerLeft}>
+            <View style={[styles.levelBadge, { backgroundColor: getLevelColor(classItem.level) + '15' }]}>
+              <Text style={[styles.levelBadgeText, { color: getLevelColor(classItem.level) }]}>
+                {classItem.level || 'beginner'}
+              </Text>
+            </View>
+            {hasFee && (
+              <View style={styles.feeBadge}>
+                <MaterialIcons name="payment" size={12} color="#d97706" />
+                <Text style={styles.feeBadgeText}>₹{classItem.fee}</Text>
+              </View>
+            )}
           </View>
           <View style={styles.capacityBadge}>
             <MaterialIcons name="people" size={14} color="#6b7280" />
@@ -263,9 +355,68 @@ export default function MemberClasses({ navigation }) {
     );
   };
 
+  // Payment Modal
+  const PaymentModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showPaymentModal}
+      onRequestClose={() => {
+        if (!paymentLoading) setShowPaymentModal(false);
+      }}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.paymentModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Registration Fee</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                if (!paymentLoading) setShowPaymentModal(false);
+              }}
+              disabled={paymentLoading}
+            >
+              <MaterialIcons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+
+          {classToRegister && (
+            <>
+              <View style={styles.paymentInfo}>
+                <MaterialIcons name="video-library" size={40} color="#3b82f6" />
+                <Text style={styles.paymentClassTitle}>{classToRegister.title}</Text>
+                <Text style={styles.paymentFeeLabel}>Registration Fee</Text>
+                <Text style={styles.paymentFeeAmount}>₹{classToRegister.fee}</Text>
+                <Text style={styles.paymentDescription}>
+                  This fee covers your registration for this online class
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.payFeeButton, paymentLoading && styles.payFeeDisabled]}
+                onPress={handlePaymentAndRegister}
+                disabled={paymentLoading}
+              >
+                {paymentLoading ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.payFeeButtonText}>
+                    Pay ₹{classToRegister.fee} & Register
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <Text style={styles.paymentNote}>🔒 Secure payment via Razorpay</Text>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
         <Text style={styles.loadingText}>Loading classes...</Text>
       </View>
     );
@@ -401,6 +552,15 @@ export default function MemberClasses({ navigation }) {
                   </Text>
                 </View>
 
+                {selectedClass.fee && selectedClass.fee > 0 && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Registration Fee</Text>
+                    <Text style={[styles.detailValue, { color: '#d97706', fontFamily: Fonts.Bold }]}>
+                      ₹{selectedClass.fee}
+                    </Text>
+                  </View>
+                )}
+
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Google Meet Link</Text>
                   <TouchableOpacity onPress={() => openMeetLink(selectedClass.googleMeetLink)}>
@@ -434,10 +594,11 @@ export default function MemberClasses({ navigation }) {
                        selectedClass.registeredCount >= selectedClass.capacity) && 
                       styles.registerDisabled
                     ]}
-                    onPress={() => handleRegister(selectedClass)}
+                    onPress={() => initiateRegistration(selectedClass)}
                     disabled={
                       registeredClasses.includes(selectedClass.id) || 
-                      selectedClass.registeredCount >= selectedClass.capacity
+                      selectedClass.registeredCount >= selectedClass.capacity ||
+                      paymentLoading
                     }
                   >
                     <MaterialIcons 
@@ -450,7 +611,8 @@ export default function MemberClasses({ navigation }) {
                     />
                     <Text style={styles.registerText}>
                       {registeredClasses.includes(selectedClass.id) ? 'Registered' :
-                       selectedClass.registeredCount >= selectedClass.capacity ? 'Full' : 'Register Now'}
+                       selectedClass.registeredCount >= selectedClass.capacity ? 'Full' :
+                       selectedClass.fee && selectedClass.fee > 0 ? `Pay ₹${selectedClass.fee} & Register` : 'Register Now'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -459,6 +621,9 @@ export default function MemberClasses({ navigation }) {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Payment Modal */}
+      <PaymentModal />
     </View>
   );
 }
@@ -619,6 +784,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
   },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   levelBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -627,6 +797,20 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+  },
+  feeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 2,
+  },
+  feeBadgeText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 10,
+    color: '#d97706',
   },
   capacityBadge: {
     flexDirection: 'row',
@@ -747,6 +931,65 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+  },
+
+  // Payment Modal
+  paymentModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+  },
+  paymentInfo: {
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  paymentClassTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  paymentFeeLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+    marginTop: 12,
+  },
+  paymentFeeAmount: {
+    fontFamily: Fonts.Bold,
+    fontSize: 32,
+    color: '#3b82f6',
+    marginTop: 4,
+  },
+  paymentDescription: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  payFeeButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  payFeeDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  payFeeButtonText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#ffffff',
+  },
+  paymentNote: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 10,
   },
 
   loadingContainer: {

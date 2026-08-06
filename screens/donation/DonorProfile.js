@@ -1,5 +1,4 @@
 // screens/donation/DonorProfile.js
-
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -8,6 +7,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { signOut } from 'firebase/auth';
 import { Fonts } from '../../config/fonts';
+import { getTotalDonations, getDonationCount, getDonationHistory } from '../../services/paymentService';
 
 export default function DonorProfile({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -15,6 +15,10 @@ export default function DonorProfile({ navigation }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notifications, setNotifications] = useState(true);
+  const [razorpayStats, setRazorpayStats] = useState({
+    totalAmount: 0,
+    count: 0,
+  });
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -25,12 +29,24 @@ export default function DonorProfile({ navigation }) {
     joinedDate: '',
     totalDonations: 0,
     donationCount: 0,
-    livesImpacted: 0
+    livesImpacted: 0,
+    razorpayTotal: 0,
+    razorpayCount: 0,
   });
 
   useEffect(() => {
     fetchUserData();
+    loadRazorpayStats();
   }, []);
+
+  const loadRazorpayStats = () => {
+    const total = getTotalDonations();
+    const count = getDonationCount();
+    setRazorpayStats({
+      totalAmount: total,
+      count: count,
+    });
+  };
 
   const fetchUserData = async () => {
     setLoading(true);
@@ -56,7 +72,9 @@ export default function DonorProfile({ navigation }) {
           joinedDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'N/A',
           totalDonations: data.totalDonations || 0,
           donationCount: data.donationCount || 0,
-          livesImpacted: data.livesImpacted || 0
+          livesImpacted: data.livesImpacted || 0,
+          razorpayTotal: getTotalDonations(),
+          razorpayCount: getDonationCount(),
         });
       }
     } catch (error) {
@@ -125,7 +143,6 @@ export default function DonorProfile({ navigation }) {
       Alert.alert('Error', error.message);
     }
   };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -134,6 +151,9 @@ export default function DonorProfile({ navigation }) {
       </View>
     );
   }
+
+  const totalDonations = formData.totalDonations + formData.razorpayTotal;
+  const totalCount = formData.donationCount + formData.razorpayCount;
 
   return (
     <View style={styles.container}>
@@ -175,14 +195,14 @@ export default function DonorProfile({ navigation }) {
           {editing && <Text style={styles.changePhotoText}>Tap to change photo</Text>}
         </View>
 
-        {/* Donation Stats */}
+        {/* Donation Stats - Combined */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>₹{formData.totalDonations.toLocaleString()}</Text>
+            <Text style={styles.statValue}>₹{totalDonations.toLocaleString()}</Text>
             <Text style={styles.statLabel}>Total Donated</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{formData.donationCount}</Text>
+            <Text style={styles.statValue}>{totalCount}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
           <View style={styles.statCard}>
@@ -190,6 +210,27 @@ export default function DonorProfile({ navigation }) {
             <Text style={styles.statLabel}>Lives Impacted</Text>
           </View>
         </View>
+
+        {/* Razorpay Stats */}
+        {razorpayStats.count > 0 && (
+          <View style={styles.razorpayCard}>
+            <View style={styles.razorpayHeader}>
+              <MaterialIcons name="security" size={20} color="#3b82f6" />
+              <Text style={styles.razorpayTitle}>Razorpay Payments</Text>
+            </View>
+            <View style={styles.razorpayStats}>
+              <View style={styles.razorpayStat}>
+                <Text style={styles.razorpayStatValue}>{razorpayStats.count}</Text>
+                <Text style={styles.razorpayStatLabel}>Transactions</Text>
+              </View>
+              <View style={styles.razorpayStatDivider} />
+              <View style={styles.razorpayStat}>
+                <Text style={styles.razorpayStatValue}>₹{razorpayStats.totalAmount.toLocaleString()}</Text>
+                <Text style={styles.razorpayStatLabel}>Total Amount</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         <View style={styles.card}>
           <View style={styles.field}>
@@ -397,7 +438,7 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 8,
   },
   statCard: {
@@ -419,6 +460,50 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+  },
+
+  razorpayCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  razorpayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  },
+  razorpayTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+  },
+  razorpayStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  razorpayStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  razorpayStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#3b82f6',
+  },
+  razorpayStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+  },
+  razorpayStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#e5e7eb',
   },
 
   card: {

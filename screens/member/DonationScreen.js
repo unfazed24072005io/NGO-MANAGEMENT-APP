@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, ActivityIndicator } from 'react-native';
+// screens/member/DonationScreen.js
+import React, { useState, useEffect } from 'react';
+import { 
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, 
+  Alert, Image, Modal, ActivityIndicator, KeyboardAvoidingView, Platform 
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, updateDoc, increment, setDoc } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
-
+import { 
+  initiateRazorpayPayment, 
+  createRazorpayOrder, 
+  verifyRazorpayPayment 
+} from '../../services/paymentService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CommissionService } from '../../services/CommissionService';
 export default function DonationScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
-  const [donationSuccess, setDonationSuccess] = useState(false);
-  const [certificateUrl, setCertificateUrl] = useState(null);
-  const [profilePhoto, setProfilePhoto] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [donationData, setDonationData] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -26,68 +34,216 @@ export default function DonationScreen({ navigation }) {
     'General', 'Education', 'Medical', 'Food', 'Shelter', 'Clothing', 'Emergency Relief', 'Other'
   ];
 
-  const quickAmounts = [5000, 10000, 20000];
+  const quickAmounts = [100, 500, 1000, 2000, 5000];
 
-  const handleDonate = async () => {
-    if (!formData.fullName || !formData.amount || !formData.email) {
-      Alert.alert('Error', 'Please fill all required fields');
-      return;
-    }
+  // Load saved user data
+  useEffect(() => {
+    loadUserData();
+  }, []);
 
-    if (parseFloat(formData.amount) < 10) {
-      Alert.alert('Error', 'Minimum donation amount is ₹10');
-      return;
-    }
-
-    setLoading(true);
+  const loadUserData = async () => {
     try {
-      const userId = auth.currentUser?.uid || 'guest';
-      const userEmail = auth.currentUser?.email || formData.email;
-
-      const donationRef = await addDoc(collection(db, 'donations'), {
-        donorName: formData.anonymous ? 'Anonymous' : formData.fullName,
-        donorEmail: formData.email,
-        phone: formData.phone || '',
-        amount: parseFloat(formData.amount),
-        purpose: formData.purpose || 'General',
-        message: formData.message || '',
-        paymentMethod: formData.paymentMethod || 'razorpay',
-        status: 'completed',
-        anonymous: formData.anonymous,
-        memberId: userId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      const certificateRef = await addDoc(collection(db, 'certificates'), {
-        memberId: userId,
-        donorName: formData.anonymous ? 'Anonymous Donor' : formData.fullName,
-        amount: parseFloat(formData.amount),
-        purpose: formData.purpose || 'General',
-        donationId: donationRef.id,
-        certificateNumber: `CERT-${Date.now().toString().slice(-8)}`,
-        issuedDate: new Date().toISOString(),
-        status: 'issued',
-        type: 'donation',
-        title: `Donation Certificate`,
-        description: `For donating ₹${parseFloat(formData.amount)} to ${formData.purpose || 'General'} cause`,
-        createdAt: new Date().toISOString()
-      });
-
-      setCertificateUrl(`https://ngo-app-54121.web.app/certificate/${certificateRef.id}`);
-      
-      setShowSuccessPopup(true);
-
+      const user = auth.currentUser;
+      if (user) {
+        const savedName = await AsyncStorage.getItem('donorName');
+        const savedEmail = await AsyncStorage.getItem('donorEmail');
+        const savedPhone = await AsyncStorage.getItem('donorPhone');
+        setFormData(prev => ({
+          ...prev,
+          fullName: savedName || user.displayName || '',
+          email: savedEmail || user.email || '',
+          phone: savedPhone || user.phoneNumber || '',
+        }));
+      }
     } catch (error) {
-      Alert.alert('Error', error.message);
-    } finally {
-      setLoading(false);
+      console.error('Error loading user data:', error);
     }
   };
 
+  const saveUserData = async () => {
+    try {
+      await AsyncStorage.setItem('donorName', formData.fullName);
+      await AsyncStorage.setItem('donorEmail', formData.email);
+      await AsyncStorage.setItem('donorPhone', formData.phone);
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.fullName.trim()) {
+      Alert.alert('Error', 'Please enter your full name');
+      return false;
+    }
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+    if (!formData.phone.trim() || formData.phone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid phone number');
+      return false;
+    }
+    if (!formData.amount || parseFloat(formData.amount) < 10) {
+      Alert.alert('Error', 'Minimum donation amount is ₹10');
+      return false;
+    }
+    return true;
+  };
+
+  // screens/member/DonationScreen.js - Fix handleDonate function
+
+const handleDonate = async () => {
+  if (!validateForm()) return;
+
+  setLoading(true);
+  try {
+    const userId = auth.currentUser?.uid;
+    const userEmail = auth.currentUser?.email || formData.email;
+
+    const donationAmount = parseFloat(formData.amount);
+    const donorName = formData.anonymous ? 'Anonymous Donor' : formData.fullName;
+    const donorEmail = formData.anonymous ? 'anonymous@donor.com' : formData.email;
+
+    // ✅ Step 1: Initiate Razorpay payment
+    const paymentResult = await initiateRazorpayPayment({
+      amount: donationAmount,
+      name: donorName,
+      email: donorEmail,
+      phone: formData.phone,
+      description: formData.purpose || 'General Donation',
+    });
+
+    // ✅ Step 2: Check if payment was successful
+    if (paymentResult && paymentResult.success) {
+      
+      // ✅ Step 3: Verify payment
+      let verificationResult = { success: true };
+      if (paymentResult.paymentId) {
+        verificationResult = await verifyRazorpayPayment({
+          paymentId: paymentResult.paymentId,
+          orderId: paymentResult.orderId,
+          signature: paymentResult.signature,
+        });
+      }
+
+      if (verificationResult.success) {
+        // ✅ Step 4: Save donation to Firebase
+        const donationRef = await addDoc(collection(db, 'donations'), {
+          donorName: donorName,
+          donorEmail: donorEmail,
+          phone: formData.phone,
+          amount: donationAmount,
+          purpose: formData.purpose || 'General',
+          message: formData.message || '',
+          paymentMethod: 'razorpay',
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          status: 'completed',
+          anonymous: formData.anonymous,
+          memberId: userId || 'guest',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // ✅ Step 5: Create certificate
+        const certificateRef = await addDoc(collection(db, 'certificates'), {
+          memberId: userId || 'guest',
+          donorName: donorName,
+          amount: donationAmount,
+          purpose: formData.purpose || 'General',
+          donationId: donationRef.id,
+          certificateNumber: `CERT-${Date.now().toString().slice(-8)}`,
+          issuedDate: new Date().toISOString(),
+          status: 'issued',
+          type: 'donation',
+          title: 'Donation Certificate',
+          description: `For donating ₹${donationAmount} to ${formData.purpose || 'General'} cause`,
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          createdAt: new Date().toISOString()
+        });
+
+        // ✅ Step 6: Update donor stats if logged in
+        if (userId && userId !== 'guest') {
+          const donorRef = doc(db, 'donors', userId);
+          const donorDoc = await getDoc(donorRef);
+          if (donorDoc.exists()) {
+            await updateDoc(donorRef, {
+              totalDonations: increment(donationAmount),
+              donationCount: increment(1),
+              lastDonation: new Date().toISOString(),
+              livesImpacted: increment(Math.floor(donationAmount / 100) + 1),
+            });
+          } else {
+            await setDoc(donorRef, {
+              userId: userId,
+              name: donorName,
+              email: donorEmail,
+              phone: formData.phone,
+              totalDonations: donationAmount,
+              donationCount: 1,
+              lastDonation: new Date().toISOString(),
+              livesImpacted: Math.floor(donationAmount / 100) + 1,
+              createdAt: new Date().toISOString(),
+            });
+          }
+          
+          // ✅ Step 7: Process commission for the working member who registered this donor
+          try {
+            console.log('🔄 Processing commission for donation...');
+            const commissionResult = await CommissionService.processDonationCommission(userId, donationAmount);
+            console.log('✅ Commission processed:', commissionResult);
+            
+            // Optionally show commission info in the success popup
+            if (commissionResult && commissionResult.success) {
+              console.log(`💰 Commission: ₹${commissionResult.commissionAmount} at ${commissionResult.commissionRate}%`);
+            }
+          } catch (commissionError) {
+            console.error('❌ Commission processing error:', commissionError);
+            // Don't block the donation flow if commission fails
+          }
+        }
+
+        // Save user data
+        if (!formData.anonymous) {
+          await saveUserData();
+        }
+
+        // Show success popup
+        setDonationData({
+          amount: donationAmount,
+          name: donorName,
+          purpose: formData.purpose,
+          paymentId: paymentResult.paymentId || 'pending_verification',
+          certificateId: certificateRef.id,
+        });
+        setShowSuccessPopup(true);
+
+      } else {
+        Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+      }
+    } else {
+      Alert.alert('Payment Failed', paymentResult?.error || 'Something went wrong');
+    }
+  } catch (error) {
+    console.error('Donation error:', error);
+    Alert.alert('Error', 'Failed to process donation. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleBackHome = () => {
     setShowSuccessPopup(false);
     navigation.goBack();
+  };
+
+  const handleViewCertificate = () => {
+    setShowSuccessPopup(false);
+    navigation.navigate('Certificate', {
+      certificateId: donationData?.certificateId,
+      amount: donationData?.amount,
+      name: donationData?.name,
+      purpose: donationData?.purpose,
+      paymentId: donationData?.paymentId,
+    });
   };
 
   const PurposeCard = ({ purpose, selected, onSelect }) => (
@@ -101,58 +257,61 @@ export default function DonationScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  if (donationSuccess) {
-    return (
-      <View style={styles.successContainer}>
-        <View style={styles.successIconContainer}>
-          <MaterialIcons name="favorite" size={60} color="#ef4444" />
-        </View>
-        <Text style={styles.successTitle}>Thank You for Your Donation!</Text>
-        <Text style={styles.successSubtext}>Your generosity makes a difference</Text>
-        
-        <View style={styles.certificateCard}>
-          <MaterialIcons name="verified" size={40} color="#10b981" />
-          <Text style={styles.certificateTitle}>Certificate of Appreciation</Text>
-          <Text style={styles.certificateText}>This certifies that</Text>
-          <Text style={styles.certificateName}>{formData.anonymous ? 'Anonymous Donor' : formData.fullName}</Text>
-          <Text style={styles.certificateText}>has donated ₹{parseFloat(formData.amount).toLocaleString()} for</Text>
-          <Text style={styles.certificatePurpose}>{formData.purpose || 'General'}</Text>
-          <Text style={styles.certificateDate}>
-            {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+  // Success Popup Modal
+  const SuccessPopup = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={showSuccessPopup}
+      onRequestClose={() => setShowSuccessPopup(false)}
+    >
+      <View style={styles.popupOverlay}>
+        <View style={styles.popupContainer}>
+          <View style={styles.popupIconContainer}>
+            <View style={styles.popupIconCircle}>
+              <MaterialIcons name="check" size={40} color="#10b981" />
+            </View>
+          </View>
+
+          <Text style={styles.popupTitle}>Thank you for your</Text>
+          <Text style={styles.popupTitle}>donation! 🙏</Text>
+
+          <Text style={styles.popupSubtext}>
+            Your generous donation of ₹{donationData?.amount?.toLocaleString()} 
+            for {donationData?.purpose} has been received.
           </Text>
-          <View style={styles.certificateDivider} />
-          <Text style={styles.certificateNumber}>#CERT-{Date.now().toString().slice(-8)}</Text>
-        </View>
 
-        <View style={styles.successActions}>
-          <TouchableOpacity 
-            style={[styles.successButton, styles.shareButton]}
-            onPress={() => Alert.alert('Share', 'Certificate sharing feature coming soon')}
-          >
-            <MaterialIcons name="share" size={20} color="#ffffff" />
-            <Text style={styles.successButtonText}>Share</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.successButton, styles.downloadButton]}
-            onPress={() => Alert.alert('Download', 'Certificate download coming soon')}
-          >
-            <MaterialIcons name="download" size={20} color="#ffffff" />
-            <Text style={styles.successButtonText}>Download</Text>
-          </TouchableOpacity>
-        </View>
+          {donationData?.paymentId && (
+            <Text style={styles.popupPaymentId}>
+              Payment ID: {donationData.paymentId.slice(-12)}
+            </Text>
+          )}
 
-        <TouchableOpacity 
-          style={styles.doneButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.doneButtonText}>Done</Text>
-        </TouchableOpacity>
+          <View style={styles.popupButtons}>
+            <TouchableOpacity 
+              style={[styles.popupButton, styles.popupButtonSecondary]} 
+              onPress={handleBackHome}
+            >
+              <Text style={styles.popupButtonTextSecondary}>Back Home</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.popupButton, styles.popupButtonPrimary]} 
+              onPress={handleViewCertificate}
+            >
+              <MaterialIcons name="card-membership" size={18} color="#ffffff" />
+              <Text style={styles.popupButtonTextPrimary}>Certificate</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-    );
-  }
+    </Modal>
+  );
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       {/* Blue Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
@@ -184,7 +343,7 @@ export default function DonationScreen({ navigation }) {
                 style={styles.quickAmountChip}
                 onPress={() => setFormData({...formData, amount: amount.toString()})}
               >
-                <Text style={styles.quickAmountText}>+{amount.toLocaleString()}</Text>
+                <Text style={styles.quickAmountText}>₹{amount.toLocaleString()}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -220,11 +379,12 @@ export default function DonationScreen({ navigation }) {
               placeholder="Enter your email"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Phone</Text>
+            <Text style={styles.label}>Phone *</Text>
             <TextInput
               style={styles.input}
               value={formData.phone}
@@ -232,6 +392,7 @@ export default function DonationScreen({ navigation }) {
               placeholder="Enter your phone number"
               placeholderTextColor="#9ca3af"
               keyboardType="phone-pad"
+              maxLength={10}
             />
           </View>
 
@@ -248,27 +409,23 @@ export default function DonationScreen({ navigation }) {
 
         {/* Payment Method */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Select Payment Method</Text>
+          <Text style={styles.cardTitle}>Payment Method</Text>
           <View style={styles.paymentGrid}>
-            {['razorpay', 'upi', 'card', 'netbanking'].map((method) => (
-              <TouchableOpacity
-                key={method}
-                style={[styles.paymentOption, formData.paymentMethod === method && styles.paymentOptionSelected]}
-                onPress={() => setFormData({...formData, paymentMethod: method})}
-              >
-                <MaterialIcons 
-                  name={method === 'razorpay' ? 'payment' : 
-                       method === 'upi' ? 'phone-android' : 
-                       method === 'card' ? 'credit-card' : 'account-balance'} 
-                  size={24} 
-                  color={formData.paymentMethod === method ? '#3b82f6' : '#6b7280'} 
-                />
-                <Text style={[styles.paymentOptionText, formData.paymentMethod === method && styles.paymentOptionTextSelected]}>
-                  {method.charAt(0).toUpperCase() + method.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              style={[styles.paymentOption, formData.paymentMethod === 'razorpay' && styles.paymentOptionSelected]}
+              onPress={() => setFormData({...formData, paymentMethod: 'razorpay'})}
+            >
+              <MaterialIcons 
+                name="security" 
+                size={24} 
+                color={formData.paymentMethod === 'razorpay' ? '#3b82f6' : '#6b7280'} 
+              />
+              <Text style={[styles.paymentOptionText, formData.paymentMethod === 'razorpay' && styles.paymentOptionTextSelected]}>
+                Razorpay
+              </Text>
+            </TouchableOpacity>
           </View>
+          <Text style={styles.paymentNote}>💳 Secure payment powered by Razorpay</Text>
         </View>
 
         {/* Purpose */}
@@ -322,57 +479,33 @@ export default function DonationScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Pay Button */}
+        {/* Donate Button */}
         <TouchableOpacity 
-          style={[styles.payButton, loading && styles.disabledButton]}
+          style={[styles.donateButton, loading && styles.disabledButton]}
           onPress={handleDonate}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
+            <ActivityIndicator color="#ffffff" size="small" />
           ) : (
             <>
-              <Text style={styles.payButtonText}>Pay ₹{parseFloat(formData.amount) || 0}</Text>
+              <MaterialIcons name="favorite" size={20} color="#ffffff" />
+              <Text style={styles.donateButtonText}>
+                Donate ₹{parseFloat(formData.amount) || 0}
+              </Text>
             </>
           )}
         </TouchableOpacity>
 
+        <Text style={styles.noteText}>
+          🔒 Your donation is secure and encrypted via Razorpay
+        </Text>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Success Popup Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showSuccessPopup}
-        onRequestClose={() => setShowSuccessPopup(false)}
-      >
-        <View style={styles.popupOverlay}>
-          <View style={styles.popupContainer}>
-            {/* Success Icon */}
-            <View style={styles.popupIconContainer}>
-              <View style={styles.popupIconCircle}>
-                <MaterialIcons name="check" size={40} color="#10b981" />
-              </View>
-            </View>
-
-            {/* Title */}
-            <Text style={styles.popupTitle}>Thank you for your</Text>
-            <Text style={styles.popupTitle}>support!</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.popupSubtext}>
-              A tax-deductible receipt was sent{'\n'}to your email.
-            </Text>
-
-            {/* Back Home Button */}
-            <TouchableOpacity style={styles.popupButton} onPress={handleBackHome}>
-              <Text style={styles.popupButtonText}>Back Home</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+      <SuccessPopup />
+    </KeyboardAvoidingView>
   );
 }
 
@@ -446,8 +579,9 @@ const styles = StyleSheet.create({
   },
   quickAmountsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
     width: '100%',
   },
   quickAmountChip: {
@@ -575,6 +709,13 @@ const styles = StyleSheet.create({
   paymentOptionTextSelected: {
     color: '#3b82f6',
   },
+  paymentNote: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
+    textAlign: 'center',
+  },
 
   // Purpose
   purposeGrid: {
@@ -635,8 +776,8 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
 
-  // Pay Button
-  payButton: {
+  // Donate Button
+  donateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -655,10 +796,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#9ca3af',
     shadowOpacity: 0,
   },
-  payButtonText: {
+  donateButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 18,
+  },
+  noteText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 12,
   },
 
   // Success Popup
@@ -706,139 +854,45 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 12,
-    marginBottom: 24,
+    marginBottom: 8,
     lineHeight: 20,
   },
-  popupButton: {
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 40,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-  },
-  popupButtonText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 16,
-  },
-
-  // Success (old)
-  successContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 20,
-  },
-  successIconContainer: {
-    marginBottom: 16,
-  },
-  successTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 24,
-    color: '#1f2937',
-    textAlign: 'center',
-  },
-  successSubtext: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  certificateCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  certificateTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 18,
-    color: '#1f2937',
-    marginTop: 8,
-  },
-  certificateText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-  },
-  certificateName: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 20,
-    color: '#1f2937',
-    marginTop: 4,
-  },
-  certificatePurpose: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 16,
-    color: '#3b82f6',
-    marginTop: 4,
-  },
-  certificateDate: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-  },
-  certificateDivider: {
-    width: 60,
-    height: 2,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 12,
-  },
-  certificateNumber: {
+  popupPaymentId: {
     fontFamily: 'monospace',
     fontSize: 12,
     color: '#9ca3af',
+    marginBottom: 20,
   },
-  successActions: {
+  popupButtons: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    gap: 10,
     width: '100%',
   },
-  successButton: {
+  popupButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     gap: 6,
   },
-  shareButton: {
+  popupButtonPrimary: {
     backgroundColor: '#3b82f6',
   },
-  downloadButton: {
-    backgroundColor: '#10b981',
+  popupButtonSecondary: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  successButtonText: {
+  popupButtonTextPrimary: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
   },
-  doneButton: {
-    backgroundColor: '#6b7280',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  doneButtonText: {
+  popupButtonTextSecondary: {
     fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
+    color: '#6b7280',
     fontSize: 14,
   },
 });

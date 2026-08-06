@@ -49,15 +49,19 @@ export default function WorkingMemberCommission({ navigation }) {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [userLevel, setUserLevel] = useState('I');
   const [userData, setUserData] = useState(null);
-  const [filterType, setFilterType] = useState('all'); // all, direct, secondary
+  const [filterType, setFilterType] = useState('all'); // all, direct, secondary, donation
   const [filterStatus, setFilterStatus] = useState('all'); // all, paid, pending
   const [showStats, setShowStats] = useState(true);
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
+  const [donationCommissionTotal, setDonationCommissionTotal] = useState(0);
+  const [donationCommissionCount, setDonationCommissionCount] = useState(0);
   const [commissionSummary, setCommissionSummary] = useState({
     directTotal: 0,
     secondaryTotal: 0,
+    donationTotal: 0,
     directCount: 0,
     secondaryCount: 0,
+    donationCount: 0,
     thisMonth: 0,
     lastMonth: 0
   });
@@ -67,6 +71,7 @@ export default function WorkingMemberCommission({ navigation }) {
     setupRealtimeListener();
     fetchUserProfile();
     calculateMonthlyEarnings();
+    fetchDonationCommissionTotal();
   }, []);
 
   const fetchUserData = async () => {
@@ -81,6 +86,7 @@ export default function WorkingMemberCommission({ navigation }) {
         setUserData(data);
         setUserLevel(data.level || 'I');
         setProfilePhoto(data.profilePhoto || null);
+        setDonationCommissionTotal(data.totalDonationCommission || 0);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -127,6 +133,10 @@ export default function WorkingMemberCommission({ navigation }) {
       snapshot.forEach((doc) => {
         const data = doc.data();
         const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
+        
+        // Check if this is a donation commission (contains 'donation' in description)
+        const isDonation = data.description?.toLowerCase().includes('donation') || false;
+        
         const commission = { 
           id: doc.id, 
           ...data,
@@ -136,7 +146,8 @@ export default function WorkingMemberCommission({ navigation }) {
           amount: data.amount || 0,
           type: data.type === 'direct_commission' ? 'direct' : 'secondary',
           createdAt: createdAt,
-          date: createdAt
+          date: createdAt,
+          isDonation: isDonation
         };
         
         commissionsList.push(commission);
@@ -172,6 +183,40 @@ export default function WorkingMemberCommission({ navigation }) {
     });
 
     return () => unsubscribe();
+  };
+
+  const fetchDonationCommissionTotal = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      // Get donation commissions from commissionLogs
+      const q = query(
+        collection(db, 'commissionLogs'),
+        where('workingMemberId', '==', userId),
+        where('type', '==', 'donation_commission')
+      );
+      
+      const snapshot = await getDocs(q);
+      let total = 0;
+      let count = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        total += data.commissionAmount || 0;
+        count++;
+      });
+      
+      setDonationCommissionTotal(total);
+      setDonationCommissionCount(count);
+      setCommissionSummary(prev => ({
+        ...prev,
+        donationTotal: total,
+        donationCount: count
+      }));
+    } catch (error) {
+      console.error('Error fetching donation commission total:', error);
+    }
   };
 
   const calculateMonthlyEarnings = async () => {
@@ -219,6 +264,7 @@ export default function WorkingMemberCommission({ navigation }) {
     setRefreshing(true);
     await fetchUserData();
     await calculateMonthlyEarnings();
+    await fetchDonationCommissionTotal();
     setRefreshing(false);
   };
 
@@ -229,12 +275,14 @@ export default function WorkingMemberCommission({ navigation }) {
   const getCommissionTypeColor = (type) => {
     if (type === 'direct') return '#8b5cf6';
     if (type === 'secondary') return '#10b981';
+    if (type === 'donation') return '#f59e0b';
     return '#6b7280';
   };
 
   const getCommissionTypeIcon = (type) => {
     if (type === 'direct') return 'person-add';
     if (type === 'secondary') return 'share';
+    if (type === 'donation') return 'volunteer-activism';
     return 'attach-money';
   };
 
@@ -251,9 +299,11 @@ export default function WorkingMemberCommission({ navigation }) {
 
     // Type filter
     if (filterType === 'direct') {
-      filtered = filtered.filter(c => c.type === 'direct');
+      filtered = filtered.filter(c => c.type === 'direct' && !c.isDonation);
     } else if (filterType === 'secondary') {
       filtered = filtered.filter(c => c.type === 'secondary');
+    } else if (filterType === 'donation') {
+      filtered = filtered.filter(c => c.isDonation);
     }
 
     // Status filter
@@ -277,7 +327,8 @@ export default function WorkingMemberCommission({ navigation }) {
         `⏳ Pending: ₹${pendingCommission.toLocaleString()}\n` +
         `✅ Paid: ₹${paidCommission.toLocaleString()}\n` +
         `📋 Direct: ₹${commissionSummary.directTotal.toLocaleString()} (${commissionSummary.directCount} txns)\n` +
-        `🔄 Secondary: ₹${commissionSummary.secondaryTotal.toLocaleString()} (${commissionSummary.secondaryCount} txns)\n\n` +
+        `🔄 Secondary: ₹${commissionSummary.secondaryTotal.toLocaleString()} (${commissionSummary.secondaryCount} txns)\n` +
+        `❤️ Donation Commissions: ₹${commissionSummary.donationTotal.toLocaleString()} (${commissionSummary.donationCount} txns)\n\n` +
         `🚀 Keep referring more members to earn more!`;
       
       await Share.share({
@@ -302,9 +353,11 @@ export default function WorkingMemberCommission({ navigation }) {
   );
 
   const CommissionCard = ({ item }) => {
-    const color = getCommissionTypeColor(item.type);
-    const icon = getCommissionTypeIcon(item.type);
-    const isDirect = item.type === 'direct';
+    const isDonation = item.isDonation || false;
+    const type = isDonation ? 'donation' : item.type;
+    const color = getCommissionTypeColor(type);
+    const icon = getCommissionTypeIcon(type);
+    const isDirect = item.type === 'direct' && !isDonation;
     const isPaid = item.status === 'paid' || item.status === 'completed';
     
     let levelDetails = null;
@@ -314,9 +367,15 @@ export default function WorkingMemberCommission({ navigation }) {
       levelName = levelDetails?.title || '';
     }
 
+    // Custom title for donation commissions
+    let title = isDirect ? 'Direct Commission' : 'Secondary Commission';
+    if (isDonation) {
+      title = 'Donation Commission';
+    }
+
     return (
       <TouchableOpacity 
-        style={[styles.commissionCard, !isPaid && styles.commissionCardPending]}
+        style={[styles.commissionCard, !isPaid && styles.commissionCardPending, isDonation && styles.commissionCardDonation]}
         onPress={() => {
           setSelectedCommission(item);
           setDetailModalVisible(true);
@@ -329,10 +388,11 @@ export default function WorkingMemberCommission({ navigation }) {
           </View>
           <View style={styles.commissionInfo}>
             <Text style={styles.commissionTitle}>
-              {isDirect ? 'Direct Commission' : `Secondary Commission${item.level ? ` (L${item.level})` : ''}`}
+              {title}
+              {item.level && !isDonation ? ` (L${item.level})` : ''}
             </Text>
             <Text style={styles.commissionDescription} numberOfLines={1}>
-              {item.description || (isDirect ? 'Member registration' : 'Upline referral')}
+              {item.description || (isDirect ? 'Member registration' : isDonation ? 'Donation commission' : 'Upline referral')}
             </Text>
           </View>
           <View style={[styles.commissionStatus, { backgroundColor: isPaid ? '#10b981' : '#f59e0b' }]}>
@@ -344,10 +404,17 @@ export default function WorkingMemberCommission({ navigation }) {
         
         <View style={styles.commissionFooter}>
           <View>
-            <Text style={styles.commissionAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
-            {levelName && (
+            <Text style={[styles.commissionAmount, isDonation && styles.donationAmount]}>
+              ₹{item.amount?.toLocaleString() || 0}
+            </Text>
+            {levelName && !isDonation && (
               <Text style={styles.commissionLevel}>
                 {levelName} {item.percentage ? `(${item.percentage}%)` : ''}
+              </Text>
+            )}
+            {isDonation && (
+              <Text style={styles.donationLabel}>
+                ❤️ Donation Commission
               </Text>
             )}
           </View>
@@ -363,13 +430,15 @@ export default function WorkingMemberCommission({ navigation }) {
   const CommissionDetailModal = () => {
     if (!selectedCommission) return null;
     
-    const color = getCommissionTypeColor(selectedCommission.type);
-    const icon = getCommissionTypeIcon(selectedCommission.type);
-    const isDirect = selectedCommission.type === 'direct';
+    const isDonation = selectedCommission.isDonation || false;
+    const type = isDonation ? 'donation' : selectedCommission.type;
+    const color = getCommissionTypeColor(type);
+    const icon = getCommissionTypeIcon(type);
+    const isDirect = selectedCommission.type === 'direct' && !isDonation;
     const isPaid = selectedCommission.status === 'paid' || selectedCommission.status === 'completed';
 
     let levelDetails = null;
-    if (selectedCommission.levelId) {
+    if (selectedCommission.levelId && !isDonation) {
       levelDetails = getLevelDetails(selectedCommission.levelId);
     }
 
@@ -396,7 +465,8 @@ export default function WorkingMemberCommission({ navigation }) {
                 </View>
                 <View style={styles.detailTitleContainer}>
                   <Text style={styles.detailTitle}>
-                    {isDirect ? 'Direct Commission' : `Secondary Commission${selectedCommission.level ? ` (Level ${selectedCommission.level})` : ''}`}
+                    {isDonation ? 'Donation Commission' : 
+                     isDirect ? 'Direct Commission' : `Secondary Commission${selectedCommission.level ? ` (Level ${selectedCommission.level})` : ''}`}
                   </Text>
                   <View style={[styles.detailStatus, { backgroundColor: isPaid ? '#10b981' : '#f59e0b' }]}>
                     <Text style={styles.detailStatusText}>
@@ -411,10 +481,12 @@ export default function WorkingMemberCommission({ navigation }) {
                 
                 <View style={styles.breakdownRow}>
                   <Text style={styles.breakdownLabel}>Type</Text>
-                  <Text style={styles.breakdownValue}>{isDirect ? 'Direct' : 'Secondary'}</Text>
+                  <Text style={styles.breakdownValue}>
+                    {isDonation ? 'Donation' : isDirect ? 'Direct' : 'Secondary'}
+                  </Text>
                 </View>
                 
-                {levelDetails && (
+                {levelDetails && !isDonation && (
                   <>
                     <View style={styles.breakdownRow}>
                       <Text style={styles.breakdownLabel}>Level</Text>
@@ -431,7 +503,14 @@ export default function WorkingMemberCommission({ navigation }) {
                   </>
                 )}
                 
-                {selectedCommission.percentage && (
+                {isDonation && (
+                  <View style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>Source</Text>
+                    <Text style={styles.breakdownValue}>Member Donation</Text>
+                  </View>
+                )}
+                
+                {selectedCommission.percentage && !isDonation && (
                   <View style={styles.breakdownRow}>
                     <Text style={styles.breakdownLabel}>Applied Rate</Text>
                     <Text style={styles.breakdownValue}>{selectedCommission.percentage}%</Text>
@@ -440,7 +519,7 @@ export default function WorkingMemberCommission({ navigation }) {
                 
                 <View style={[styles.breakdownRow, styles.totalRow]}>
                   <Text style={styles.breakdownLabel}>Commission Amount</Text>
-                  <Text style={[styles.breakdownValue, { color: '#10b981', fontSize: 18 }]}>
+                  <Text style={[styles.breakdownValue, { color: isDonation ? '#f59e0b' : '#10b981', fontSize: 18 }]}>
                     ₹{selectedCommission.amount?.toLocaleString() || 0}
                   </Text>
                 </View>
@@ -526,6 +605,38 @@ export default function WorkingMemberCommission({ navigation }) {
     </View>
   );
 
+  // Donation Commission Card
+  const DonationCommissionCard = () => (
+    <View style={styles.donationCommissionCard}>
+      <View style={styles.donationCommissionHeader}>
+        <View style={styles.donationCommissionIcon}>
+          <MaterialIcons name="volunteer-activism" size={24} color="#f59e0b" />
+        </View>
+        <View style={styles.donationCommissionContent}>
+          <Text style={styles.donationCommissionTitle}>Donation Commissions</Text>
+          <Text style={styles.donationCommissionSubtitle}>
+            Earned from members' donations
+          </Text>
+        </View>
+      </View>
+      <View style={styles.donationCommissionStats}>
+        <View style={styles.donationCommissionStat}>
+          <Text style={styles.donationCommissionStatValue}>
+            ₹{commissionSummary.donationTotal.toLocaleString()}
+          </Text>
+          <Text style={styles.donationCommissionStatLabel}>Total Earned</Text>
+        </View>
+        <View style={styles.donationStatDivider} />
+        <View style={styles.donationCommissionStat}>
+          <Text style={styles.donationCommissionStatValue}>
+            {commissionSummary.donationCount}
+          </Text>
+          <Text style={styles.donationCommissionStatLabel}>Transactions</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -595,6 +706,9 @@ export default function WorkingMemberCommission({ navigation }) {
         </ScrollView>
       </View>
 
+      {/* Donation Commission Card */}
+      <DonationCommissionCard />
+
       {/* Monthly Stats */}
       <MonthlyStats />
 
@@ -640,6 +754,13 @@ export default function WorkingMemberCommission({ navigation }) {
             <Text style={[styles.filterChipText, filterType === 'secondary' && styles.filterChipTextActive]}>Secondary</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            style={[styles.filterChip, filterType === 'donation' && styles.filterChipActive]}
+            onPress={() => setFilterType('donation')}
+          >
+            <MaterialIcons name="volunteer-activism" size={14} color={filterType === 'donation' ? '#ffffff' : '#6b7280'} />
+            <Text style={[styles.filterChipText, filterType === 'donation' && styles.filterChipTextActive]}>Donations</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[styles.filterChip, filterStatus === 'paid' && styles.filterChipActive]}
             onPress={() => setFilterStatus('paid')}
           >
@@ -668,7 +789,7 @@ export default function WorkingMemberCommission({ navigation }) {
             <MaterialIcons name="attach-money" size={44} color="#d1d5db" />
             <Text style={styles.emptyStateText}>No commissions found</Text>
             <Text style={styles.emptyStateSubtext}>
-              {searchQuery ? 'Try adjusting your search' : 'Register members to earn commissions'}
+              {searchQuery ? 'Try adjusting your search' : 'Register members or get donation commissions'}
             </Text>
           </View>
         }
@@ -810,12 +931,80 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  // Donation Commission Card (NEW)
+  donationCommissionCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  donationCommissionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  donationCommissionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fef3c7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  donationCommissionContent: {
+    flex: 1,
+  },
+  donationCommissionTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  donationCommissionSubtitle: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  donationCommissionStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  donationCommissionStat: {
+    alignItems: 'center',
+  },
+  donationCommissionStatValue: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#f59e0b',
+  },
+  donationCommissionStatLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  donationStatDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
+  },
+
   // Monthly Stats
   monthlyStatsContainer: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 10,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
@@ -931,6 +1120,11 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#f59e0b',
   },
+  commissionCardDonation: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
+    backgroundColor: '#fffbeb',
+  },
   commissionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -979,6 +1173,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#10b981',
+  },
+  donationAmount: {
+    color: '#f59e0b',
+  },
+  donationLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#f59e0b',
+    marginTop: 2,
   },
   commissionLevel: {
     fontFamily: Fonts.Regular,

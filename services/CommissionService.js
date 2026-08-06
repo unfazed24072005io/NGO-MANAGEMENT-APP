@@ -14,12 +14,20 @@ import {
   runTransaction,
   Timestamp
 } from 'firebase/firestore';
-import { getLevelDetails, getCommissionRates } from '../config/commissionLevels';
+import { 
+  getLevelDetails, 
+  getCommissionRates,
+  getLevelByMemberCountAndDonations,
+  isEligibleForPromotion,
+  getPromotionRequirements
+} from '../config/commissionLevels';
 import { WalletService } from './WalletService';
 import { LevelUpdateService } from './LevelUpdateService';
 
 export const CommissionService = {
-  // Process commission on new member registration
+  // ============================================================
+  // 1. PROCESS COMMISSION ON NEW MEMBER REGISTRATION
+  // ============================================================
   async processNewRegistration(newMemberId, sponsorId, registrationAmount = 1000) {
     console.log('🔵 CommissionService.processNewRegistration called');
     console.log('   newMemberId:', newMemberId);
@@ -34,7 +42,7 @@ export const CommissionService = {
       console.log('📋 Sponsor data:', sponsorData);
       console.log('📋 Sponsor role:', sponsorData?.role);
       
-      // ✅ FIX: Check both 'working' and 'workingMember' roles
+      // Check both 'working' and 'workingMember' roles
       const isWorkingMember = sponsorData.role === 'working' || 
                              sponsorData.role === 'workingMember';
       
@@ -80,7 +88,7 @@ export const CommissionService = {
       // 4. Update sponsor's direct referrals count
       await this.updateDirectReferrals(sponsorId, newMemberId);
       
-      // 5. Update sponsor's level
+      // 5. Update sponsor's level (based on both members AND donations)
       await LevelUpdateService.checkAndUpdateLevel(sponsorId);
       
       return {
@@ -96,7 +104,174 @@ export const CommissionService = {
     }
   },
 
-  // Calculate secondary commissions for upline
+  // ============================================================
+  // 2. PROCESS COMMISSION ON DONATION (NEW)
+  // ============================================================
+  async processDonationCommission(memberId, donationAmount) {
+    console.log('💰 CommissionService.processDonationCommission called');
+    console.log('   memberId:', memberId);
+    console.log('   donationAmount:', donationAmount);
+    
+    try {
+      // 1. Get the member's data to find who registered them
+      const memberDoc = await getDoc(doc(db, 'users', memberId));
+      const memberData = memberDoc.data();
+      
+      if (!memberDoc.exists()) {
+        console.log('❌ Member not found');
+        return { success: false, message: 'Member not found' };
+      }
+      
+      console.log('📋 Member data:', memberData);
+      
+      // 2. Get the working member who registered this member
+      const workingMemberId = memberData.registeredBy || memberData.createdBy;
+      
+      if (!workingMemberId) {
+        console.log('❌ No working member found for this member');
+        return { success: false, message: 'No working member found' };
+      }
+      
+      console.log('👤 Working Member ID (who registered this member):', workingMemberId);
+      
+      // 3. Get working member's details
+      const workingMemberDoc = await getDoc(doc(db, 'users', workingMemberId));
+      const workingMemberData = workingMemberDoc.data();
+      
+      if (!workingMemberDoc.exists()) {
+        console.log('❌ Working member not found');
+        return { success: false, message: 'Working member not found' };
+      }
+      
+      console.log('📋 Working member data:', workingMemberData);
+      
+      // 4. Check if it's a working member
+      const isWorkingMember = workingMemberData.role === 'working' || 
+                             workingMemberData.role === 'workingMember';
+      
+      if (!isWorkingMember) {
+        console.log('❌ Sponsor is not a working member. Role:', workingMemberData.role);
+        return { success: false, message: 'Sponsor is not a working member' };
+      }
+      
+      // 5. Get working member's level and commission rate
+      const level = workingMemberData.level || 'I';
+      const levelDetails = getLevelDetails(level);
+      const commissionRate = levelDetails.directCommission;
+      
+      console.log(`📊 Working Member Level: ${level}, Commission Rate: ${commissionRate}%`);
+      
+      // 6. Calculate commission
+      const commissionAmount = (donationAmount * commissionRate) / 100;
+      console.log(`💰 Commission Amount: ₹${commissionAmount}`);
+      
+      // 7. Add commission to working member's wallet
+      await WalletService.addCommission(
+        workingMemberId,
+        commissionAmount,
+        'direct_commission',
+        `Commission from ${memberData.fullName || 'Member'}'s donation of ₹${donationAmount} (${commissionRate}%)`,
+        memberId
+      );
+      
+      console.log(`✅ Commission: ₹${commissionAmount} added to working member ${workingMemberId}`);
+      
+      // 8. Log the commission
+      await addDoc(collection(db, 'commissionLogs'), {
+        workingMemberId: workingMemberId,
+        memberId: memberId,
+        memberName: memberData.fullName || 'Unknown',
+        donationAmount: donationAmount,
+        commissionAmount: commissionAmount,
+        commissionRate: commissionRate,
+        level: level,
+        type: 'donation_commission',
+        createdAt: Timestamp.now()
+      });
+      
+      console.log('✅ Commission log created');
+      
+      // 9. Update working member's total commission from donations
+      const workingMemberRef = doc(db, 'users', workingMemberId);
+      const currentTotal = workingMemberData.totalDonationCommission || 0;
+      await updateDoc(workingMemberRef, {
+        totalDonationCommission: currentTotal + commissionAmount,
+        updatedAt: Timestamp.now()
+      });
+      
+      // ============ 🎯 UPDATE WORKING MEMBER'S LEVEL BASED ON DONATIONS ============
+      // 10. Check and update level based on donations
+      const updatedLevelResult = await LevelUpdateService.checkAndUpdateLevel(workingMemberId);
+      console.log('📊 Level update result after donation:', updatedLevelResult);
+      
+      // 11. Update working member's donation total in the user document
+      const totalDonations = await this.getTotalDonationsByMember(workingMemberId);
+      await updateDoc(workingMemberRef, {
+        totalDonationsFromMembers: totalDonations,
+        updatedAt: Timestamp.now()
+      });
+      
+      return {
+        success: true,
+        commissionAmount: commissionAmount,
+        commissionRate: commissionRate,
+        level: level,
+        workingMemberId: workingMemberId,
+        memberName: memberData.fullName || 'Unknown',
+        levelChanged: updatedLevelResult?.levelChanged || false,
+        newLevel: updatedLevelResult?.newLevel || level
+      };
+      
+    } catch (error) {
+      console.error('❌ Error processing donation commission:', error);
+      throw error;
+    }
+  },
+
+  // ============================================================
+  // 3. GET TOTAL DONATIONS BY WORKING MEMBER'S REGISTERED MEMBERS
+  // ============================================================
+  async getTotalDonationsByMember(workingMemberId) {
+    try {
+      console.log('📊 Getting total donations for working member:', workingMemberId);
+      
+      // Get all members registered by this working member
+      const membersQuery = query(
+        collection(db, 'registeredMembers'),
+        where('workingMemberId', '==', workingMemberId)
+      );
+      
+      const membersSnapshot = await getDocs(membersQuery);
+      let totalDonations = 0;
+      
+      for (const doc of membersSnapshot.docs) {
+        const memberData = doc.data();
+        const memberId = memberData.memberId;
+        
+        // Get donations for this member
+        const donationsQuery = query(
+          collection(db, 'donations'),
+          where('memberId', '==', memberId),
+          where('status', '==', 'completed')
+        );
+        
+        const donationsSnapshot = await getDocs(donationsQuery);
+        donationsSnapshot.forEach((donationDoc) => {
+          totalDonations += donationDoc.data().amount || 0;
+        });
+      }
+      
+      console.log(`✅ Total donations: ₹${totalDonations}`);
+      return totalDonations;
+    } catch (error) {
+      console.error('❌ Error getting total donations:', error);
+      return 0;
+    }
+  },
+
+  // ============================================================
+  // 4. CALCULATE SECONDARY COMMISSIONS (UPLINE)
+  // ============================================================
   async calculateSecondaryCommissions(sponsorId, registrationAmount, newMemberId) {
     const commissions = [];
     let currentId = sponsorId;
@@ -118,7 +293,7 @@ export const CommissionService = {
         
         console.log(`📊 Upline level ${level}:`, uplineData.name || 'Unknown', 'Role:', uplineData.role);
         
-        // ✅ FIX: Check both 'working' and 'workingMember' roles
+        // Check both 'working' and 'workingMember' roles
         const isWorkingMember = uplineData.role === 'working' || 
                                uplineData.role === 'workingMember';
         
@@ -175,7 +350,9 @@ export const CommissionService = {
     return commissions;
   },
 
-  // Update sponsor's direct referrals
+  // ============================================================
+  // 5. UPDATE SPONSOR'S DIRECT REFERRALS
+  // ============================================================
   async updateDirectReferrals(sponsorId, newMemberId) {
     try {
       console.log('📝 Updating direct referrals for sponsor:', sponsorId);
@@ -202,7 +379,9 @@ export const CommissionService = {
     }
   },
 
-  // Get commission summary for a user
+  // ============================================================
+  // 6. GET COMMISSION SUMMARY FOR A USER
+  // ============================================================
   async getCommissionSummary(userId) {
     try {
       console.log('📊 Getting commission summary for user:', userId);
@@ -251,7 +430,9 @@ export const CommissionService = {
     }
   },
 
-  // Get commission history (Admin)
+  // ============================================================
+  // 7. GET COMMISSION HISTORY (ADMIN)
+  // ============================================================
   async getAllCommissionTransactions(limit = 100) {
     try {
       console.log('📊 Getting all commission transactions...');
@@ -288,12 +469,13 @@ export const CommissionService = {
     }
   },
 
-  // Get top earners
+  // ============================================================
+  // 8. GET TOP EARNERS
+  // ============================================================
   async getTopEarners(limit = 10) {
     try {
       console.log('📊 Getting top earners...');
       
-      // ✅ FIX: Check both 'working' and 'workingMember' roles
       const q = query(
         collection(db, 'users'),
         where('role', 'in', ['working', 'workingMember'])
@@ -305,13 +487,19 @@ export const CommissionService = {
       for (const doc of querySnapshot.docs) {
         const userData = doc.data();
         const wallet = await WalletService.getOrCreateWallet(doc.id);
+        
+        // Get total donations from this working member's registered members
+        const totalDonations = await this.getTotalDonationsByMember(doc.id);
+        
         earners.push({
           id: doc.id,
           name: userData.fullName || userData.name || 'Unknown',
           email: userData.email,
           level: userData.level || 'I',
           totalEarned: wallet.totalEarned || 0,
-          directReferrals: userData.directReferrals?.length || 0
+          directReferrals: userData.directReferrals?.length || 0,
+          donationCommission: userData.totalDonationCommission || 0,
+          totalDonationsFromMembers: totalDonations
         });
       }
       
@@ -326,7 +514,9 @@ export const CommissionService = {
     }
   },
 
-  // ✅ NEW: Process payout for a single commission
+  // ============================================================
+  // 9. PROCESS PAYOUT FOR A SINGLE COMMISSION
+  // ============================================================
   async processPayout(transactionId, amount, note = '') {
     try {
       console.log('💰 Processing payout for transaction:', transactionId);
@@ -371,7 +561,9 @@ export const CommissionService = {
     }
   },
 
-  // ✅ NEW: Get pending commissions for a user
+  // ============================================================
+  // 10. GET PENDING COMMISSIONS FOR A USER
+  // ============================================================
   async getPendingCommissions(userId) {
     try {
       console.log('📊 Getting pending commissions for user:', userId);
@@ -401,6 +593,116 @@ export const CommissionService = {
     } catch (error) {
       console.error('❌ Error getting pending commissions:', error);
       return { commissions: [], totalPending: 0 };
+    }
+  },
+
+  // ============================================================
+  // 11. GET DONATION COMMISSION HISTORY FOR A WORKING MEMBER
+  // ============================================================
+  async getDonationCommissionHistory(workingMemberId, limit = 50) {
+    try {
+      console.log('📊 Getting donation commission history for:', workingMemberId);
+      
+      const q = query(
+        collection(db, 'commissionLogs'),
+        where('workingMemberId', '==', workingMemberId),
+        where('type', '==', 'donation_commission'),
+        orderBy('createdAt', 'desc'),
+        limit(limit)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const history = [];
+      
+      querySnapshot.forEach((doc) => {
+        history.push({ id: doc.id, ...doc.data() });
+      });
+      
+      console.log(`✅ Found ${history.length} donation commission records`);
+      return history;
+    } catch (error) {
+      console.error('❌ Error getting donation commission history:', error);
+      return [];
+    }
+  },
+
+  // ============================================================
+  // 12. GET TOTAL DONATION COMMISSION FOR A WORKING MEMBER
+  // ============================================================
+  async getTotalDonationCommission(workingMemberId) {
+    try {
+      console.log('📊 Getting total donation commission for:', workingMemberId);
+      
+      const userDoc = await getDoc(doc(db, 'users', workingMemberId));
+      const userData = userDoc.data();
+      
+      const total = userData.totalDonationCommission || 0;
+      console.log(`✅ Total donation commission: ₹${total}`);
+      
+      return total;
+    } catch (error) {
+      console.error('❌ Error getting total donation commission:', error);
+      return 0;
+    }
+  },
+
+  // ============================================================
+  // 13. GET PROMOTION PROGRESS FOR A WORKING MEMBER
+  // ============================================================
+  async getPromotionProgress(workingMemberId) {
+    try {
+      console.log('📊 Getting promotion progress for:', workingMemberId);
+      
+      const userDoc = await getDoc(doc(db, 'users', workingMemberId));
+      const userData = userDoc.data();
+      
+      const currentLevel = userData.level || 'I';
+      const directReferrals = userData.directReferrals || [];
+      const memberCount = directReferrals.length;
+      
+      // Get total donations from members
+      const totalDonations = await this.getTotalDonationsByMember(workingMemberId);
+      
+      const nextLevelId = getNextLevel(currentLevel);
+      if (!nextLevelId) {
+        return {
+          currentLevel,
+          memberCount,
+          totalDonations,
+          nextLevel: null,
+          isMaxLevel: true,
+          message: 'You are at the highest level! 🎉'
+        };
+      }
+      
+      const nextLevel = getLevelDetails(nextLevelId);
+      const requirements = getPromotionRequirements(currentLevel);
+      
+      const membersNeeded = Math.max(0, nextLevel.minMembers - memberCount);
+      const donationsNeeded = Math.max(0, nextLevel.minDonations - totalDonations);
+      
+      const isEligible = isEligibleForPromotion(currentLevel, memberCount, totalDonations);
+      
+      return {
+        currentLevel,
+        currentLevelTitle: getLevelDetails(currentLevel).title,
+        memberCount,
+        totalDonations,
+        nextLevel: nextLevelId,
+        nextLevelTitle: nextLevel.title,
+        membersNeeded,
+        donationsNeeded,
+        isEligible,
+        isMaxLevel: false,
+        requirements,
+        progress: {
+          members: Math.min((memberCount / nextLevel.minMembers) * 100, 100),
+          donations: Math.min((totalDonations / nextLevel.minDonations) * 100, 100)
+        }
+      };
+    } catch (error) {
+      console.error('❌ Error getting promotion progress:', error);
+      return null;
     }
   }
 };

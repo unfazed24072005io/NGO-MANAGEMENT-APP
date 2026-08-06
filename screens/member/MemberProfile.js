@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TextInput, TouchableOpacity, Alert, ActivityIndicator, Switch, Modal, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
 import { signOut } from 'firebase/auth';
 import { Fonts } from '../../config/fonts';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
 
 export default function MemberProfile({ navigation }) {
   const [userData, setUserData] = useState(null);
@@ -16,8 +19,6 @@ export default function MemberProfile({ navigation }) {
   const [certificates, setCertificates] = useState([]);
   const [cardId, setCardId] = useState('');
   const [showAllCertificates, setShowAllCertificates] = useState(false);
-  const [selectedCertificate, setSelectedCertificate] = useState(null);
-  const [certificateModalVisible, setCertificateModalVisible] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -180,6 +181,10 @@ export default function MemberProfile({ navigation }) {
     }
   };
 
+  const navigateToCertificates = () => {
+    navigation.navigate('MemberCertificate');
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -305,102 +310,138 @@ export default function MemberProfile({ navigation }) {
           </View>
         </View>
 
-        {/* ID Card Section - Displayed Directly */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>ID Card</Text>
-          <View style={styles.idCardDisplay}>
+        {/* Professional ID Card */}
+        <View style={styles.idCardWrapper}>
+          <LinearGradient
+            colors={['#1e3a5f', '#2d5a8e', '#3b82f6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.idCard}
+          >
+            {/* Card Header */}
             <View style={styles.idCardHeader}>
-              <View style={styles.idCardLogo}>
-                <MaterialIcons name="volunteer-activism" size={20} color="#ffffff" />
+              <View style={styles.idCardLogoContainer}>
+                <View style={styles.idCardLogo}>
+                  <MaterialIcons name="volunteer-activism" size={24} color="#ffffff" />
+                </View>
+                <Text style={styles.idCardOrgName}>NGO</Text>
               </View>
-              <Text style={styles.idCardTitleText}>NGO MEMBER</Text>
               <View style={styles.idCardBadge}>
-                <Text style={styles.idCardBadgeText}>ACTIVE</Text>
+                <Text style={styles.idCardBadgeText}>MEMBER</Text>
               </View>
             </View>
 
+            {/* Card Body */}
             <View style={styles.idCardBody}>
-              <View style={styles.idCardAvatarContainer}>
+              <View style={styles.idCardPhotoContainer}>
                 {formData.profilePhoto ? (
-                  <Image source={{ uri: formData.profilePhoto }} style={styles.idCardAvatar} />
+                  <Image source={{ uri: formData.profilePhoto }} style={styles.idCardPhoto} />
                 ) : (
-                  <View style={styles.idCardAvatarPlaceholder}>
-                    <MaterialIcons name="person" size={30} color="#3b82f6" />
+                  <View style={styles.idCardPhotoPlaceholder}>
+                    <MaterialIcons name="person" size={40} color="#3b82f6" />
                   </View>
                 )}
               </View>
-              <Text style={styles.idCardName}>{formData.fullName || 'Member'}</Text>
-              <Text style={styles.idCardId}>ID: {cardId}</Text>
+              <View style={styles.idCardInfo}>
+                <Text style={styles.idCardName}>{formData.fullName || 'Member'}</Text>
+                <Text style={styles.idCardRole}>{formData.bio || 'NGO Member'}</Text>
+                <View style={styles.idCardIdRow}>
+                  <MaterialIcons name="badge" size={14} color="rgba(255,255,255,0.7)" />
+                  <Text style={styles.idCardIdText}>ID: {cardId}</Text>
+                </View>
+              </View>
             </View>
 
+            {/* Card Divider */}
+            <View style={styles.idCardDivider} />
+
+            {/* Card Footer */}
             <View style={styles.idCardFooter}>
               <View style={styles.idCardDetail}>
-                <MaterialIcons name="email" size={14} color="#6b7280" />
-                <Text style={styles.idCardDetailText}>{formData.email || 'N/A'}</Text>
+                <MaterialIcons name="email" size={14} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.idCardDetailText} numberOfLines={1}>
+                  {formData.email || 'N/A'}
+                </Text>
               </View>
               <View style={styles.idCardDetail}>
-                <MaterialIcons name="phone" size={14} color="#6b7280" />
+                <MaterialIcons name="phone" size={14} color="rgba(255,255,255,0.7)" />
                 <Text style={styles.idCardDetailText}>{formData.phone || 'N/A'}</Text>
               </View>
               <View style={styles.idCardDetail}>
-                <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
+                <MaterialIcons name="calendar-today" size={14} color="rgba(255,255,255,0.7)" />
                 <Text style={styles.idCardDetailText}>Joined: {formData.joinedDate}</Text>
               </View>
             </View>
 
+            {/* Card Bottom */}
             <View style={styles.idCardBottom}>
-              <Text style={styles.idCardBottomText}>Valid Until: {new Date().getFullYear() + 1}-12-31</Text>
+              <View style={styles.idCardStatus}>
+                <View style={styles.idCardStatusDot} />
+                <Text style={styles.idCardStatusText}>ACTIVE</Text>
+              </View>
+              <Text style={styles.idCardValidUntil}>
+                Valid: {new Date().getFullYear() + 1}-12-31
+              </Text>
             </View>
-          </View>
+          </LinearGradient>
+          
         </View>
 
-        {/* Certificates Section - Displayed Directly */}
-        <View style={styles.card}>
+        {/* Certificates Section */}
+        <TouchableOpacity style={styles.card} onPress={navigateToCertificates} activeOpacity={0.7}>
           <View style={styles.certHeader}>
             <Text style={styles.cardTitle}>Certificates</Text>
-            {certificates.length > 3 && (
-              <TouchableOpacity onPress={() => setShowAllCertificates(!showAllCertificates)}>
-                <Text style={styles.viewAllText}>
-                  {showAllCertificates ? 'Show Less' : `View All (${certificates.length})`}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.certHeaderRight}>
+              {certificates.length > 0 && (
+                <Text style={styles.certCount}>{certificates.length} earned</Text>
+              )}
+              <MaterialIcons name="chevron-right" size={20} color="#3b82f6" />
+            </View>
           </View>
 
           {certificates.length > 0 ? (
             <>
-              {displayedCertificates.map((cert, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.certItem}
-                  onPress={() => {
-                    setSelectedCertificate(cert);
-                    setCertificateModalVisible(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.certItemIcon, { backgroundColor: getCertificateColor(cert.type) + '15' }]}>
-                    <MaterialIcons name={getCertificateIcon(cert.type)} size={16} color={getCertificateColor(cert.type)} />
-                  </View>
-                  <View style={styles.certItemContent}>
-                    <Text style={styles.certItemTitle}>{cert.title || getCertificateTypeLabel(cert.type)}</Text>
-                    <View style={styles.certItemMeta}>
-                      <Text style={styles.certItemType}>{getCertificateTypeLabel(cert.type)}</Text>
-                      <Text style={styles.certItemDate}>
-                        {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                  {cert.amount && (
-                    <Text style={styles.certItemAmount}>₹{cert.amount}</Text>
-                  )}
-                  <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
-                </TouchableOpacity>
-              ))}
-              <View style={styles.certTotalBadge}>
-                <MaterialIcons name="verified" size={16} color="#10b981" />
-                <Text style={styles.certTotalText}>Total Certificates: {certificates.length}</Text>
-              </View>
+
+{displayedCertificates.map((cert, index) => (
+  <TouchableOpacity 
+    key={index} 
+    style={styles.certItem}
+    onPress={() => navigation.navigate('MemberCertificate', { certificate: cert })}
+    activeOpacity={0.7}
+  >
+    <View style={[styles.certItemIcon, { backgroundColor: getCertificateColor(cert.type) + '15' }]}>
+      <MaterialIcons name={getCertificateIcon(cert.type)} size={16} color={getCertificateColor(cert.type)} />
+    </View>
+    <View style={styles.certItemContent}>
+      <Text style={styles.certItemTitle}>{cert.title || getCertificateTypeLabel(cert.type)}</Text>
+      <View style={styles.certItemMeta}>
+        <Text style={styles.certItemType}>{getCertificateTypeLabel(cert.type)}</Text>
+        <Text style={styles.certItemDate}>
+          {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
+        </Text>
+      </View>
+    </View>
+    {cert.amount && (
+      <Text style={styles.certItemAmount}>₹{cert.amount}</Text>
+    )}
+    <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
+  </TouchableOpacity>
+))}
+              {certificates.length > 3 && (
+  <TouchableOpacity 
+    style={styles.viewAllCertificates}
+    onPress={() => setShowAllCertificates(!showAllCertificates)}
+  >
+    <Text style={styles.viewAllText}>
+      {showAllCertificates ? 'Show Less' : `View All ${certificates.length} Certificates`}
+    </Text>
+    <MaterialIcons 
+      name={showAllCertificates ? 'expand-less' : 'expand-more'} 
+      size={16} 
+      color="#3b82f6" 
+    />
+  </TouchableOpacity>
+)}
             </>
           ) : (
             <View style={styles.noCertContainer}>
@@ -409,7 +450,7 @@ export default function MemberProfile({ navigation }) {
               <Text style={styles.noCertSubtext}>Complete activities to earn certificates</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {/* Settings Section */}
         <View style={styles.card}>
@@ -495,105 +536,6 @@ export default function MemberProfile({ navigation }) {
           <Text style={styles.versionFooterText}>NGO App v1.0.0</Text>
         </View>
       </ScrollView>
-
-      {/* Certificate Detail Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={certificateModalVisible}
-        onRequestClose={() => setCertificateModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Certificate Details</Text>
-              <TouchableOpacity onPress={() => setCertificateModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            {selectedCertificate && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={styles.detailCertificate}>
-                  <View style={[styles.detailIcon, { backgroundColor: getCertificateColor(selectedCertificate.type) + '15' }]}>
-                    <MaterialIcons 
-                      name={getCertificateIcon(selectedCertificate.type)} 
-                      size={50} 
-                      color={getCertificateColor(selectedCertificate.type)} 
-                    />
-                  </View>
-                  <Text style={styles.detailTitle}>{selectedCertificate.title || 'Certificate'}</Text>
-                  <Text style={styles.detailNumber}>
-                    {selectedCertificate.certificateNumber || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Issued To</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedCertificate.donorName || selectedCertificate.memberName || userData?.fullName || 'N/A'}
-                  </Text>
-                </View>
-
-                {selectedCertificate.amount && (
-                  <View style={styles.detailSection}>
-                    <Text style={styles.detailLabel}>Amount</Text>
-                    <Text style={[styles.detailValue, { color: '#10b981', fontFamily: Fonts.Bold }]}>
-                      ₹{selectedCertificate.amount}
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Purpose</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedCertificate.purpose || selectedCertificate.type || 'General'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Description</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedCertificate.description || 'No description'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Type</Text>
-                  <View style={[styles.detailTypeBadge, { backgroundColor: getCertificateColor(selectedCertificate.type) + '15' }]}>
-                    <Text style={[styles.detailTypeText, { color: getCertificateColor(selectedCertificate.type) }]}>
-                      {getCertificateTypeLabel(selectedCertificate.type)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Issued Date</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedCertificate.issuedDate ? new Date(selectedCertificate.issuedDate).toLocaleString() : 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <View style={[styles.detailStatusBadge, { backgroundColor: selectedCertificate.status === 'issued' ? '#10b981' : '#f59e0b' }]}>
-                    <Text style={styles.detailStatusText}>
-                      {selectedCertificate.status || 'issued'}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.closeModalButton}
-                  onPress={() => setCertificateModalVisible(false)}
-                >
-                  <Text style={styles.closeModalButtonText}>Close</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -601,7 +543,7 @@ export default function MemberProfile({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fdf8f3',
+    backgroundColor: '#f8fafc',
   },
 
   // Blue Header
@@ -646,7 +588,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fdf8f3',
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
     fontFamily: Fonts.Regular,
@@ -787,111 +729,195 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // ID Card Display
-  idCardDisplay: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    overflow: 'hidden',
+  // Professional ID Card
+  idCardWrapper: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  idCard: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   idCardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#3b82f6',
+    marginBottom: 12,
+  },
+  idCardLogoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   idCardLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
-  idCardTitleText: {
+  idCardOrgName: {
     fontFamily: Fonts.Bold,
-    flex: 1,
-    fontSize: 14,
+    fontSize: 20,
+    color: '#ffffff',
+    letterSpacing: 2,
+  },
+  idCardBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  idCardBadgeText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 11,
     color: '#ffffff',
     letterSpacing: 1,
   },
-  idCardBadge: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  idCardBadgeText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 9,
-  },
   idCardBody: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: 12,
+    gap: 14,
+    paddingVertical: 12,
   },
-  idCardAvatarContainer: {
-    marginBottom: 8,
+  idCardPhotoContainer: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  idCardAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: '#3b82f6',
+  idCardPhoto: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
-  idCardAvatarPlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#eff6ff',
+  idCardPhotoPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#3b82f6',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  idCardInfo: {
+    flex: 1,
   },
   idCardName: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
-    color: '#1f2937',
+    fontSize: 18,
+    color: '#ffffff',
   },
-  idCardId: {
-    fontFamily: 'monospace',
-    fontSize: 11,
-    color: '#6b7280',
+  idCardRole: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
+  idCardIdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  idCardIdText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  idCardDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginVertical: 8,
+  },
   idCardFooter: {
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 4,
+    paddingVertical: 4,
   },
   idCardDetail: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   idCardDetailText: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#1f2937',
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.8)',
+    maxWidth: width * 0.25,
   },
   idCardBottom: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    padding: 8,
-    backgroundColor: '#f8fafc',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
-  idCardBottomText: {
+  idCardStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  idCardStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#34d399',
+    shadowColor: '#34d399',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  idCardStatusText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#34d399',
+    letterSpacing: 1,
+  },
+  idCardValidUntil: {
     fontFamily: Fonts.Regular,
-    fontSize: 9,
-    color: '#6b7280',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  idCardActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    width: '100%',
+  },
+  idCardAction: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  idCardActionGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 6,
+  },
+  idCardActionText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#ffffff',
   },
 
   // Certificates Section
@@ -900,6 +926,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  certHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  certCount: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+  },
+  viewAllCertificates: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 10,
+    gap: 4,
   },
   viewAllText: {
     fontFamily: Fonts.SemiBold,
@@ -952,22 +995,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#10b981',
-  },
-  certTotalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 8,
-    gap: 6,
-  },
-  certTotalText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 13,
-    color: '#059669',
   },
   noCertContainer: {
     alignItems: 'center',
@@ -1089,100 +1116,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9ca3af',
-  },
-
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 16,
-  },
-  modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#1f2937',
-  },
-  detailCertificate: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  detailIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  detailTitle: {
-    fontFamily: Fonts.Bold,
-    fontSize: 18,
-    color: '#1f2937',
-  },
-  detailNumber: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  detailSection: {
-    marginBottom: 12,
-  },
-  detailLabel: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontFamily: Fonts.Regular,
-    fontSize: 14,
-    color: '#1f2937',
-  },
-  detailTypeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  detailTypeText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-  },
-  detailStatusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  detailStatusText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 12,
-  },
-  closeModalButton: {
-    backgroundColor: '#6b7280',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  closeModalButtonText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
-    fontSize: 16,
   },
 });

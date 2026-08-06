@@ -15,8 +15,6 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
-import { CommissionService } from '../../services/CommissionService';
-import { WalletService } from '../../services/WalletService';
 import { LevelUpdateService } from '../../services/LevelUpdateService';
 import { getLevelDetails } from '../../config/commissionLevels';
 
@@ -149,6 +147,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         }
       });
 
+      // Get commission from donations (walletTransactions)
       const commissionQuery = query(
         collection(db, 'walletTransactions'),
         where('userId', '==', userId),
@@ -162,6 +161,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         }
       });
 
+      // Calculate commission for each member based on donations
       membersList.forEach(member => {
         const commission = (member.totalDonations || 0) * 0.1;
         member.commission = commission;
@@ -245,201 +245,197 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
     return re.test(email);
   };
 
-// ============ FIXED: Register Member with Auto-Logout ============
-// ============ FIXED: Register Member with Auto-Logout & Redirect ============
-const handleRegisterMember = async () => {
-  console.log('🚀 Register button clicked!');
-  console.log('📋 Current form data:', {
-    fullName: formData.fullName,
-    email: formData.email,
-    phone: formData.phone,
-    password: formData.password ? '***' : 'empty',
-    confirmPassword: formData.confirmPassword ? '***' : 'empty',
-    gender: formData.gender
-  });
-  
-  // Validation - Check all required fields
-  console.log('🔍 Validating form data...');
-  
-  if (!formData.fullName.trim()) {
-    console.log('❌ Validation failed: Full name is empty');
-    Alert.alert('Validation Error', 'Please enter full name');
-    return;
-  }
-  console.log('✅ Full name validated');
-
-  if (!formData.email.trim() || !validateEmail(formData.email)) {
-    console.log('❌ Validation failed: Email is invalid');
-    Alert.alert('Validation Error', 'Please enter a valid email address');
-    return;
-  }
-  console.log('✅ Email validated');
-
-  if (!formData.phone.trim()) {
-    console.log('❌ Validation failed: Phone is empty');
-    Alert.alert('Validation Error', 'Please enter phone number');
-    return;
-  }
-  console.log('✅ Phone validated');
-
-  if (!formData.password || formData.password.length < 6) {
-    console.log('❌ Validation failed: Password is too short');
-    Alert.alert('Validation Error', 'Password must be at least 6 characters');
-    return;
-  }
-  console.log('✅ Password validated');
-
-  if (formData.password !== formData.confirmPassword) {
-    console.log('❌ Validation failed: Passwords do not match');
-    Alert.alert('Validation Error', 'Passwords do not match');
-    return;
-  }
-  console.log('✅ Passwords match');
-
-  console.log('✅ All validations passed, starting registration...');
-  setRegisterLoading(true);
-
-  try {
-    console.log('👤 Getting current user...');
-    const workingMemberId = auth.currentUser?.uid;
-    const workingMemberEmail = auth.currentUser?.email;
-    console.log('👤 Working Member ID:', workingMemberId);
+  // ============ UPDATED: Register Member WITHOUT Registration Commission ============
+  const handleRegisterMember = async () => {
+    console.log('🚀 Register button clicked!');
+    console.log('📋 Current form data:', {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password ? '***' : 'empty',
+      confirmPassword: formData.confirmPassword ? '***' : 'empty',
+      gender: formData.gender
+    });
     
-    if (!workingMemberId) {
-      console.log('❌ No user logged in');
-      Alert.alert('Error', 'You must be logged in to register a member');
-      setRegisterLoading(false);
+    // Validation - Check all required fields
+    console.log('🔍 Validating form data...');
+    
+    if (!formData.fullName.trim()) {
+      console.log('❌ Validation failed: Full name is empty');
+      Alert.alert('Validation Error', 'Please enter full name');
       return;
     }
-    
-    console.log('📖 Fetching working member data...');
-    const workingMemberDoc = await getDoc(doc(db, 'users', workingMemberId));
-    
-    if (!workingMemberDoc.exists()) {
-      console.log('❌ Working member document does not exist');
-      Alert.alert('Error', 'Working member not found');
-      setRegisterLoading(false);
+    console.log('✅ Full name validated');
+
+    if (!formData.email.trim() || !validateEmail(formData.email)) {
+      console.log('❌ Validation failed: Email is invalid');
+      Alert.alert('Validation Error', 'Please enter a valid email address');
       return;
     }
-    
-    const workingMemberData = workingMemberDoc.data();
-    console.log('📋 Working Member Data found:', {
-      name: workingMemberData.fullName,
-      email: workingMemberData.email,
-      role: workingMemberData.role,
-      level: workingMemberData.level
-    });
-    
-    // Create user account
-    console.log('📧 Creating user account for:', formData.email);
-    console.log('🔐 Password length:', formData.password.length);
-    
-    const userCredential = await createUserWithEmailAndPassword(
-      auth, 
-      formData.email.trim(), 
-      formData.password
-    );
-    
-    const userId = userCredential.user.uid;
-    console.log('✅ User created with ID:', userId);
+    console.log('✅ Email validated');
 
-    // ============ CREATE DOCUMENTS BEFORE LOGOUT ============
-    // Do all Firestore operations while we still have the working member ID
-    
-    console.log('📝 Creating user document...');
-    const userDocData = {
-      uid: userId,
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim() || '',
-      city: formData.city || '',
-      state: formData.state || '',
-      pincode: formData.pincode || '',
-      gender: formData.gender || 'Male',
-      role: 'member',
-      isWorkingMember: false,
-      createdBy: workingMemberId,
-      registeredBy: workingMemberId,
-      status: 'active',
-      profilePhoto: formData.profilePhoto || null,
-      aadharFront: formData.aadharFront || null,
-      aadharBack: formData.aadharBack || null,
-      panCard: formData.panCard || null,
-      signature: formData.signature || null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    await setDoc(doc(db, 'users', userId), userDocData);
-    console.log('✅ User document created');
+    if (!formData.phone.trim()) {
+      console.log('❌ Validation failed: Phone is empty');
+      Alert.alert('Validation Error', 'Please enter phone number');
+      return;
+    }
+    console.log('✅ Phone validated');
 
-    // Add to registeredMembers collection
-    console.log('📝 Adding to registeredMembers...');
-    const registeredMemberData = {
-      memberId: userId,
-      workingMemberId: workingMemberId,
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim() || '',
-      city: formData.city || '',
-      state: formData.state || '',
-      pincode: formData.pincode || '',
-      gender: formData.gender || 'Male',
-      status: 'active',
-      commission: 0,
-      totalDonations: 0,
-      profilePhoto: formData.profilePhoto || null,
-      aadharFront: formData.aadharFront || null,
-      aadharBack: formData.aadharBack || null,
-      panCard: formData.panCard || null,
-      signature: formData.signature || null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    const registeredMemberRef = await addDoc(collection(db, 'registeredMembers'), registeredMemberData);
-    console.log('✅ Registered member added with ID:', registeredMemberRef.id);
+    if (!formData.password || formData.password.length < 6) {
+      console.log('❌ Validation failed: Password is too short');
+      Alert.alert('Validation Error', 'Password must be at least 6 characters');
+      return;
+    }
+    console.log('✅ Password validated');
 
-    // Add to members collection
-    console.log('📝 Adding to members...');
-    await addDoc(collection(db, 'members'), {
-      uid: userId,
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: formData.phone.trim(),
-      address: formData.address.trim() || '',
-      city: formData.city || '',
-      state: formData.state || '',
-      pincode: formData.pincode || '',
-      gender: formData.gender || 'Male',
-      role: 'member',
-      registeredBy: workingMemberId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    console.log('✅ Members collection updated');
+    if (formData.password !== formData.confirmPassword) {
+      console.log('❌ Validation failed: Passwords do not match');
+      Alert.alert('Validation Error', 'Passwords do not match');
+      return;
+    }
+    console.log('✅ Passwords match');
 
-    // Create wallet for the member
-    console.log('📝 Creating wallet...');
-    await setDoc(doc(db, 'wallets', userId), {
-      balance: 0,
-      totalDonations: 0,
-      totalWithdrawn: 0,
-      pendingWithdrawals: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    console.log('✅ Wallet created');
-
-    // ============ 🎯 COMMISSION & LEVEL UPDATE ============
-    let commissionResult = null;
-    let levelUpdateResult = null;
-    let commissionError = null;
+    console.log('✅ All validations passed, starting registration...');
+    setRegisterLoading(true);
 
     try {
-      // 1. Update working member's direct referrals
+      console.log('👤 Getting current user...');
+      const workingMemberId = auth.currentUser?.uid;
+      const workingMemberEmail = auth.currentUser?.email;
+      console.log('👤 Working Member ID:', workingMemberId);
+      
+      if (!workingMemberId) {
+        console.log('❌ No user logged in');
+        Alert.alert('Error', 'You must be logged in to register a member');
+        setRegisterLoading(false);
+        return;
+      }
+      
+      console.log('📖 Fetching working member data...');
+      const workingMemberDoc = await getDoc(doc(db, 'users', workingMemberId));
+      
+      if (!workingMemberDoc.exists()) {
+        console.log('❌ Working member document does not exist');
+        Alert.alert('Error', 'Working member not found');
+        setRegisterLoading(false);
+        return;
+      }
+      
+      const workingMemberData = workingMemberDoc.data();
+      console.log('📋 Working Member Data found:', {
+        name: workingMemberData.fullName,
+        email: workingMemberData.email,
+        role: workingMemberData.role,
+        level: workingMemberData.level
+      });
+      
+      // Create user account
+      console.log('📧 Creating user account for:', formData.email);
+      console.log('🔐 Password length:', formData.password.length);
+      
+      const userCredential = await createUserWithEmailAndPassword(
+        auth, 
+        formData.email.trim(), 
+        formData.password
+      );
+      
+      const userId = userCredential.user.uid;
+      console.log('✅ User created with ID:', userId);
+
+      // ============ CREATE DOCUMENTS BEFORE LOGOUT ============
+      console.log('📝 Creating user document...');
+      const userDocData = {
+        uid: userId,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim() || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        pincode: formData.pincode || '',
+        gender: formData.gender || 'Male',
+        role: 'member',
+        isWorkingMember: false,
+        createdBy: workingMemberId,
+        registeredBy: workingMemberId,
+        status: 'active',
+        profilePhoto: formData.profilePhoto || null,
+        aadharFront: formData.aadharFront || null,
+        aadharBack: formData.aadharBack || null,
+        panCard: formData.panCard || null,
+        signature: formData.signature || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      await setDoc(doc(db, 'users', userId), userDocData);
+      console.log('✅ User document created');
+
+      // Add to registeredMembers collection
+      console.log('📝 Adding to registeredMembers...');
+      const registeredMemberData = {
+        memberId: userId,
+        workingMemberId: workingMemberId,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim() || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        pincode: formData.pincode || '',
+        gender: formData.gender || 'Male',
+        status: 'active',
+        commission: 0,
+        totalDonations: 0,
+        profilePhoto: formData.profilePhoto || null,
+        aadharFront: formData.aadharFront || null,
+        aadharBack: formData.aadharBack || null,
+        panCard: formData.panCard || null,
+        signature: formData.signature || null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const registeredMemberRef = await addDoc(collection(db, 'registeredMembers'), registeredMemberData);
+      console.log('✅ Registered member added with ID:', registeredMemberRef.id);
+
+      // Add to members collection
+      console.log('📝 Adding to members...');
+      await addDoc(collection(db, 'members'), {
+        uid: userId,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim() || '',
+        city: formData.city || '',
+        state: formData.state || '',
+        pincode: formData.pincode || '',
+        gender: formData.gender || 'Male',
+        role: 'member',
+        registeredBy: workingMemberId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      console.log('✅ Members collection updated');
+
+      // Create wallet for the member
+      console.log('📝 Creating wallet...');
+      await setDoc(doc(db, 'wallets', userId), {
+        balance: 0,
+        totalDonations: 0,
+        totalWithdrawn: 0,
+        pendingWithdrawals: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      console.log('✅ Wallet created');
+
+      // ============ 🎯 REMOVED: Registration Commission ============
+      // ❌ Registration commission is REMOVED
+      // ❌ No commission is given when a member is registered
+      // ✅ Commission will ONLY be given when the member makes a donation
+      
+      // 1. Update working member's direct referrals (Keep this)
       console.log('📝 Updating direct referrals...');
       const workingMemberRef = doc(db, 'users', workingMemberId);
       const currentReferrals = workingMemberData.directReferrals || [];
@@ -456,152 +452,128 @@ const handleRegisterMember = async () => {
         console.log('ℹ️ User already in referrals list');
       }
 
-      // 2. Process commission
-      console.log('💰 Processing commission...');
-      const registrationAmount = 1000;
-      commissionResult = await CommissionService.processNewRegistration(
-        userId, 
-        workingMemberId, 
-        registrationAmount
-      );
-      console.log('✅ Commission processed:', commissionResult);
-
-      // 3. Update working member's level
-      console.log('📊 Updating level...');
-      levelUpdateResult = await LevelUpdateService.checkAndUpdateLevel(workingMemberId);
-      console.log('✅ Level updated:', levelUpdateResult);
-
-      // 4. Log the activity
+      // ❌ REMOVED: Process registration commission
+      // ❌ REMOVED: Update working member's level (level will be updated based on donations)
+      
+      // 2. Log the activity (without commission)
       console.log('📝 Logging activity...');
       await addDoc(collection(db, 'activities'), {
         workingMemberId: workingMemberId,
         memberId: userId,
         memberName: formData.fullName.trim(),
         type: 'member_registration',
-        commission: commissionResult?.directCommission || 0,
-        levelChanged: levelUpdateResult?.levelChanged || false,
-        oldLevel: levelUpdateResult?.oldLevel || null,
-        newLevel: levelUpdateResult?.newLevel || null,
+        commission: 0, // No registration commission
+        levelChanged: false,
+        oldLevel: null,
+        newLevel: null,
         createdAt: new Date().toISOString()
       });
       console.log('✅ Activity logged');
 
-    } catch (err) {
-      console.error('❌ Commission/Level update error:', err);
-      commissionError = err;
+      // Update local state
+      console.log('📊 Updating local state...');
+      const newMember = {
+        id: registeredMemberRef.id,
+        memberId: userId,
+        workingMemberId: workingMemberId,
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.trim(),
+        status: 'active',
+        commission: 0,
+        totalDonations: 0,
+        profilePhoto: formData.profilePhoto || null,
+        createdAt: new Date().toISOString()
+      };
+      
+      setMembers(prev => {
+        const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
+        if (exists) return prev;
+        return [newMember, ...prev];
+      });
+
+      setFilteredMembers(prev => {
+        const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
+        if (exists) return prev;
+        return [newMember, ...prev];
+      });
+      
+      setStats(prev => ({
+        ...prev,
+        total: prev.total + 1,
+        active: prev.active + 1
+      }));
+
+      // ============ ⚠️ NOW LOGOUT AND REDIRECT ============
+      console.log('🔄 Auto-logging out working member...');
+      await auth.signOut();
+      console.log('✅ Working member logged out');
+      console.log('📧 New member is now logged in:', auth.currentUser?.uid);
+
+      // Build success message (NO commission)
+      let successMessage = `✅ Member registered successfully!\n\n`;
+      successMessage += `👤 ${formData.fullName} is now registered.\n`;
+      successMessage += `🔑 You have been logged out. Please login again.\n\n`;
+      successMessage += `💡 Commission will be earned when this member makes a donation.`;
+
+      console.log('🎉 Registration complete! Redirecting to Login...');
+      
+      // ✅ RESET FORM AND NAVIGATE TO LOGIN
+      setFormData({
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        gender: 'Male',
+        password: '',
+        confirmPassword: '',
+        aadharFront: null,
+        aadharBack: null,
+        panCard: null,
+        profilePhoto: null,
+        signature: null,
+      });
+      setStep(1);
+      setRegisterModalVisible(false);
+      setRegisterLoading(false);
+
+      // ✅ Navigate to Login screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+
+      // Show alert after navigation
+      Alert.alert('✅ Registration Successful', successMessage);
+      
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      console.error('❌ Error stack:', error.stack);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error message:', error.message);
+      
+      setRegisterLoading(false);
+      
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Error', 'This email is already registered. Please use a different email.');
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert('Error', 'Invalid email address. Please enter a valid email.');
+      } else if (error.code === 'auth/weak-password') {
+        Alert.alert('Error', 'Password is too weak. Please use at least 6 characters.');
+      } else if (error.code === 'auth/network-request-failed') {
+        Alert.alert('Network Error', 'Please check your internet connection and try again.');
+      } else {
+        Alert.alert('Registration Failed', error.message || 'Something went wrong. Please try again.');
+      }
+    } finally {
+      console.log('🏁 Registration process completed');
+      setRegisterLoading(false);
     }
+  };
 
-    // Update local state
-    console.log('📊 Updating local state...');
-    const newMember = {
-      id: registeredMemberRef.id,
-      memberId: userId,
-      workingMemberId: workingMemberId,
-      fullName: formData.fullName.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: formData.phone.trim(),
-      status: 'active',
-      commission: 0,
-      totalDonations: 0,
-      profilePhoto: formData.profilePhoto || null,
-      createdAt: new Date().toISOString()
-    };
-    
-    setMembers(prev => {
-      const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
-      if (exists) return prev;
-      return [newMember, ...prev];
-    });
-
-    setFilteredMembers(prev => {
-      const exists = prev.some(m => m.id === registeredMemberRef.id || m.memberId === userId);
-      if (exists) return prev;
-      return [newMember, ...prev];
-    });
-    
-    setStats(prev => ({
-      ...prev,
-      total: prev.total + 1,
-      active: prev.active + 1
-    }));
-
-    // ============ ⚠️ NOW LOGOUT AND REDIRECT ============
-    console.log('🔄 Auto-logging out working member...');
-    await auth.signOut();
-    console.log('✅ Working member logged out');
-    console.log('📧 New member is now logged in:', auth.currentUser?.uid);
-
-    // Build success message
-    let successMessage = `✅ Member registered successfully!\n\n`;
-    successMessage += `👤 ${formData.fullName} is now registered.\n`;
-    successMessage += `🔑 You have been logged out. Please login again.\n\n`;
-    
-    if (commissionResult && commissionResult.directCommission > 0) {
-      successMessage += `💰 Commission earned: ₹${commissionResult.directCommission}\n`;
-    }
-    
-    if (levelUpdateResult && levelUpdateResult.levelChanged) {
-      successMessage += `🎉 Level Promoted: ${levelUpdateResult.oldTitle || 'N/A'} → ${levelUpdateResult.newTitle || 'N/A'}\n`;
-    }
-
-    if (commissionError) {
-      successMessage += '\n⚠️ Commission processing had an issue. Please check commission settings.';
-    }
-
-    console.log('🎉 Registration complete! Redirecting to Login...');
-    
-    // ✅ RESET FORM AND NAVIGATE TO LOGIN
-    setFormData({
-      fullName: '',
-      email: '',
-      phone: '',
-      address: '',
-      city: '',
-      state: '',
-      pincode: '',
-      gender: 'Male',
-      password: '',
-      confirmPassword: '',
-      aadharFront: null,
-      aadharBack: null,
-      panCard: null,
-      profilePhoto: null,
-      signature: null,
-    });
-    setStep(1);
-    setRegisterModalVisible(false);
-    setRegisterLoading(false);
-
-    // ✅ Navigate to Login screen
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
-
-    // Show alert after navigation (or before, doesn't matter)
-    Alert.alert('✅ Registration Successful', successMessage);
-    
-  } catch (error) {
-    console.error('❌ Registration error:', error);
-    console.error('❌ Error stack:', error.stack);
-    console.error('❌ Error code:', error.code);
-    console.error('❌ Error message:', error.message);
-    
-    setRegisterLoading(false);
-    
-    if (error.code === 'auth/email-already-in-use') {
-      Alert.alert('Error', 'This email is already registered. Please use a different email.');
-    } else if (error.code === 'auth/invalid-email') {
-      Alert.alert('Error', 'Invalid email address. Please enter a valid email.');
-    } else if (error.code === 'auth/weak-password') {
-      Alert.alert('Error', 'Password is too weak. Please use at least 6 characters.');
-    } else if (error.code === 'auth/network-request-failed') {
-      Alert.alert('Network Error', 'Please check your internet connection and try again.');
-    } else {
-      Alert.alert('Registration Failed', error.message || 'Something went wrong. Please try again.');
-    }
-  }
-};
   const resetForm = () => {
     setFormData({
       fullName: '',
@@ -984,7 +956,6 @@ const handleRegisterMember = async () => {
     <TouchableOpacity 
       style={styles.memberCard}
       onPress={() => {
-        // Check if detail screen exists
         try {
           navigation.navigate('WorkingMemberMemberDetail', { memberId: item.id });
         } catch (e) {

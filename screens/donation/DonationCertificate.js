@@ -1,11 +1,17 @@
 // screens/donation/DonationCertificate.js
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert, ActivityIndicator, Share, RefreshControl, Modal } from 'react-native';
+import { 
+  View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, 
+  Alert, ActivityIndicator, Share, RefreshControl, Modal, Platform 
+} from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
-import { collection, getDocs, query, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Fonts } from '../../config/fonts';
+import { getDonationHistory, getDonationById } from '../../services/paymentService';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DonationCertificate({ navigation }) {
   const [certificates, setCertificates] = useState([]);
@@ -14,10 +20,12 @@ export default function DonationCertificate({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [selectedCert, setSelectedCert] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     donationCerts: 0,
-    achievementCerts: 0
+    achievementCerts: 0,
+    totalAmount: 0
   });
 
   useEffect(() => {
@@ -39,15 +47,39 @@ export default function DonationCertificate({ navigation }) {
       snapshot.forEach((doc) => {
         certList.push({ id: doc.id, ...doc.data() });
       });
-      setCertificates(certList);
+      
+      // Merge with local Razorpay certificates
+      const localHistory = getDonationHistory();
+      const localCerts = localHistory.map(donation => ({
+        id: `local_${donation.paymentId}`,
+        type: 'donation',
+        title: 'Donation Certificate',
+        donorName: donation.name,
+        amount: donation.amount,
+        purpose: donation.description || 'Donation',
+        paymentId: donation.paymentId,
+        issuedDate: donation.timestamp,
+        status: 'issued',
+        isLocal: true,
+        // ✅ FIX: Add safety check for paymentId
+        certificateNumber: donation.paymentId 
+          ? `CERT-${donation.paymentId.slice(-8)}` 
+          : `CERT-${Date.now().toString().slice(-8)}`,
+      }));
+      
+      const allCerts = [...certList, ...localCerts];
+      setCertificates(allCerts);
       
       // Update stats
-      const donationCerts = certList.filter(c => c.type === 'donation').length;
-      const achievementCerts = certList.filter(c => c.type === 'achievement').length;
+      const donationCerts = allCerts.filter(c => c.type === 'donation').length;
+      const achievementCerts = allCerts.filter(c => c.type === 'achievement').length;
+      const totalAmount = allCerts.reduce((sum, c) => sum + (c.amount || 0), 0);
+      
       setStats({
-        total: certList.length,
+        total: allCerts.length,
         donationCerts: donationCerts,
-        achievementCerts: achievementCerts
+        achievementCerts: achievementCerts,
+        totalAmount: totalAmount
       });
       
       setLoading(false);
@@ -60,13 +92,18 @@ export default function DonationCertificate({ navigation }) {
     setLoading(true);
     try {
       const userId = auth.currentUser?.uid;
-      if (!userId) return;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
 
+      // Get user data
       const userDoc = await getDoc(doc(db, 'donors', userId));
       if (userDoc.exists()) {
         setUserData(userDoc.data());
       }
 
+      // Get certificates from Firebase
       const certSnap = await getDocs(query(
         collection(db, 'donationCertificates'),
         where('donorId', '==', userId)
@@ -76,15 +113,39 @@ export default function DonationCertificate({ navigation }) {
       certSnap.forEach((doc) => {
         certList.push({ id: doc.id, ...doc.data() });
       });
-      setCertificates(certList);
+      
+      // Get local Razorpay donations
+      const localHistory = getDonationHistory();
+      const localCerts = localHistory.map(donation => ({
+        id: `local_${donation.paymentId}`,
+        type: 'donation',
+        title: 'Donation Certificate',
+        donorName: donation.name,
+        amount: donation.amount,
+        purpose: donation.description || 'Donation',
+        paymentId: donation.paymentId,
+        issuedDate: donation.timestamp,
+        status: 'issued',
+        isLocal: true,
+        // ✅ FIX: Add safety check for paymentId
+        certificateNumber: donation.paymentId 
+          ? `CERT-${donation.paymentId.slice(-8)}` 
+          : `CERT-${Date.now().toString().slice(-8)}`,
+      }));
+      
+      const allCerts = [...certList, ...localCerts];
+      setCertificates(allCerts);
       
       // Update stats
-      const donationCerts = certList.filter(c => c.type === 'donation').length;
-      const achievementCerts = certList.filter(c => c.type === 'achievement').length;
+      const donationCerts = allCerts.filter(c => c.type === 'donation').length;
+      const achievementCerts = allCerts.filter(c => c.type === 'achievement').length;
+      const totalAmount = allCerts.reduce((sum, c) => sum + (c.amount || 0), 0);
+      
       setStats({
-        total: certList.length,
+        total: allCerts.length,
         donationCerts: donationCerts,
-        achievementCerts: achievementCerts
+        achievementCerts: achievementCerts,
+        totalAmount: totalAmount
       });
     } catch (error) {
       console.error('Error fetching certificates:', error);
@@ -99,10 +160,261 @@ export default function DonationCertificate({ navigation }) {
     setRefreshing(false);
   };
 
-  const handleShare = async (cert) => {
+  const generateHTMLCertificate = (cert) => {
+    const donorName = cert.donorName || userData?.fullName || 'Donor';
+    const amount = cert.amount || 0;
+    const purpose = cert.purpose || 'Donation';
+    const date = cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    }) : new Date().toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+    const certNumber = cert.certificateNumber || `CERT-${Date.now().toString().slice(-8)}`;
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Georgia', serif;
+      background: #f5f0eb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      margin: 0;
+    }
+    .certificate-wrapper {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      max-width: 800px;
+      width: 100%;
+    }
+    .certificate {
+      border: 8px double #10b981;
+      padding: 40px;
+      text-align: center;
+      background: #fafafa;
+      position: relative;
+    }
+    .certificate::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      bottom: 15px;
+      border: 2px solid #10b981;
+      opacity: 0.2;
+    }
+    .header h1 {
+      font-size: 48px;
+      color: #10b981;
+      font-weight: bold;
+      letter-spacing: 6px;
+      font-family: 'Georgia', serif;
+      margin-bottom: 5px;
+    }
+    .header .subtitle {
+      font-size: 20px;
+      color: #666;
+      letter-spacing: 4px;
+      font-style: italic;
+    }
+    .divider {
+      width: 60%;
+      height: 2px;
+      background: #10b981;
+      margin: 20px auto;
+      opacity: 0.3;
+    }
+    .cert-body {
+      margin: 30px 0;
+    }
+    .cert-body p {
+      font-size: 18px;
+      color: #333;
+      line-height: 2;
+      font-family: 'Georgia', serif;
+    }
+    .donor-name {
+      font-size: 40px;
+      font-weight: bold;
+      color: #1a1a2e;
+      margin: 15px 0;
+      font-family: 'Georgia', serif;
+      letter-spacing: 2px;
+    }
+    .amount {
+      font-size: 32px;
+      font-weight: bold;
+      color: #10b981;
+      margin: 10px 0;
+    }
+    .purpose {
+      font-size: 22px;
+      color: #555;
+      margin: 10px 0;
+      font-style: italic;
+    }
+    .quote {
+      margin-top: 20px;
+      font-style: italic;
+      color: #666;
+      font-size: 16px;
+    }
+    .footer {
+      margin-top: 30px;
+    }
+    .footer .cert-number {
+      font-size: 12px;
+      color: #999;
+      margin-top: 10px;
+      font-family: monospace;
+    }
+    .footer .date {
+      font-size: 16px;
+      color: #555;
+    }
+    .seal {
+      margin: 20px auto;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 4px solid #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #10b981;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+      background: #f0fdf4;
+      line-height: 1.3;
+    }
+    .seal span {
+      display: block;
+      font-size: 10px;
+      font-weight: normal;
+      color: #666;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .certificate-wrapper { box-shadow: none; border-radius: 0; }
+    }
+    @media (max-width: 600px) {
+      .certificate-wrapper { padding: 15px; }
+      .certificate { padding: 20px; }
+      .header h1 { font-size: 28px; }
+      .donor-name { font-size: 24px; }
+      .amount { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="certificate-wrapper">
+    <div class="certificate">
+      <div class="header">
+        <h1>🏆 Certificate</h1>
+        <div class="subtitle">of Appreciation</div>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="cert-body">
+        <p>This certificate is proudly presented to</p>
+        <div class="donor-name">${donorName}</div>
+        <p>in recognition of their generous contribution of</p>
+        <div class="amount">₹${amount.toLocaleString()}</div>
+        <p>for the purpose of</p>
+        <div class="purpose">${purpose}</div>
+        <div class="quote">
+          "Your generosity transforms lives and builds a better tomorrow."
+        </div>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="footer">
+        <div class="seal">
+          NGO<br>App Fresh
+          <span>Est. 2024</span>
+        </div>
+        <div class="date">Issued on: ${date}</div>
+        <div class="cert-number">Certificate No: ${certNumber}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  };
+
+  const shareCertificateAsHTML = async (cert) => {
+    setGeneratingPDF(true);
     try {
+      const html = generateHTMLCertificate(cert);
+      const filePath = FileSystem.documentDirectory + `certificate_${Date.now()}.html`;
+      
+      await FileSystem.writeAsStringAsync(filePath, html);
+      
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'text/html',
+          dialogTitle: 'Share Certificate',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      Alert.alert('Error', 'Failed to share certificate. Please try again.');
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
+
+  const shareAsText = async (cert) => {
+    try {
+      const donorName = cert.donorName || userData?.fullName || 'Donor';
+      const amount = cert.amount || 0;
+      const purpose = cert.purpose || 'Donation';
+      const date = cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : new Date().toLocaleDateString();
+      
+      const message = `🏆 DONATION CERTIFICATE 🏆
+
+This certificate is proudly presented to
+
+${donorName}
+
+in recognition of their generous contribution of
+
+₹${amount.toLocaleString()}
+
+for the purpose of
+
+${purpose}
+
+"Your generosity transforms lives and builds a better tomorrow."
+
+Issued on: ${date}
+Certificate No: ${cert.certificateNumber || 'N/A'}
+
+#NGOAppFresh #Donation #GiveBack`;
+
       await Share.share({
-        message: `I received a ${cert.type} certificate for ${cert.purpose || 'donation'}! 🎉\n\nJoin me in making a difference! 🙏`,
+        message: message,
         title: 'Donation Certificate',
       });
     } catch (error) {
@@ -110,8 +422,16 @@ export default function DonationCertificate({ navigation }) {
     }
   };
 
-  const handleDownload = (cert) => {
-    Alert.alert('Coming Soon', 'Download feature will be available soon!');
+  const handleShare = async (cert) => {
+    Alert.alert(
+      'Share Certificate',
+      'How would you like to share?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Share as Text', onPress: () => shareAsText(cert) },
+        { text: 'Share as HTML', onPress: () => shareCertificateAsHTML(cert) },
+      ]
+    );
   };
 
   const getCertificateIcon = (type) => {
@@ -157,6 +477,7 @@ export default function DonationCertificate({ navigation }) {
         setSelectedCert(cert);
         setDetailModalVisible(true);
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.certHeader}>
         <View style={[styles.certIcon, { backgroundColor: getCertificateBgColor(cert.type) }]}>
@@ -168,9 +489,11 @@ export default function DonationCertificate({ navigation }) {
             {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
           </Text>
         </View>
-        <View style={[styles.certStatus, { backgroundColor: cert.status === 'issued' ? '#10b981' : '#f59e0b' }]}>
-          <Text style={styles.certStatusText}>{cert.status || 'issued'}</Text>
-        </View>
+        {cert.isLocal && (
+          <View style={[styles.certStatus, { backgroundColor: '#3b82f6' }]}>
+            <Text style={styles.certStatusText}>Razorpay</Text>
+          </View>
+        )}
       </View>
       
       {cert.purpose && (
@@ -187,10 +510,6 @@ export default function DonationCertificate({ navigation }) {
         <TouchableOpacity style={styles.certAction} onPress={() => handleShare(cert)}>
           <MaterialIcons name="share" size={18} color="#10b981" />
           <Text style={styles.certActionText}>Share</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.certAction} onPress={() => handleDownload(cert)}>
-          <MaterialIcons name="download" size={18} color="#10b981" />
-          <Text style={styles.certActionText}>Download</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -225,12 +544,12 @@ export default function DonationCertificate({ navigation }) {
           <Text style={styles.summaryLabel}>Total</Text>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{stats.donationCerts}</Text>
-          <Text style={styles.summaryLabel}>Donations</Text>
+          <Text style={styles.summaryValue}>₹{stats.totalAmount.toLocaleString()}</Text>
+          <Text style={styles.summaryLabel}>Total Donated</Text>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{stats.achievementCerts}</Text>
-          <Text style={styles.summaryLabel}>Achievements</Text>
+          <Text style={styles.summaryValue}>{stats.donationCerts}</Text>
+          <Text style={styles.summaryLabel}>Donations</Text>
         </View>
       </View>
 
@@ -287,6 +606,12 @@ export default function DonationCertificate({ navigation }) {
                   </View>
                   <Text style={styles.detailTitle}>{selectedCert.title || 'Certificate'}</Text>
                   <Text style={styles.detailNumber}>{selectedCert.certificateNumber || 'N/A'}</Text>
+                  {selectedCert.isLocal && (
+                    <View style={styles.detailRazorpayBadge}>
+                      <MaterialIcons name="security" size={14} color="#3b82f6" />
+                      <Text style={styles.detailRazorpayText}>Verified by Razorpay</Text>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.detailSection}>
@@ -306,14 +631,16 @@ export default function DonationCertificate({ navigation }) {
                   </View>
                 )}
 
+                {selectedCert.paymentId && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailLabel}>Payment ID</Text>
+                    <Text style={[styles.detailValue, styles.detailCode]}>{selectedCert.paymentId}</Text>
+                  </View>
+                )}
+
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Purpose</Text>
                   <Text style={styles.detailValue}>{selectedCert.purpose || 'General Donation'}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Description</Text>
-                  <Text style={styles.detailValue}>{selectedCert.description || 'No description'}</Text>
                 </View>
 
                 <View style={styles.detailSection}>
@@ -323,21 +650,20 @@ export default function DonationCertificate({ navigation }) {
                   </Text>
                 </View>
 
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <View style={[styles.detailStatusBadge, { backgroundColor: selectedCert.status === 'issued' ? '#10b981' : '#f59e0b' }]}>
-                    <Text style={styles.detailStatusText}>{selectedCert.status || 'issued'}</Text>
-                  </View>
-                </View>
-
                 <View style={styles.detailActions}>
-                  <TouchableOpacity style={[styles.detailActionButton, styles.detailShareButton]} onPress={() => handleShare(selectedCert)}>
-                    <MaterialIcons name="share" size={20} color="#ffffff" />
-                    <Text style={styles.detailActionText}>Share</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.detailActionButton, styles.detailDownloadButton]} onPress={() => handleDownload(selectedCert)}>
-                    <MaterialIcons name="download" size={20} color="#ffffff" />
-                    <Text style={styles.detailActionText}>Download</Text>
+                  <TouchableOpacity 
+                    style={[styles.detailActionButton, styles.detailShareButton]} 
+                    onPress={() => handleShare(selectedCert)}
+                    disabled={generatingPDF}
+                  >
+                    {generatingPDF ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="share" size={20} color="#ffffff" />
+                        <Text style={styles.detailActionText}>Share</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -411,12 +737,12 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 22,
+    fontSize: 20,
     color: '#1f2937',
   },
   summaryLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
   },
@@ -468,7 +794,7 @@ const styles = StyleSheet.create({
   certStatusText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 9,
   },
   certPurpose: {
     fontFamily: Fonts.Regular,
@@ -522,6 +848,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    textAlign: 'center',
   },
   donateButton: {
     flexDirection: 'row',
@@ -585,6 +912,21 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 4,
   },
+  detailRazorpayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+    gap: 4,
+  },
+  detailRazorpayText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#3b82f6',
+  },
   detailSection: {
     marginBottom: 12,
   },
@@ -599,41 +941,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
   },
-  detailStatusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  detailStatusText: {
-    fontFamily: Fonts.SemiBold,
-    color: '#ffffff',
+  detailCode: {
+    fontFamily: 'monospace',
     fontSize: 12,
+    color: '#6b7280',
   },
   detailActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
-    gap: 12,
   },
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
+    gap: 8,
     flex: 1,
     justifyContent: 'center',
   },
   detailShareButton: {
     backgroundColor: '#10b981',
-  },
-  detailDownloadButton: {
-    backgroundColor: '#3b82f6',
   },
   detailActionText: {
     fontFamily: Fonts.SemiBold,

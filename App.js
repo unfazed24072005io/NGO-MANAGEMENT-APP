@@ -122,8 +122,8 @@ function PublicTabs() {
           }
           return <MaterialIcons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#FF7722',     // Saffron color for active tab
-        tabBarInactiveTintColor: '#9ca3af',    // Gray for inactive tabs
+        tabBarActiveTintColor: '#FF7722',
+        tabBarInactiveTintColor: '#9ca3af',
         tabBarStyle: {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
@@ -145,6 +145,7 @@ function PublicTabs() {
     </Tab.Navigator>
   );
 }
+
 // ============ DONATION TABS ============
 function DonationTabs() {
   return (
@@ -300,6 +301,7 @@ function WorkingMemberNotificationTabs() {
 }
 
 // ============ ORGANIZATION SETTINGS TABS (SAFFRON THEME) ============
+// ============ ORGANIZATION SETTINGS TABS (SAFFRON THEME) ============
 function OrganizationSettingsTabs() {
   return (
     <Tab.Navigator
@@ -308,6 +310,8 @@ function OrganizationSettingsTabs() {
           let iconName;
           if (route.name === 'Dashboard') {
             iconName = 'dashboard';
+          } else if (route.name === 'WorkingMembers') {
+            iconName = 'people-outline';
           } else if (route.name === 'Finances') {
             iconName = 'attach-money';
           } else if (route.name === 'Commission') {
@@ -340,6 +344,7 @@ function OrganizationSettingsTabs() {
       })}
     >
       <Tab.Screen name="Dashboard" component={CompanyManagement} />
+      <Tab.Screen name="WorkingMembers" component={WorkingMemberManagement} options={{ title: 'Working' }} />
       <Tab.Screen name="Finances" component={FinancesManagement} />
       <Tab.Screen name="Commission" component={CommissionManagement} />
       <Tab.Screen name="Employees" component={EmployeeManagement} />
@@ -592,6 +597,7 @@ function AdminTabs() {
 }
 
 // ============ MEMBER TABS ============
+// ============ MEMBER TABS ============
 function MemberTabs() {
   let navigationRef = null;
 
@@ -605,6 +611,7 @@ function MemberTabs() {
             else if (route.name === 'Events') iconName = 'event';
             else if (route.name === 'Shop') iconName = 'shopping-cart';
             else if (route.name === 'Donate') iconName = 'favorite';
+            else if (route.name === 'Orders') iconName = 'receipt';
             else if (route.name === 'Profile') iconName = 'person';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
@@ -634,6 +641,7 @@ function MemberTabs() {
             { name: 'Events', icon: 'event', label: 'Events' },
             { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
             { name: 'Donate', icon: 'favorite', label: 'Donate' },
+            { name: 'Orders', icon: 'receipt', label: 'Orders' },
             { name: 'Profile', icon: 'person', label: 'Profile' },
           ];
 
@@ -698,13 +706,14 @@ function MemberTabs() {
         <Tab.Screen name="Events" component={MemberEvents} />
         <Tab.Screen name="Shop" component={MemberECommerce} />
         <Tab.Screen name="Donate" component={DonationScreen} />
+        <Tab.Screen name="Orders" component={MyOrders} />
         <Tab.Screen name="Profile" component={MemberProfile} />
       </Tab.Navigator>
     </>
   );
 }
 
-// ============ WORKING MEMBER TABS ============
+// ============ WORKING MEMBER TABS (UPDATED WITH WALLET & ORDERS) ============
 function WorkingMemberTabs() {
   let navigationRef = null;
 
@@ -718,6 +727,9 @@ function WorkingMemberTabs() {
             else if (route.name === 'Members') iconName = 'people';
             else if (route.name === 'Shop') iconName = 'shopping-cart';
             else if (route.name === 'Events') iconName = 'event';
+            else if (route.name === 'Donate') iconName = 'favorite';
+            else if (route.name === 'Orders') iconName = 'receipt';
+            else if (route.name === 'Wallet') iconName = 'account-balance-wallet';
             else if (route.name === 'Profile') iconName = 'person';
             return <MaterialIcons name={iconName} size={size} color={color} />;
           },
@@ -747,6 +759,9 @@ function WorkingMemberTabs() {
             { name: 'Members', icon: 'people', label: 'Members' },
             { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
             { name: 'Events', icon: 'event', label: 'Events' },
+            { name: 'Donate', icon: 'favorite', label: 'Donate' },
+            { name: 'Orders', icon: 'receipt', label: 'Orders' },
+            { name: 'Wallet', icon: 'account-balance-wallet', label: 'Wallet' },
             { name: 'Profile', icon: 'person', label: 'Profile' },
           ];
 
@@ -811,6 +826,9 @@ function WorkingMemberTabs() {
         <Tab.Screen name="Members" component={WorkingMemberRegisteredMembers} />
         <Tab.Screen name="Shop" component={WorkingMemberECommerce} />
         <Tab.Screen name="Events" component={WorkingMemberEvents} />
+        <Tab.Screen name="Donate" component={WorkingMemberDonation} />
+        <Tab.Screen name="Orders" component={WorkingMemberMyOrders} />
+        <Tab.Screen name="Wallet" component={WorkingMemberWallet} />
         <Tab.Screen name="Profile" component={WorkingMemberProfile} />
       </Tab.Navigator>
     </>
