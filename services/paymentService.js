@@ -1,14 +1,59 @@
 // services/paymentService.js
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// Test Keys (Development)
-const RAZORPAY_KEY = 'rzp_test_TMRfz7C8JokRH7';
-const RAZORPAY_SECRET = 'UviRcSd3oJFI4JNt37ElSK4w';
+// ============================================
+// ENVIRONMENT VARIABLES CONFIGURATION
+// ============================================
+
+// Get environment variable with fallback
+const getEnvVar = (key, fallback = null) => {
+  try {
+    // Check Expo Constants (for managed workflow)
+    if (Constants?.expoConfig?.extra?.[key]) {
+      return Constants.expoConfig.extra[key];
+    }
+    // Check process.env (for bare workflow or web)
+    if (process.env?.[key]) {
+      return process.env[key];
+    }
+    // Return fallback for development
+    if (__DEV__) {
+      console.warn(`⚠️ Environment variable ${key} not found, using fallback`);
+    }
+    return fallback;
+  } catch (error) {
+    console.warn(`⚠️ Error reading env var ${key}:`, error);
+    return fallback;
+  }
+};
+
+// ✅ Load keys from environment with fallbacks
+const RAZORPAY_KEY = getEnvVar('RAZORPAY_KEY', 'rzp_test_TMRfz7C8JokRH7');
+const RAZORPAY_SECRET = getEnvVar('RAZORPAY_SECRET', 'UviRcSd3oJFI4JNt37ElSK4w');
+
+// ✅ Determine environment
+const IS_PRODUCTION = getEnvVar('APP_ENV') === 'production' || 
+                      getEnvVar('NODE_ENV') === 'production';
+
+// ✅ Log which environment we're using (only in development)
+if (__DEV__) {
+  console.log(`🔑 Payment Service initialized in ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+  console.log(`🔑 Razorpay Key: ${RAZORPAY_KEY?.slice(0, 10)}...`);
+}
+
+// ============================================
+// HELPERS
+// ============================================
 
 // Generate unique order ID
 const generateOrderId = () => {
   return `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
+
+// ============================================
+// ORDER CREATION
+// ============================================
 
 // Create order (client-side)
 export const createRazorpayOrder = async (amount, currency = 'INR') => {
@@ -43,6 +88,10 @@ export const createRazorpayOrder = async (amount, currency = 'INR') => {
   }
 };
 
+// ============================================
+// PAYMENT INITIATION
+// ============================================
+
 // Initiate Razorpay Payment - Web Version
 const initiateWebPayment = async (paymentData) => {
   const { amount, name, email, phone, description, orderId } = paymentData;
@@ -72,7 +121,7 @@ const initiateWebPayment = async (paymentData) => {
             email: email || 'user@example.com',
             contact: phone || '9876543210',
           },
-          theme: { color: '#FF7722' },
+          theme: { color: IS_PRODUCTION ? '#FF7722' : '#FF7722' },
           modal: {
             ondismiss: function() {
               resolve({ success: false, error: 'Payment cancelled' });
@@ -151,7 +200,7 @@ const initiateNativePayment = async (paymentData) => {
         contact: phone || '9876543210',
         name: name || 'Anonymous Donor',
       },
-      theme: { color: '#FF7722' },
+      theme: { color: IS_PRODUCTION ? '#FF7722' : '#FF7722' },
       modal: {
         ondismiss: function() {
           console.log('Payment modal closed');
@@ -203,6 +252,10 @@ export const initiateRazorpayPayment = async (paymentData) => {
   }
 };
 
+// ============================================
+// PAYMENT VERIFICATION
+// ============================================
+
 // Verify payment (client-side)
 export const verifyRazorpayPayment = async (paymentData) => {
   try {
@@ -250,7 +303,7 @@ export const verifyRazorpayPayment = async (paymentData) => {
 };
 
 // ============================================
-// ✅ EXPORT THESE FUNCTIONS - FIX FOR ERROR
+// EXPORT UTILITY FUNCTIONS
 // ============================================
 
 // Get donation history
@@ -285,4 +338,48 @@ export const clearPaymentData = () => {
   global.paymentDetails = {};
   global.donationHistory = [];
   global.orders = {};
+};
+
+// ============================================
+// ENVIRONMENT HELPERS
+// ============================================
+
+// Check if we're in production mode
+export const isProduction = () => {
+  return IS_PRODUCTION;
+};
+
+// Get environment name
+export const getEnvironment = () => {
+  return IS_PRODUCTION ? 'production' : 'development';
+};
+
+// Get Razorpay key (for debugging)
+export const getRazorpayKey = () => {
+  return RAZORPAY_KEY;
+};
+
+// Check if we have valid keys
+export const hasValidKeys = () => {
+  return RAZORPAY_KEY && RAZORPAY_KEY.length > 10;
+};
+
+// ============================================
+// DEFAULT EXPORT
+// ============================================
+
+export default {
+  initiateRazorpayPayment,
+  verifyRazorpayPayment,
+  createRazorpayOrder,
+  getDonationHistory,
+  getDonationById,
+  getTotalDonations,
+  getDonationCount,
+  getAllPayments,
+  clearPaymentData,
+  isProduction,
+  getEnvironment,
+  getRazorpayKey,
+  hasValidKeys
 };
