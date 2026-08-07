@@ -24,6 +24,7 @@ import {
 import { WalletService } from '../../services/WalletService';
 import { CommissionService } from '../../services/CommissionService';
 import { LevelUpdateService } from '../../services/LevelUpdateService';
+
 // Helper functions for dynamic levels
 const getLevelBadge = (levelId) => {
   const badges = {
@@ -50,6 +51,7 @@ const getLevelColor = (levelId) => {
   };
   return colors[levelId] || '#8b5cf6';
 };
+
 export default function WorkingMemberDashboard({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,179 +83,58 @@ export default function WorkingMemberDashboard({ navigation }) {
   }, []);
 
   const setupRealtimeListener = () => {
-  const userId = auth.currentUser?.uid;
-  if (!userId) return;
-
-  const userRef = doc(db, 'users', userId);
-  const unsubscribe = onSnapshot(userRef, async (doc) => {
-    if (doc.exists()) {
-      const data = doc.data();
-      setUserData(data);
-      setProfilePhoto(data.profilePhoto || null);
-      
-      const level = data.level || 'I';
-      
-      // Fetch dynamic levels from Firestore
-      try {
-        const settingsRef = doc(db, 'settings', 'commission');
-        const settingsSnap = await getDoc(settingsRef);
-        let dynamicLevels = null;
-        
-        if (settingsSnap.exists()) {
-          const settingsData = settingsSnap.data();
-          if (settingsData.levels) {
-            dynamicLevels = settingsData.levels;
-          }
-        }
-        
-        // Get level details from dynamic levels or fallback to static
-        let details;
-        let nextLevelData = null;
-        let nextLevelId = null;
-        let nextLevelMinDonations = 0;
-        
-        if (dynamicLevels) {
-          const levelData = dynamicLevels.find(l => l.id === level);
-          if (levelData) {
-            details = {
-              ...levelData,
-              title: levelData.name,
-              badge: getLevelBadge(level),
-              color: getLevelColor(level)
-            };
-            // Get next level
-            const currentIndex = dynamicLevels.findIndex(l => l.id === level);
-            if (currentIndex !== -1 && currentIndex < dynamicLevels.length - 1) {
-  nextLevelData = dynamicLevels[currentIndex + 1];
-  nextLevelId = nextLevelData.id;
-  // ✅ Use donationsRequiredForPromotion from CURRENT level
-  nextLevelMinDonations = levelData.donationsRequiredForPromotion || 0;
-}
-          } else {
-            details = getLevelDetails(level);
-            const nextLevel = getLevelDetails(level).nextLevel;
-            if (nextLevel) {
-              nextLevelId = nextLevel;
-              nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
-            }
-          }
-        } else {
-          details = getLevelDetails(level);
-          const nextLevel = getLevelDetails(level).nextLevel;
-          if (nextLevel) {
-            nextLevelId = nextLevel;
-            nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
-          }
-        }
-        
-        // Store next level data in details
-        if (nextLevelData) {
-          details.nextLevelData = nextLevelData;
-        }
-        setLevelDetails(details);
-        
-        // Get total donations from members
-        const donations = await CommissionService.getTotalDonationsByMember(userId);
-        setTotalDonations(donations);
-        
-        // Update level progress with donations ONLY
-        const progress = {
-          progress: nextLevelMinDonations > 0 ? Math.min((donations / nextLevelMinDonations) * 100, 100) : 100,
-          nextLevel: nextLevelId,
-          nextLevelTitle: nextLevelData ? nextLevelData.name : (nextLevelId ? getLevelDetails(nextLevelId)?.title || nextLevelId : null),
-          remainingDonations: nextLevelMinDonations > 0 ? Math.max(0, nextLevelMinDonations - donations) : 0,
-          donationProgress: nextLevelMinDonations > 0 ? (donations / nextLevelMinDonations) * 100 : 100,
-          requiredDonations: nextLevelMinDonations // <-- ADD THIS
-        };
-        setLevelProgress(progress);
-        
-        // Check promotion eligibility (donation only)
-        const isEligible = nextLevelMinDonations > 0 && donations >= nextLevelMinDonations;
-        setPromotionData({ isEligible });
-        
-        // Get wallet data
-        try {
-          const wallet = await WalletService.getOrCreateWallet(userId);
-          setWalletData(wallet);
-        } catch (error) {
-          console.error('Error fetching wallet:', error);
-        }
-      } catch (error) {
-        console.error('Error fetching dynamic levels:', error);
-        // Fallback to static levels
-        const details = getLevelDetails(level);
-        setLevelDetails(details);
-        const donations = await CommissionService.getTotalDonationsByMember(userId);
-        setTotalDonations(donations);
-        const progress = getLevelProgress(level, donations);
-        setLevelProgress(progress);
-        const isEligible = isEligibleForPromotion(level, donations);
-        setPromotionData({ isEligible });
-      }
-    }
-  });
-
-  return () => unsubscribe();
-};
-  const fetchUserData = async () => {
-  try {
     const userId = auth.currentUser?.uid;
     if (!userId) return;
-    
-    const docRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      setUserData(data);
-      setProfilePhoto(data.profilePhoto || null);
-      
-      const level = data.level || 'I';
-      console.log('🔍 Current Level:', level);
-      
-      // Fetch dynamic levels from Firestore
-      try {
-        const settingsRef = doc(db, 'settings', 'commission');
-        const settingsSnap = await getDoc(settingsRef);
-        let dynamicLevels = null;
+
+    const userRef = doc(db, 'users', userId);
+    const unsubscribe = onSnapshot(userRef, async (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setUserData(data);
+        setProfilePhoto(data.profilePhoto || null);
         
-        if (settingsSnap.exists()) {
-          const settingsData = settingsSnap.data();
-          console.log('🔍 Settings Data:', settingsData);
-          if (settingsData.levels) {
-            dynamicLevels = settingsData.levels;
-            console.log('🔍 Dynamic Levels:', dynamicLevels);
-          }
-        }
+        const level = data.level || 'I';
         
-        // Get level details from dynamic levels or fallback to static
-        let details;
-        let nextLevelData = null;
-        let nextLevelId = null;
-        let nextLevelMinDonations = 0;
-        
-        if (dynamicLevels) {
-          const levelData = dynamicLevels.find(l => l.id === level);
-          console.log('🔍 Level Data Found:', levelData);
+        try {
+          const settingsRef = doc(db, 'settings', 'commission');
+          const settingsSnap = await getDoc(settingsRef);
+          let dynamicLevels = null;
           
-          if (levelData) {
-            details = {
-              ...levelData,
-              title: levelData.name,
-              badge: getLevelBadge(level),
-              color: getLevelColor(level)
-            };
-            // Get next level
-            const currentIndex = dynamicLevels.findIndex(l => l.id === level);
-            console.log('🔍 Current Index:', currentIndex);
-            
-            if (currentIndex !== -1 && currentIndex < dynamicLevels.length - 1) {
-  nextLevelData = dynamicLevels[currentIndex + 1];
-  nextLevelId = nextLevelData.id;
-  // ✅ Use donationsRequiredForPromotion from CURRENT level
-  nextLevelMinDonations = levelData.donationsRequiredForPromotion || 0;
-  console.log('🔍 Next Level Data:', nextLevelData);
-  console.log('🔍 Donations Required for Promotion:', nextLevelMinDonations);
-}
+          if (settingsSnap.exists()) {
+            const settingsData = settingsSnap.data();
+            if (settingsData.levels) {
+              dynamicLevels = settingsData.levels;
+            }
+          }
+          
+          let details;
+          let nextLevelData = null;
+          let nextLevelId = null;
+          let nextLevelMinDonations = 0;
+          
+          if (dynamicLevels) {
+            const levelData = dynamicLevels.find(l => l.id === level);
+            if (levelData) {
+              details = {
+                ...levelData,
+                title: levelData.name,
+                badge: getLevelBadge(level),
+                color: getLevelColor(level)
+              };
+              const currentIndex = dynamicLevels.findIndex(l => l.id === level);
+              if (currentIndex !== -1 && currentIndex < dynamicLevels.length - 1) {
+                nextLevelData = dynamicLevels[currentIndex + 1];
+                nextLevelId = nextLevelData.id;
+                nextLevelMinDonations = levelData.donationsRequiredForPromotion || 0;
+              }
+            } else {
+              details = getLevelDetails(level);
+              const nextLevel = getLevelDetails(level).nextLevel;
+              if (nextLevel) {
+                nextLevelId = nextLevel;
+                nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
+              }
+            }
           } else {
             details = getLevelDetails(level);
             const nextLevel = getLevelDetails(level).nextLevel;
@@ -262,67 +143,171 @@ export default function WorkingMemberDashboard({ navigation }) {
               nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
             }
           }
-        } else {
-          details = getLevelDetails(level);
-          const nextLevel = getLevelDetails(level).nextLevel;
-          if (nextLevel) {
-            nextLevelId = nextLevel;
-            nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
+          
+          if (nextLevelData) {
+            details.nextLevelData = nextLevelData;
           }
+          setLevelDetails(details);
+          
+          const donations = await CommissionService.getTotalDonationsByMember(userId);
+          setTotalDonations(donations);
+          
+          const progress = {
+            progress: nextLevelMinDonations > 0 ? Math.min((donations / nextLevelMinDonations) * 100, 100) : 100,
+            nextLevel: nextLevelId,
+            nextLevelTitle: nextLevelData ? nextLevelData.name : (nextLevelId ? getLevelDetails(nextLevelId)?.title || nextLevelId : null),
+            remainingDonations: nextLevelMinDonations > 0 ? Math.max(0, nextLevelMinDonations - donations) : 0,
+            donationProgress: nextLevelMinDonations > 0 ? (donations / nextLevelMinDonations) * 100 : 100,
+            requiredDonations: nextLevelMinDonations
+          };
+          setLevelProgress(progress);
+          
+          const isEligible = nextLevelMinDonations > 0 && donations >= nextLevelMinDonations;
+          setPromotionData({ isEligible });
+          
+          try {
+            const wallet = await WalletService.getOrCreateWallet(userId);
+            setWalletData(wallet);
+          } catch (error) {
+            console.error('Error fetching wallet:', error);
+          }
+        } catch (error) {
+          console.error('Error fetching dynamic levels:', error);
+          const details = getLevelDetails(level);
+          setLevelDetails(details);
+          const donations = await CommissionService.getTotalDonationsByMember(userId);
+          setTotalDonations(donations);
+          const progress = getLevelProgress(level, donations);
+          setLevelProgress(progress);
+          const isEligible = isEligibleForPromotion(level, donations);
+          setPromotionData({ isEligible });
         }
+      }
+    });
+
+    return () => unsubscribe();
+  };
+
+  const fetchUserData = async () => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+      
+      const docRef = doc(db, 'users', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserData(data);
+        setProfilePhoto(data.profilePhoto || null);
         
-        // Store next level data in details for use in LevelProgressBar
-        if (nextLevelData) {
-          details.nextLevelData = nextLevelData;
-        }
-        setLevelDetails(details);
-        
-        // Get total donations from members
-        const donations = await CommissionService.getTotalDonationsByMember(userId);
-        setTotalDonations(donations);
-        console.log('🔍 Total Donations:', donations);
-        console.log('🔍 Next Level Min Donations (final):', nextLevelMinDonations);
-        
-        // Update level progress with donations ONLY
-        const progress = {
-          progress: nextLevelMinDonations > 0 ? Math.min((donations / nextLevelMinDonations) * 100, 100) : 100,
-          nextLevel: nextLevelId,
-          nextLevelTitle: nextLevelData ? nextLevelData.name : (nextLevelId ? getLevelDetails(nextLevelId)?.title || nextLevelId : null),
-          remainingDonations: nextLevelMinDonations > 0 ? Math.max(0, nextLevelMinDonations - donations) : 0,
-          donationProgress: nextLevelMinDonations > 0 ? (donations / nextLevelMinDonations) * 100 : 100,
-          requiredDonations: nextLevelMinDonations // <-- THIS IS THE KEY
-        };
-        console.log('🔍 Progress Object:', progress);
-        setLevelProgress(progress);
-        
-        const isEligible = nextLevelMinDonations > 0 && donations >= nextLevelMinDonations;
-        setPromotionData({ isEligible });
+        const level = data.level || 'I';
+        console.log('🔍 Current Level:', level);
         
         try {
-          const wallet = await WalletService.getOrCreateWallet(userId);
-          setWalletData(wallet);
+          const settingsRef = doc(db, 'settings', 'commission');
+          const settingsSnap = await getDoc(settingsRef);
+          let dynamicLevels = null;
+          
+          if (settingsSnap.exists()) {
+            const settingsData = settingsSnap.data();
+            console.log('🔍 Settings Data:', settingsData);
+            if (settingsData.levels) {
+              dynamicLevels = settingsData.levels;
+              console.log('🔍 Dynamic Levels:', dynamicLevels);
+            }
+          }
+          
+          let details;
+          let nextLevelData = null;
+          let nextLevelId = null;
+          let nextLevelMinDonations = 0;
+          
+          if (dynamicLevels) {
+            const levelData = dynamicLevels.find(l => l.id === level);
+            console.log('🔍 Level Data Found:', levelData);
+            
+            if (levelData) {
+              details = {
+                ...levelData,
+                title: levelData.name,
+                badge: getLevelBadge(level),
+                color: getLevelColor(level)
+              };
+              const currentIndex = dynamicLevels.findIndex(l => l.id === level);
+              console.log('🔍 Current Index:', currentIndex);
+              
+              if (currentIndex !== -1 && currentIndex < dynamicLevels.length - 1) {
+                nextLevelData = dynamicLevels[currentIndex + 1];
+                nextLevelId = nextLevelData.id;
+                nextLevelMinDonations = levelData.donationsRequiredForPromotion || 0;
+                console.log('🔍 Next Level Data:', nextLevelData);
+                console.log('🔍 Donations Required for Promotion:', nextLevelMinDonations);
+              }
+            } else {
+              details = getLevelDetails(level);
+              const nextLevel = getLevelDetails(level).nextLevel;
+              if (nextLevel) {
+                nextLevelId = nextLevel;
+                nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
+              }
+            }
+          } else {
+            details = getLevelDetails(level);
+            const nextLevel = getLevelDetails(level).nextLevel;
+            if (nextLevel) {
+              nextLevelId = nextLevel;
+              nextLevelMinDonations = getLevelDetails(nextLevel).minDonations || 0;
+            }
+          }
+          
+          if (nextLevelData) {
+            details.nextLevelData = nextLevelData;
+          }
+          setLevelDetails(details);
+          
+          const donations = await CommissionService.getTotalDonationsByMember(userId);
+          setTotalDonations(donations);
+          console.log('🔍 Total Donations:', donations);
+          console.log('🔍 Next Level Min Donations (final):', nextLevelMinDonations);
+          
+          const progress = {
+            progress: nextLevelMinDonations > 0 ? Math.min((donations / nextLevelMinDonations) * 100, 100) : 100,
+            nextLevel: nextLevelId,
+            nextLevelTitle: nextLevelData ? nextLevelData.name : (nextLevelId ? getLevelDetails(nextLevelId)?.title || nextLevelId : null),
+            remainingDonations: nextLevelMinDonations > 0 ? Math.max(0, nextLevelMinDonations - donations) : 0,
+            donationProgress: nextLevelMinDonations > 0 ? (donations / nextLevelMinDonations) * 100 : 100,
+            requiredDonations: nextLevelMinDonations
+          };
+          console.log('🔍 Progress Object:', progress);
+          setLevelProgress(progress);
+          
+          const isEligible = nextLevelMinDonations > 0 && donations >= nextLevelMinDonations;
+          setPromotionData({ isEligible });
+          
+          try {
+            const wallet = await WalletService.getOrCreateWallet(userId);
+            setWalletData(wallet);
+          } catch (error) {
+            console.error('Error fetching wallet:', error);
+          }
         } catch (error) {
-          console.error('Error fetching wallet:', error);
+          console.error('Error fetching dynamic levels:', error);
+          const details = getLevelDetails(level);
+          setLevelDetails(details);
+          const donations = await CommissionService.getTotalDonationsByMember(userId);
+          setTotalDonations(donations);
+          const progress = getLevelProgress(level, donations);
+          setLevelProgress(progress);
+          const isEligible = isEligibleForPromotion(level, donations);
+          setPromotionData({ isEligible });
         }
-      } catch (error) {
-        console.error('Error fetching dynamic levels:', error);
-        // Fallback to static levels
-        const details = getLevelDetails(level);
-        setLevelDetails(details);
-        const donations = await CommissionService.getTotalDonationsByMember(userId);
-        setTotalDonations(donations);
-        const progress = getLevelProgress(level, donations);
-        setLevelProgress(progress);
-        const isEligible = isEligibleForPromotion(level, donations);
-        setPromotionData({ isEligible });
       }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Error fetching user data:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const fetchPromotionProgress = async () => {
     try {
@@ -445,9 +430,9 @@ export default function WorkingMemberDashboard({ navigation }) {
   };
 
   const QuickActionButton = ({ title, icon, onPress, badge }) => (
-    <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
+    <TouchableOpacity style={styles.quickActionButton} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.quickActionIconBg}>
-        <MaterialIcons name={icon} size={28} color="#ffffff" />
+        <MaterialIcons name={icon} size={24} color="#ffffff" />
         {badge > 0 && (
           <View style={styles.badgeContainer}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -465,7 +450,7 @@ export default function WorkingMemberDashboard({ navigation }) {
         <Text style={styles.statValue}>{value}</Text>
       </View>
       <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
-        <MaterialIcons name={icon} size={22} color={color} />
+        <MaterialIcons name={icon} size={20} color={color} />
       </View>
     </View>
   );
@@ -491,117 +476,109 @@ export default function WorkingMemberDashboard({ navigation }) {
     </View>
   );
 
-  // Level Progress Component (Donation ONLY)
-  // Level Progress Component (Donation ONLY)
-// Level Progress Component (Donation ONLY)
-const LevelProgressBar = () => {
-  if (!levelProgress || !levelDetails) return null;
+  const LevelProgressBar = () => {
+    if (!levelProgress || !levelDetails) return null;
 
-  const progress = levelProgress.progress || 0;
-  const nextLevel = levelProgress.nextLevel;
-  const remainingDonations = levelProgress.remainingDonations || 0;
-  const donationProgress = levelProgress.donationProgress || 0;
+    const progress = levelProgress.progress || 0;
+    const nextLevel = levelProgress.nextLevel;
+    const remainingDonations = levelProgress.remainingDonations || 0;
+    const donationProgress = levelProgress.donationProgress || 0;
 
-  // Check if eligible for promotion (donation only)
-  const isEligible = promotionData?.isEligible || false;
+    const isEligible = promotionData?.isEligible || false;
+    const requiredDonations = levelProgress.requiredDonations || 0;
+    const nextLevelTitle = levelProgress.nextLevelTitle || 'Next Level';
 
-  // Get the required donations from levelProgress
-  const requiredDonations = levelProgress.requiredDonations || 0;
-  const nextLevelTitle = levelProgress.nextLevelTitle || 'Next Level';
-
-  return (
-    <View style={styles.levelCard}>
-      <View style={styles.levelHeader}>
-        <View style={styles.levelBadgeContainer}>
-          <Text style={styles.levelBadgeEmoji}>{levelDetails.badge || '⭐'}</Text>
-          <Text style={styles.levelTitle}>{levelDetails.title}</Text>
-        </View>
-        <View style={styles.levelCommissionContainer}>
-          <Text style={styles.levelCommissionText}>
-            {levelDetails.directCommission}% Direct
-          </Text>
-          {levelDetails.secondaryCommission > 0 && (
-            <Text style={styles.levelCommissionSubtext}>
-              +{levelDetails.secondaryCommission}% Secondary
+    return (
+      <View style={styles.levelCard}>
+        <View style={styles.levelHeader}>
+          <View style={styles.levelBadgeContainer}>
+            <Text style={styles.levelBadgeEmoji}>{levelDetails.badge || '⭐'}</Text>
+            <Text style={styles.levelTitle}>{levelDetails.title}</Text>
+          </View>
+          <View style={styles.levelCommissionContainer}>
+            <Text style={styles.levelCommissionText}>
+              {levelDetails.directCommission}% Direct
             </Text>
-          )}
+            {levelDetails.secondaryCommission > 0 && (
+              <Text style={styles.levelCommissionSubtext}>
+                +{levelDetails.secondaryCommission}% Secondary
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Donation Progress ONLY */}
-      {nextLevel && requiredDonations > 0 ? (
-        <>
-          <View style={styles.progressSection}>
-            <View style={styles.progressLabelContainer}>
-              <Text style={styles.progressLabel}>Donations Progress</Text>
-              <Text style={styles.progressPercentage}>
-                {Math.round(Math.min(donationProgress, 100))}%
+        {nextLevel && requiredDonations > 0 ? (
+          <>
+            <View style={styles.progressSection}>
+              <View style={styles.progressLabelContainer}>
+                <Text style={styles.progressLabel}>Donations Progress</Text>
+                <Text style={styles.progressPercentage}>
+                  {Math.round(Math.min(donationProgress, 100))}%
+                </Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { 
+                  width: `${Math.min(donationProgress, 100)}%`, 
+                  backgroundColor: '#f59e0b' 
+                }]} />
+              </View>
+              <Text style={styles.progressSubtext}>
+                ₹{totalDonations.toLocaleString()} / ₹{requiredDonations.toLocaleString()} 
+                needed for {nextLevelTitle}
               </Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { 
-                width: `${Math.min(donationProgress, 100)}%`, 
-                backgroundColor: '#f59e0b' 
-              }]} />
-            </View>
-            <Text style={styles.progressSubtext}>
-              ₹{totalDonations.toLocaleString()} / ₹{requiredDonations.toLocaleString()} 
-              needed for {nextLevelTitle}
-            </Text>
+          </>
+        ) : nextLevel && requiredDonations === 0 ? (
+          <View style={styles.progressSection}>
+            <Text style={styles.progressLabel}>No donation target set for next level</Text>
           </View>
-        </>
-      ) : nextLevel && requiredDonations === 0 ? (
-        <View style={styles.progressSection}>
-          <Text style={styles.progressLabel}>No donation target set for next level</Text>
-        </View>
-      ) : null}
+        ) : null}
 
-      {nextLevel ? (
-        <View style={styles.nextLevelInfo}>
-          <Text style={styles.nextLevelText}>
-            {remainingDonations > 0 ? `₹${remainingDonations.toLocaleString()} more in donations needed` : '🎉 Ready for promotion!'}
-            {' to reach '}
-            <Text style={[styles.nextLevelHighlight, { color: levelDetails.color }]}>
-              {nextLevelTitle}
+        {nextLevel ? (
+          <View style={styles.nextLevelInfo}>
+            <Text style={styles.nextLevelText}>
+              {remainingDonations > 0 ? `₹${remainingDonations.toLocaleString()} more in donations needed` : '🎉 Ready for promotion!'}
+              {' to reach '}
+              <Text style={[styles.nextLevelHighlight, { color: levelDetails.color }]}>
+                {nextLevelTitle}
+              </Text>
             </Text>
-          </Text>
-          {isEligible && (
-            <View style={styles.eligibleBadge}>
-              <MaterialIcons name="stars" size={16} color="#10b981" />
-              <Text style={styles.eligibleText}>Eligible for Promotion!</Text>
-            </View>
-          )}
-        </View>
-      ) : (
-        <View style={styles.maxLevelContainer}>
-          <MaterialIcons name="emoji-events" size={20} color="#fbbf24" />
-          <Text style={styles.maxLevelText}>🎉 You've reached the highest level!</Text>
-        </View>
-      )}
+            {isEligible && (
+              <View style={styles.eligibleBadge}>
+                <MaterialIcons name="stars" size={16} color="#10b981" />
+                <Text style={styles.eligibleText}>Eligible for Promotion!</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={styles.maxLevelContainer}>
+            <MaterialIcons name="emoji-events" size={20} color="#fbbf24" />
+            <Text style={styles.maxLevelText}>🎉 You've reached the highest level!</Text>
+          </View>
+        )}
 
-      <View style={styles.memberCountContainer}>
-        <View style={styles.memberCountItem}>
-          <Text style={styles.memberCountNumber}>{userData?.directReferrals?.length || 0}</Text>
-          <Text style={styles.memberCountLabel}>Direct Members</Text>
-        </View>
-        <View style={styles.memberCountDivider} />
-        <View style={styles.memberCountItem}>
-          <Text style={styles.memberCountNumber}>{stats.totalMembers}</Text>
-          <Text style={styles.memberCountLabel}>Total Members</Text>
-        </View>
-        <View style={styles.memberCountDivider} />
-        <View style={styles.memberCountItem}>
-          <Text style={[styles.memberCountNumber, { color: '#f59e0b' }]}>
-            ₹{totalDonations.toLocaleString()}
-          </Text>
-          <Text style={styles.memberCountLabel}>Total Donations</Text>
+        <View style={styles.memberCountContainer}>
+          <View style={styles.memberCountItem}>
+            <Text style={styles.memberCountNumber}>{userData?.directReferrals?.length || 0}</Text>
+            <Text style={styles.memberCountLabel}>Direct Members</Text>
+          </View>
+          <View style={styles.memberCountDivider} />
+          <View style={styles.memberCountItem}>
+            <Text style={styles.memberCountNumber}>{stats.totalMembers}</Text>
+            <Text style={styles.memberCountLabel}>Total Members</Text>
+          </View>
+          <View style={styles.memberCountDivider} />
+          <View style={styles.memberCountItem}>
+            <Text style={[styles.memberCountNumber, { color: '#f59e0b' }]}>
+              ₹{totalDonations.toLocaleString()}
+            </Text>
+            <Text style={styles.memberCountLabel}>Total Donations</Text>
+          </View>
         </View>
       </View>
-    </View>
-  );
-};
+    );
+  };
 
-  // Wallet Card Component
   const WalletCard = () => {
     if (!walletData) return null;
 
@@ -613,7 +590,7 @@ const LevelProgressBar = () => {
       >
         <View style={styles.walletHeader}>
           <View style={styles.walletHeaderLeft}>
-            <MaterialIcons name="account-balance-wallet" size={22} color="#10b981" />
+            <MaterialIcons name="account-balance-wallet" size={20} color="#10b981" />
             <Text style={styles.walletTitle}>Wallet</Text>
           </View>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -679,11 +656,12 @@ const LevelProgressBar = () => {
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('WorkingMemberProfile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={30} color="#8b5cf6" />
+                <MaterialIcons name="person" size={28} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -751,7 +729,7 @@ const LevelProgressBar = () => {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Registrations</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Members')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Members')} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -792,9 +770,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberApplications');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="handshake" size={24} color="#ffffff" />
+                  <MaterialIcons name="handshake" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Applications</Text>
@@ -813,9 +792,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberEvents');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="event" size={24} color="#ffffff" />
+                  <MaterialIcons name="event" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Events</Text>
@@ -829,9 +809,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('Wallet');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="account-balance-wallet" size={24} color="#ffffff" />
+                  <MaterialIcons name="account-balance-wallet" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Wallet</Text>
@@ -845,9 +826,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberNotice');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
+                  <MaterialIcons name="announcement" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Notices</Text>
@@ -861,9 +843,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberComplaint');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
-                  <MaterialIcons name="report-problem" size={24} color="#ffffff" />
+                  <MaterialIcons name="report-problem" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Submit Complaint</Text>
@@ -877,9 +860,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberSuggestion');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#f59e0b' }]}>
-                  <MaterialIcons name="lightbulb" size={24} color="#ffffff" />
+                  <MaterialIcons name="lightbulb" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Submit Suggestion</Text>
@@ -893,9 +877,10 @@ const LevelProgressBar = () => {
                   setFabModalVisible(false);
                   navigation.navigate('WorkingMemberCompany');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="business" size={24} color="#ffffff" />
+                  <MaterialIcons name="business" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Company Info</Text>
@@ -906,6 +891,7 @@ const LevelProgressBar = () => {
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => setFabModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCloseButtonText}>Close</Text>
               </TouchableOpacity>
@@ -932,6 +918,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerCard: {
     backgroundColor: '#8b5cf6',
@@ -953,15 +941,19 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#ffffff',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   subGreeting: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 40,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -974,8 +966,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 40,
   },
   quickActionsRow: {
@@ -990,8 +982,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   quickActionIconBg: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     backgroundColor: '#7c3aed',
     justifyContent: 'center',
@@ -1021,6 +1013,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   quickActionText: {
     fontFamily: Fonts.SemiBold,
@@ -1028,6 +1022,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 3,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Level Card (Donation ONLY)
   levelCard: {
@@ -1056,12 +1052,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   levelBadgeEmoji: {
-    fontSize: 24,
+    fontSize: 22,
   },
   levelTitle: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   levelCommissionContainer: {
     alignItems: 'flex-end',
@@ -1070,11 +1068,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   levelCommissionSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   progressSection: {
     marginBottom: 8,
@@ -1089,11 +1091,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   progressPercentage: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   progressBar: {
     flex: 1,
@@ -1111,6 +1117,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   nextLevelInfo: {
     marginTop: 4,
@@ -1120,6 +1128,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   nextLevelHighlight: {
     fontFamily: Fonts.SemiBold,
@@ -1139,6 +1149,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   maxLevelContainer: {
     flexDirection: 'row',
@@ -1155,6 +1167,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#92400e',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberCountContainer: {
     flexDirection: 'row',
@@ -1168,14 +1182,18 @@ const styles = StyleSheet.create({
   },
   memberCountNumber: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
+    fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberCountLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
+    fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberCountDivider: {
     width: 1,
@@ -1214,15 +1232,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statIconContainer: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1257,6 +1279,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   walletContent: {
     gap: 8,
@@ -1271,11 +1295,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   walletBalanceAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 24,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   walletStats: {
     flexDirection: 'row',
@@ -1291,12 +1319,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   walletStatLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   walletStatDivider: {
     width: 1,
@@ -1318,11 +1350,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     letterSpacing: 0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activityItem: {
     flexDirection: 'row',
@@ -1344,6 +1380,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   activityItemIcon: {
     width: 32,
@@ -1356,16 +1393,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activityItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activityItemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     paddingVertical: 20,
@@ -1377,6 +1420,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomSpacing: {
     height: 20,
@@ -1404,6 +1449,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItem: {
     flexDirection: 'row',
@@ -1415,9 +1462,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   modalItemIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -1429,11 +1476,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   pendingBadge: {
     backgroundColor: '#ef4444',
@@ -1445,11 +1496,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#f3f4f6',
     marginTop: 8,
   },
@@ -1457,5 +1511,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

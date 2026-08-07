@@ -134,7 +134,6 @@ export default function WorkingMemberCommission({ navigation }) {
         const data = doc.data();
         const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
         
-        // Check if this is a donation commission (contains 'donation' in description)
         const isDonation = data.description?.toLowerCase().includes('donation') || false;
         
         const commission = { 
@@ -190,7 +189,6 @@ export default function WorkingMemberCommission({ navigation }) {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
       
-      // Get donation commissions from commissionLogs
       const q = query(
         collection(db, 'commissionLogs'),
         where('workingMemberId', '==', userId),
@@ -289,7 +287,6 @@ export default function WorkingMemberCommission({ navigation }) {
   const getFilteredCommissions = () => {
     let filtered = commissions;
     
-    // Search filter
     if (searchQuery) {
       filtered = filtered.filter(c => 
         c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -297,7 +294,6 @@ export default function WorkingMemberCommission({ navigation }) {
       );
     }
 
-    // Type filter
     if (filterType === 'direct') {
       filtered = filtered.filter(c => c.type === 'direct' && !c.isDonation);
     } else if (filterType === 'secondary') {
@@ -306,7 +302,6 @@ export default function WorkingMemberCommission({ navigation }) {
       filtered = filtered.filter(c => c.isDonation);
     }
 
-    // Status filter
     if (filterStatus === 'paid') {
       filtered = filtered.filter(c => c.status === 'paid' || c.status === 'completed');
     } else if (filterStatus === 'pending') {
@@ -343,7 +338,7 @@ export default function WorkingMemberCommission({ navigation }) {
   const StatCard = ({ label, count, icon, color }) => (
     <View style={[styles.statCard]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={18} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
       <View style={styles.statContent}>
         <Text style={styles.statLabel}>{label}</Text>
@@ -367,7 +362,6 @@ export default function WorkingMemberCommission({ navigation }) {
       levelName = levelDetails?.title || '';
     }
 
-    // Custom title for donation commissions
     let title = isDirect ? 'Direct Commission' : 'Secondary Commission';
     if (isDonation) {
       title = 'Donation Commission';
@@ -384,7 +378,7 @@ export default function WorkingMemberCommission({ navigation }) {
       >
         <View style={styles.commissionHeader}>
           <View style={[styles.commissionIcon, { backgroundColor: color + '15' }]}>
-            <MaterialIcons name={icon} size={20} color={color} />
+            <MaterialIcons name={icon} size={18} color={color} />
           </View>
           <View style={styles.commissionInfo}>
             <Text style={styles.commissionTitle}>
@@ -426,7 +420,6 @@ export default function WorkingMemberCommission({ navigation }) {
     );
   };
 
-  // Commission Detail Modal
   const CommissionDetailModal = () => {
     if (!selectedCommission) return null;
     
@@ -453,7 +446,7 @@ export default function WorkingMemberCommission({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Commission Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -461,7 +454,7 @@ export default function WorkingMemberCommission({ navigation }) {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.detailHeader}>
                 <View style={[styles.detailIcon, { backgroundColor: color + '15' }]}>
-                  <MaterialIcons name={icon} size={30} color={color} />
+                  <MaterialIcons name={icon} size={28} color={color} />
                 </View>
                 <View style={styles.detailTitleContainer}>
                   <Text style={styles.detailTitle}>
@@ -555,6 +548,7 @@ export default function WorkingMemberCommission({ navigation }) {
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={() => setDetailModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
@@ -565,11 +559,10 @@ export default function WorkingMemberCommission({ navigation }) {
     );
   };
 
-  // Summary Cards
   const SummaryCard = ({ title, value, icon, color, subtitle }) => (
     <View style={styles.summaryCard}>
       <View style={[styles.summaryIcon, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={18} color={color} />
       </View>
       <View style={styles.summaryContent}>
         <Text style={styles.summaryTitle}>{title}</Text>
@@ -579,7 +572,6 @@ export default function WorkingMemberCommission({ navigation }) {
     </View>
   );
 
-  // Monthly Stats
   const MonthlyStats = () => (
     <View style={styles.monthlyStatsContainer}>
       <View style={styles.monthlyStat}>
@@ -605,12 +597,11 @@ export default function WorkingMemberCommission({ navigation }) {
     </View>
   );
 
-  // Donation Commission Card
   const DonationCommissionCard = () => (
     <View style={styles.donationCommissionCard}>
       <View style={styles.donationCommissionHeader}>
         <View style={styles.donationCommissionIcon}>
-          <MaterialIcons name="volunteer-activism" size={24} color="#f59e0b" />
+          <MaterialIcons name="volunteer-activism" size={22} color="#f59e0b" />
         </View>
         <View style={styles.donationCommissionContent}>
           <Text style={styles.donationCommissionTitle}>Donation Commissions</Text>
@@ -654,23 +645,24 @@ export default function WorkingMemberCommission({ navigation }) {
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Commissions</Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-              <MaterialIcons name="share" size={22} color="#ffffff" />
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.7}>
+              <MaterialIcons name="share" size={20} color="#ffffff" />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('WorkingMemberProfile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#8b5cf6" />
+                <MaterialIcons name="person" size={26} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -678,17 +670,18 @@ export default function WorkingMemberCommission({ navigation }) {
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search commissions..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -736,42 +729,48 @@ export default function WorkingMemberCommission({ navigation }) {
           <TouchableOpacity
             style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
             onPress={() => setFilterType('all')}
+            activeOpacity={0.7}
           >
             <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>All</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterType === 'direct' && styles.filterChipActive]}
             onPress={() => setFilterType('direct')}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="person-add" size={14} color={filterType === 'direct' ? '#ffffff' : '#6b7280'} />
+            <MaterialIcons name="person-add" size={12} color={filterType === 'direct' ? '#ffffff' : '#6b7280'} />
             <Text style={[styles.filterChipText, filterType === 'direct' && styles.filterChipTextActive]}>Direct</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterType === 'secondary' && styles.filterChipActive]}
             onPress={() => setFilterType('secondary')}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="share" size={14} color={filterType === 'secondary' ? '#ffffff' : '#6b7280'} />
+            <MaterialIcons name="share" size={12} color={filterType === 'secondary' ? '#ffffff' : '#6b7280'} />
             <Text style={[styles.filterChipText, filterType === 'secondary' && styles.filterChipTextActive]}>Secondary</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterType === 'donation' && styles.filterChipActive]}
             onPress={() => setFilterType('donation')}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="volunteer-activism" size={14} color={filterType === 'donation' ? '#ffffff' : '#6b7280'} />
+            <MaterialIcons name="volunteer-activism" size={12} color={filterType === 'donation' ? '#ffffff' : '#6b7280'} />
             <Text style={[styles.filterChipText, filterType === 'donation' && styles.filterChipTextActive]}>Donations</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterStatus === 'paid' && styles.filterChipActive]}
             onPress={() => setFilterStatus('paid')}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="check-circle" size={14} color={filterStatus === 'paid' ? '#ffffff' : '#6b7280'} />
+            <MaterialIcons name="check-circle" size={12} color={filterStatus === 'paid' ? '#ffffff' : '#6b7280'} />
             <Text style={[styles.filterChipText, filterStatus === 'paid' && styles.filterChipTextActive]}>Paid</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, filterStatus === 'pending' && styles.filterChipActive]}
             onPress={() => setFilterStatus('pending')}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="pending" size={14} color={filterStatus === 'pending' ? '#ffffff' : '#6b7280'} />
+            <MaterialIcons name="pending" size={12} color={filterStatus === 'pending' ? '#ffffff' : '#6b7280'} />
             <Text style={[styles.filterChipText, filterStatus === 'pending' && styles.filterChipTextActive]}>Pending</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -835,18 +834,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   shareButton: {
     padding: 4,
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -859,8 +860,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
   },
 
@@ -871,7 +872,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginBottom: 12,
     gap: 8,
   },
@@ -879,65 +880,72 @@ const styles = StyleSheet.create({
     flex: 1, 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
   statsContainer: { 
-    maxHeight: 80,
+    maxHeight: 72,
   },
   statsContent: { 
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
     paddingHorizontal: 4,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 70,
-    width: 75,
+    borderRadius: 10,
+    padding: 6,
+    minWidth: 62,
+    width: 68,
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 70,
+    height: 62,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
   statContent: { 
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statLabel: { 
     fontFamily: Fonts.Regular,
-    fontSize: 8, 
+    fontSize: 7, 
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statValue: { 
     fontFamily: Fonts.Bold,
-    fontSize: 14, 
+    fontSize: 13, 
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statIcon: { 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
     justifyContent: 'center', 
     alignItems: 'center', 
     backgroundColor: 'rgba(255,255,255,0.2)',
-    marginTop: 2,
+    marginTop: 1,
   },
 
-  // Donation Commission Card (NEW)
+  // Donation Commission Card
   donationCommissionCard: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#fef3c7',
     shadowColor: '#000',
@@ -949,34 +957,38 @@ const styles = StyleSheet.create({
   donationCommissionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   donationCommissionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#fef3c7',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   donationCommissionContent: {
     flex: 1,
   },
   donationCommissionTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
+    fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationCommissionSubtitle: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationCommissionStats: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
   },
@@ -985,14 +997,18 @@ const styles = StyleSheet.create({
   },
   donationCommissionStatValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
+    fontSize: 18,
     color: '#f59e0b',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationCommissionStatLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
+    fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationStatDivider: {
     width: 1,
@@ -1006,7 +1022,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 10,
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -1016,18 +1032,22 @@ const styles = StyleSheet.create({
   },
   monthlyStatLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
+    fontSize: 9,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   monthlyStatValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
+    fontSize: 15,
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   monthlyDivider: {
     width: 1,
     backgroundColor: '#e5e7eb',
-    marginHorizontal: 8,
+    marginHorizontal: 6,
   },
 
   // Summary Container
@@ -1035,43 +1055,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     marginTop: 10,
-    gap: 10,
+    gap: 8,
   },
   summaryCard: {
     flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 12,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
   summaryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   summaryContent: {
     flex: 1,
   },
   summaryTitle: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
+    fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
+    fontSize: 15,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summarySubtitle: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
+    fontSize: 9,
     color: '#9ca3af',
     marginTop: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Filters
@@ -1083,20 +1109,22 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
     backgroundColor: '#f3f4f6',
-    marginRight: 8,
-    gap: 4,
+    marginRight: 6,
+    gap: 3,
   },
   filterChipActive: {
     backgroundColor: '#8b5cf6',
   },
   filterChipText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   filterChipTextActive: {
     color: '#ffffff',
@@ -1111,7 +1139,7 @@ const styles = StyleSheet.create({
   commissionCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
@@ -1130,68 +1158,82 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   commissionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
   },
   commissionInfo: {
     flex: 1,
   },
   commissionTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
+    fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   commissionDescription: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   commissionStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 10,
   },
   commissionStatusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
+    fontSize: 9,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   commissionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
   },
   commissionAmount: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
+    fontSize: 15,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationAmount: {
     color: '#f59e0b',
   },
   donationLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
+    fontSize: 9,
     color: '#f59e0b',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   commissionLevel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
+    fontSize: 9,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   commissionDate: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
+    fontSize: 10,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal Styles
@@ -1217,32 +1259,36 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Detail View
   detailHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
+    marginBottom: 14,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
   detailIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   detailTitleContainer: {
     flex: 1,
   },
   detailTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
+    fontSize: 17,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailStatus: {
     paddingHorizontal: 10,
@@ -1253,78 +1299,94 @@ const styles = StyleSheet.create({
   },
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
+    fontSize: 10,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Breakdown Card
   breakdownCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 10,
-    padding: 14,
-    marginBottom: 14,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
   breakdownTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
+    fontSize: 13,
     color: '#1f2937',
-    marginBottom: 10,
+    marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   breakdownLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   breakdownValue: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   totalRow: {
     borderTopWidth: 2,
     borderTopColor: '#e5e7eb',
     marginTop: 4,
-    paddingTop: 8,
+    paddingTop: 6,
   },
 
   // Detail Sections
   detailSection: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   detailSectionTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSectionText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
+    fontSize: 13,
     color: '#1f2937',
-    lineHeight: 22,
+    lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   metadataRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   metadataLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   metadataValue: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
+    fontSize: 11,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   closeButton: {
@@ -1332,29 +1394,36 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
   },
   closeButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 60,
-    gap: 12,
+    gap: 10,
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   loadingContainer: {
@@ -1368,5 +1437,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

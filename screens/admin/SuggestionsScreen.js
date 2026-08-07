@@ -113,11 +113,12 @@ export default function SuggestionsScreen({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -133,11 +134,12 @@ export default function SuggestionsScreen({ navigation }) {
           setSelectedItem(item);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.itemHeader}>
           <View style={styles.itemTitleContainer}>
             <View style={[styles.itemIcon, { backgroundColor: statusColor + '15' }]}>
-              <MaterialIcons name="lightbulb" size={20} color={statusColor} />
+              <MaterialIcons name="lightbulb" size={18} color={statusColor} />
             </View>
             <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
           </View>
@@ -172,8 +174,9 @@ export default function SuggestionsScreen({ navigation }) {
             <TouchableOpacity 
               style={[styles.itemActionButton, styles.itemResolveButton]}
               onPress={() => handleStatusUpdate(item.id, 'resolved')}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="check-circle" size={14} color="#ffffff" />
+              <MaterialIcons name="check-circle" size={12} color="#ffffff" />
               <Text style={styles.itemActionText}>Resolve</Text>
             </TouchableOpacity>
           )}
@@ -181,8 +184,9 @@ export default function SuggestionsScreen({ navigation }) {
             <TouchableOpacity 
               style={[styles.itemActionButton, styles.itemReopenButton]}
               onPress={() => handleStatusUpdate(item.id, 'pending')}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="refresh" size={14} color="#ffffff" />
+              <MaterialIcons name="refresh" size={12} color="#ffffff" />
               <Text style={styles.itemActionText}>Reopen</Text>
             </TouchableOpacity>
           )}
@@ -190,16 +194,18 @@ export default function SuggestionsScreen({ navigation }) {
             <TouchableOpacity 
               style={[styles.itemActionButton, styles.itemRejectButton]}
               onPress={() => handleStatusUpdate(item.id, 'rejected')}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="block" size={14} color="#ffffff" />
+              <MaterialIcons name="block" size={12} color="#ffffff" />
               <Text style={styles.itemActionText}>Reject</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
             style={[styles.itemActionButton, styles.itemDeleteButton]}
             onPress={() => handleDelete(item.id)}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="delete" size={14} color="#ffffff" />
+            <MaterialIcons name="delete" size={12} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -220,17 +226,18 @@ export default function SuggestionsScreen({ navigation }) {
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search suggestions..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -358,6 +365,7 @@ export default function SuggestionsScreen({ navigation }) {
                         setDetailModalVisible(false);
                         handleStatusUpdate(selectedItem.id, 'resolved');
                       }}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="check-circle" size={16} color="#ffffff" />
                       <Text style={styles.detailActionText}>Resolve</Text>
@@ -369,6 +377,7 @@ export default function SuggestionsScreen({ navigation }) {
                       setDetailModalVisible(false);
                       handleDelete(selectedItem.id);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="delete" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Delete</Text>
@@ -411,6 +420,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   placeholderButton: {
     width: 40,
@@ -421,7 +432,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -430,23 +441,27 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statsWrapper: {
     marginBottom: 4,
   },
   statsScrollContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 6,
     minWidth: 70,
-    width: 80,
+    width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
+    height: 58,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -460,29 +475,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
   itemCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -510,6 +531,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemStatusBadge: {
     flexDirection: 'row',
@@ -527,12 +550,16 @@ const styles = StyleSheet.create({
   itemStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemFooter: {
     flexDirection: 'row',
@@ -556,6 +583,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   priorityBadge: {
     flexDirection: 'row',
@@ -568,11 +597,15 @@ const styles = StyleSheet.create({
   priorityText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemActions: {
     flexDirection: 'row',
@@ -583,8 +616,9 @@ const styles = StyleSheet.create({
   itemActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 4,
     gap: 4,
   },
@@ -599,11 +633,14 @@ const styles = StyleSheet.create({
   },
   itemDeleteButton: {
     backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
   },
   itemActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     alignItems: 'center',
@@ -615,12 +652,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -644,6 +685,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailHeader: {
     marginBottom: 16,
@@ -652,6 +695,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailStatusRow: {
     flexDirection: 'row',
@@ -667,6 +712,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailPriorityBadge: {
     flexDirection: 'row',
@@ -679,6 +726,8 @@ const styles = StyleSheet.create({
   detailPriorityText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -688,11 +737,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailActions: {
     flexDirection: 'row',
@@ -706,6 +759,7 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -721,5 +775,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

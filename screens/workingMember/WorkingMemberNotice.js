@@ -165,9 +165,10 @@ export default function WorkingMemberNotice({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={18} color={color} />
       </View>
       <Text style={styles.statType}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
@@ -175,10 +176,14 @@ export default function WorkingMemberNotice({ navigation }) {
   );
 
   const NoticeCard = ({ item }) => (
-    <TouchableOpacity style={styles.noticeCard} onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}>
+    <TouchableOpacity 
+      style={styles.noticeCard} 
+      onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}
+      activeOpacity={0.7}
+    >
       <View style={styles.noticeHeader}>
         <View style={styles.noticeIcon}>
-          <MaterialIcons name="announcement" size={20} color="#3b82f6" />
+          <MaterialIcons name="announcement" size={18} color="#3b82f6" />
         </View>
         <Text style={styles.noticeTitle} numberOfLines={1}>{item.title}</Text>
       </View>
@@ -194,10 +199,14 @@ export default function WorkingMemberNotice({ navigation }) {
   );
 
   const ComplaintCard = ({ item }) => (
-    <TouchableOpacity style={styles.complaintCard} onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}>
+    <TouchableOpacity 
+      style={styles.complaintCard} 
+      onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}
+      activeOpacity={0.7}
+    >
       <View style={styles.complaintHeader}>
         <View style={[styles.complaintIcon, { backgroundColor: getPriorityColor(item.priority) + '15' }]}>
-          <MaterialIcons name={item.type === 'complaint' ? 'report-problem' : 'lightbulb'} size={20} color={getPriorityColor(item.priority)} />
+          <MaterialIcons name={item.type === 'complaint' ? 'report-problem' : 'lightbulb'} size={18} color={getPriorityColor(item.priority)} />
         </View>
         <Text style={styles.complaintTitle} numberOfLines={1}>{item.title}</Text>
         <View style={[styles.complaintStatus, { backgroundColor: getStatusColor(item.status) + '15' }]}>
@@ -224,13 +233,17 @@ export default function WorkingMemberNotice({ navigation }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Communications</Text>
           {activeTab !== 'notices' && (
-            <TouchableOpacity style={styles.addButton} onPress={() => { resetForm(); setFormData({...formData, type: activeTab === 'complaints' ? 'complaint' : 'suggestion'}); setModalVisible(true); }}>
-              <MaterialIcons name="add" size={20} color="#ffffff" />
+            <TouchableOpacity 
+              style={styles.addButton} 
+              onPress={() => { resetForm(); setFormData({...formData, type: activeTab === 'complaints' ? 'complaint' : 'suggestion'}); setModalVisible(true); }}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="add" size={18} color="#ffffff" />
               <Text style={styles.addButtonText}>{activeTab === 'complaints' ? 'Complaint' : 'Suggestion'}</Text>
             </TouchableOpacity>
           )}
@@ -240,32 +253,45 @@ export default function WorkingMemberNotice({ navigation }) {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <MaterialIcons name="search" size={20} color="#9ca3af" />
+        <MaterialIcons name="search" size={18} color="#9ca3af" />
         <TextInput
           style={styles.searchInput}
           placeholder="Search..."
           placeholderTextColor="#9ca3af"
           value={searchQuery}
           onChangeText={setSearchQuery}
+          textAlignVertical="center"
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <MaterialIcons name="close" size={20} color="#9ca3af" />
+          <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+            <MaterialIcons name="close" size={18} color="#9ca3af" />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'notices' && styles.activeTab]} onPress={() => { setActiveTab('notices'); setFilterStatus('All'); }}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'notices' && styles.activeTab]} 
+          onPress={() => { setActiveTab('notices'); setFilterStatus('All'); }}
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="announcement" size={16} color={activeTab === 'notices' ? '#ffffff' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'notices' && styles.activeTabText]}>Notices ({notices.length})</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'complaints' && styles.activeTab]} onPress={() => { setActiveTab('complaints'); setFilterStatus('All'); }}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'complaints' && styles.activeTab]} 
+          onPress={() => { setActiveTab('complaints'); setFilterStatus('All'); }}
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="report-problem" size={16} color={activeTab === 'complaints' ? '#ffffff' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'complaints' && styles.activeTabText]}>Complaints ({complaints.length})</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'suggestions' && styles.activeTab]} onPress={() => { setActiveTab('suggestions'); setFilterStatus('All'); }}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'suggestions' && styles.activeTab]} 
+          onPress={() => { setActiveTab('suggestions'); setFilterStatus('All'); }}
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="lightbulb" size={16} color={activeTab === 'suggestions' ? '#ffffff' : '#6b7280'} />
           <Text style={[styles.tabText, activeTab === 'suggestions' && styles.activeTabText]}>Suggestions ({suggestions.length})</Text>
         </TouchableOpacity>
@@ -330,7 +356,11 @@ export default function WorkingMemberNotice({ navigation }) {
             <Text style={styles.emptyStateText}>{activeTab === 'notices' ? 'No notices' : activeTab === 'complaints' ? 'No complaints' : 'No suggestions'}</Text>
             <Text style={styles.emptyStateSubtext}>{activeTab === 'notices' ? 'Check back later for updates' : activeTab === 'complaints' ? 'Submit a complaint to get help' : 'Share your suggestions to improve'}</Text>
             {activeTab !== 'notices' && (
-              <TouchableOpacity style={styles.emptyButton} onPress={() => { resetForm(); setFormData({...formData, type: activeTab === 'complaints' ? 'complaint' : 'suggestion'}); setModalVisible(true); }}>
+              <TouchableOpacity 
+                style={styles.emptyButton} 
+                onPress={() => { resetForm(); setFormData({...formData, type: activeTab === 'complaints' ? 'complaint' : 'suggestion'}); setModalVisible(true); }}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.emptyButtonText}>{activeTab === 'complaints' ? 'Submit Complaint' : 'Submit Suggestion'}</Text>
               </TouchableOpacity>
             )}
@@ -342,42 +372,69 @@ export default function WorkingMemberNotice({ navigation }) {
       {/* Submit Modal - Only for Complaints & Suggestions */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Submit {formData.type === 'complaint' ? 'Complaint' : 'Suggestion'}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Title *</Text>
-              <TextInput style={styles.formInput} value={formData.title} onChangeText={(text) => setFormData({...formData, title: text})} placeholder="Enter title" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.title} 
+                onChangeText={(text) => setFormData({...formData, title: text})} 
+                placeholder="Enter title"
+                textAlignVertical="center"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Description *</Text>
-              <TextInput style={[styles.formInput, styles.formTextArea]} value={formData.description} onChangeText={(text) => setFormData({...formData, description: text})} placeholder="Describe your issue or suggestion" multiline numberOfLines={4} />
+              <TextInput 
+                style={[styles.formInput, styles.formTextArea]} 
+                value={formData.description} 
+                onChangeText={(text) => setFormData({...formData, description: text})} 
+                placeholder="Describe your issue or suggestion" 
+                multiline 
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Category</Text>
-              <TextInput style={styles.formInput} value={formData.category} onChangeText={(text) => setFormData({...formData, category: text})} placeholder="e.g., General, Technical, Event" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.category} 
+                onChangeText={(text) => setFormData({...formData, category: text})} 
+                placeholder="e.g., General, Technical, Event"
+                textAlignVertical="center"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Priority</Text>
               <View style={styles.priorityContainer}>
                 {['low', 'medium', 'high'].map((priority) => (
-                  <TouchableOpacity key={priority} style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} onPress={() => setFormData({...formData, priority})}>
+                  <TouchableOpacity 
+                    key={priority} 
+                    style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} 
+                    onPress={() => setFormData({...formData, priority})}
+                    activeOpacity={0.7}
+                  >
                     <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(priority) }]} />
-                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</Text>
+                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>{loading ? 'Submitting...' : 'Submit'}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -390,7 +447,7 @@ export default function WorkingMemberNotice({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -450,7 +507,10 @@ export default function WorkingMemberNotice({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
 
   // Blue Header
   headerCard: {
@@ -466,17 +526,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: { padding: 4 },
+  backButton: { 
+    padding: 4 
+  },
   headerTitle: {
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -489,6 +554,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   searchContainer: {
@@ -498,7 +565,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#ffffff',
     borderWidth: 1,
@@ -509,7 +576,10 @@ const styles = StyleSheet.create({
     flex: 1, 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   tabContainer: {
@@ -530,22 +600,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10, 
     gap: 6 
   },
-  activeTab: { backgroundColor: '#3b82f6' },
+  activeTab: { 
+    backgroundColor: '#3b82f6' 
+  },
   tabText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  activeTabText: { color: '#ffffff' },
+  activeTabText: { 
+    color: '#ffffff' 
+  },
 
-  statsWrapper: { marginBottom: 12 },
-  statsScrollContent: { paddingHorizontal: 16, gap: 12 },
+  statsWrapper: { 
+    marginBottom: 12 
+  },
+  statsScrollContent: { 
+    paddingHorizontal: 16, 
+    gap: 10 
+  },
   statCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 14,
+    padding: 12,
     alignItems: 'center',
-    width: 85,
+    width: 78,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -554,50 +635,78 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
-  statCardActive: { borderColor: '#3b82f6', borderWidth: 2 },
+  statCardActive: { 
+    borderColor: '#3b82f6', 
+    borderWidth: 2 
+  },
   statIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   statType: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12, 
+    fontSize: 11, 
     color: '#6b7280', 
-    marginBottom: 4, 
-    textAlign: 'center' 
+    marginBottom: 2, 
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: { 
     fontFamily: Fonts.Bold,
-    fontSize: 18 
+    fontSize: 17,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  listContent: { 
+    paddingHorizontal: 16, 
+    paddingBottom: 20,
+    paddingTop: 4,
+  },
 
   noticeCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  noticeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  noticeIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center' },
+  noticeHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginBottom: 4 
+  },
+  noticeIcon: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    backgroundColor: '#eff6ff', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   noticeTitle: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 14, 
     color: '#1f2937', 
-    flex: 1 
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   noticeDescription: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
     color: '#6b7280', 
-    marginLeft: 40 
+    marginLeft: 40,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   noticeFooter: { 
     flexDirection: 'row', 
@@ -608,16 +717,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, 
     borderTopColor: '#f3f4f6' 
   },
-  metaTag: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaTag: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   noticeCategory: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   noticeDate: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
-    color: '#9ca3af' 
+    color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   complaintCard: {
@@ -625,27 +742,49 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  complaintHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  complaintIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  complaintHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginBottom: 4 
+  },
+  complaintIcon: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   complaintTitle: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 14, 
     color: '#1f2937', 
-    flex: 1 
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  complaintStatus: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  complaintStatus: { 
+    paddingHorizontal: 8, 
+    paddingVertical: 2, 
+    borderRadius: 10 
+  },
   complaintStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 10 
+    fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintDescription: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
     color: '#6b7280', 
-    marginLeft: 40 
+    marginLeft: 40,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintFooter: {
     flexDirection: 'row',
@@ -655,58 +794,106 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
-    gap: 12,
+    gap: 10,
+    flexWrap: 'wrap',
   },
   complaintCategory: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  priorityBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   priorityText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 11 
+    fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintDate: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
     color: '#9ca3af', 
-    marginLeft: 'auto' 
+    marginLeft: 'auto',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
+  emptyState: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingTop: 60, 
+    gap: 12 
+  },
   emptyStateText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  emptyButton: { backgroundColor: '#3b82f6', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  emptyButton: { 
+    backgroundColor: '#3b82f6', 
+    paddingHorizontal: 20, 
+    paddingVertical: 10, 
+    borderRadius: 8 
+  },
   emptyButtonText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 14 
+    fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 },
-  modalContent: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 16 
+  },
+  modalContent: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 16, 
+    padding: 20, 
+    maxHeight: '85%' 
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
   modalTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  formField: { marginBottom: 12 },
+  formField: { 
+    marginBottom: 12 
+  },
   formLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 14, 
     color: '#1f2937', 
-    marginBottom: 4 
+    marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: { 
     borderWidth: 1, 
@@ -716,11 +903,22 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
-  formTextArea: { height: 100, textAlignVertical: 'top' },
+  formTextArea: { 
+    height: 100, 
+    textAlignVertical: 'top' 
+  },
 
-  priorityContainer: { flexDirection: 'row', gap: 8 },
-  priorityDot: { width: 8, height: 8, borderRadius: 4 },
+  priorityContainer: { 
+    flexDirection: 'row', 
+    gap: 8 
+  },
+  priorityDot: { 
+    width: 8, 
+    height: 8, 
+    borderRadius: 4 
+  },
   priorityButton: { 
     flex: 1, 
     flexDirection: 'row', 
@@ -732,48 +930,94 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb', 
     gap: 6 
   },
-  priorityButtonActive: { backgroundColor: '#3b82f6', borderColor: '#3b82f6' },
+  priorityButtonActive: { 
+    backgroundColor: '#3b82f6', 
+    borderColor: '#3b82f6' 
+  },
   priorityButtonText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  priorityButtonTextActive: { color: '#ffffff' },
+  priorityButtonTextActive: { 
+    color: '#ffffff' 
+  },
 
-  submitButton: { backgroundColor: '#10b981', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 12 },
+  submitButton: { 
+    backgroundColor: '#10b981', 
+    paddingVertical: 12, 
+    borderRadius: 8, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12 
+  },
   submitButtonText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 16 
+    fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  detailHeader: { marginBottom: 16 },
+  detailHeader: { 
+    marginBottom: 16 
+  },
   detailTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  detailStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  detailStatusRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 8 
+  },
+  detailStatusBadge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12 
+  },
   detailStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailPriorityBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  detailPriorityBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12, 
+    gap: 4 
+  },
   detailPriorityText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailSection: { marginBottom: 12 },
+  detailSection: { 
+    marginBottom: 12 
+  },
   detailLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
     color: '#6b7280', 
-    marginBottom: 2 
+    marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: { 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -141,11 +141,11 @@ export default function CompanyProfileManagement({ navigation }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Company Profile</Text>
-          <TouchableOpacity onPress={() => setEditing(!editing)}>
+          <TouchableOpacity onPress={() => setEditing(!editing)} activeOpacity={0.7}>
             <Text style={styles.editButton}>{editing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
         </View>
@@ -153,7 +153,7 @@ export default function CompanyProfileManagement({ navigation }) {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Cover Image */}
-        <TouchableOpacity onPress={() => editing && pickImage('coverImage')} disabled={!editing}>
+        <TouchableOpacity onPress={() => editing && pickImage('coverImage')} disabled={!editing} activeOpacity={0.7}>
           <View style={styles.coverContainer}>
             {companyData.coverImage ? (
               <Image source={{ uri: companyData.coverImage }} style={styles.coverImage} />
@@ -175,7 +175,7 @@ export default function CompanyProfileManagement({ navigation }) {
 
         {/* Logo */}
         <View style={styles.logoSection}>
-          <TouchableOpacity onPress={() => editing && pickImage('logo')} disabled={!editing}>
+          <TouchableOpacity onPress={() => editing && pickImage('logo')} disabled={!editing} activeOpacity={0.7}>
             <View style={styles.logoContainer}>
               {companyData.logo ? (
                 <Image source={{ uri: companyData.logo }} style={styles.logoImage} />
@@ -205,6 +205,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 value={companyData.companyName}
                 onChangeText={(text) => setCompanyData({...companyData, companyName: text})}
                 placeholder="Enter company name"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.companyName || 'Not set'}</Text>
@@ -219,6 +220,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 value={companyData.tagline}
                 onChangeText={(text) => setCompanyData({...companyData, tagline: text})}
                 placeholder="Enter tagline"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.tagline || 'Not set'}</Text>
@@ -235,6 +237,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter company description"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{companyData.description || 'Not set'}</Text>
@@ -249,6 +252,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 value={companyData.registrationNumber}
                 onChangeText={(text) => setCompanyData({...companyData, registrationNumber: text})}
                 placeholder="Enter registration number"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.registrationNumber || 'Not set'}</Text>
@@ -264,6 +268,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 onChangeText={(text) => setCompanyData({...companyData, establishedYear: text})}
                 keyboardType="numeric"
                 placeholder="Enter established year"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.establishedYear || 'Not set'}</Text>
@@ -279,6 +284,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 onChangeText={(text) => setCompanyData({...companyData, employees: text})}
                 keyboardType="numeric"
                 placeholder="Enter number of employees"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.employees || 'Not set'}</Text>
@@ -300,6 +306,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 multiline
                 numberOfLines={5}
                 placeholder="Tell your company story"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{companyData.about || 'Not set'}</Text>
@@ -316,6 +323,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter mission statement"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{companyData.mission || 'Not set'}</Text>
@@ -332,6 +340,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter vision statement"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{companyData.vision || 'Not set'}</Text>
@@ -352,6 +361,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 onChangeText={(text) => setCompanyData({...companyData, email: text})}
                 keyboardType="email-address"
                 placeholder="Enter email address"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.email || 'Not set'}</Text>
@@ -367,6 +377,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 onChangeText={(text) => setCompanyData({...companyData, phone: text})}
                 keyboardType="phone-pad"
                 placeholder="Enter phone number"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.phone || 'Not set'}</Text>
@@ -383,6 +394,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter address"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{companyData.address || 'Not set'}</Text>
@@ -397,6 +409,7 @@ export default function CompanyProfileManagement({ navigation }) {
                 value={companyData.website}
                 onChangeText={(text) => setCompanyData({...companyData, website: text})}
                 placeholder="Enter website URL"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{companyData.website || 'Not set'}</Text>
@@ -420,6 +433,7 @@ export default function CompanyProfileManagement({ navigation }) {
                     socialMedia: { ...companyData.socialMedia, [platform]: text }
                   })}
                   placeholder={`Enter ${platform} URL`}
+                  textAlignVertical="center"
                 />
               ) : (
                 <Text style={styles.value}>
@@ -450,6 +464,7 @@ export default function CompanyProfileManagement({ navigation }) {
                     workingHours: { ...companyData.workingHours, [day]: text }
                   })}
                   placeholder="Enter working hours"
+                  textAlignVertical="center"
                 />
               ) : (
                 <Text style={styles.hoursText}>{hours}</Text>
@@ -460,7 +475,7 @@ export default function CompanyProfileManagement({ navigation }) {
 
         {/* Save Button */}
         {editing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
             <MaterialIcons name="save" size={20} color="#ffffff" />
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
@@ -501,11 +516,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   editButton: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   scrollView: {
@@ -523,6 +542,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   coverContainer: {
@@ -554,12 +575,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   coverPlaceholderSub: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9ca3af',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   coverEditBadge: {
     position: 'absolute',
@@ -577,6 +602,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   logoSection: {
@@ -635,6 +662,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   field: {
@@ -645,11 +674,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   value: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -660,6 +693,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   textArea: {
     height: 100,
@@ -682,6 +716,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     width: 100,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   hoursInput: {
     flex: 1,
@@ -691,6 +727,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   saveButton: {
@@ -713,5 +751,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

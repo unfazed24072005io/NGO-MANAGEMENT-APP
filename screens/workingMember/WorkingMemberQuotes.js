@@ -129,7 +129,7 @@ export default function WorkingMemberQuotes({ navigation }) {
           >
             "{quote.text}"
           </Text>
-          {quote.text.length > 100 && (
+          {quote.text && quote.text.length > 100 && (
             <TouchableOpacity onPress={() => setExpanded(!expanded)}>
               <Text style={styles.expandText}>
                 {expanded ? 'Show less' : 'Read more'}
@@ -137,12 +137,12 @@ export default function WorkingMemberQuotes({ navigation }) {
             </TouchableOpacity>
           )}
           {quote.author && (
-            <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+            <Text style={styles.quoteAuthor} numberOfLines={1}>— {quote.author}</Text>
           )}
           <View style={styles.quoteFooter}>
             <View style={styles.dateInfo}>
               <MaterialIcons name="event" size={14} color="#6b7280" />
-              <Text style={styles.dateText}>
+              <Text style={styles.dateText} numberOfLines={1}>
                 Valid: {formatDate(quote.startDate)} - {formatDate(quote.endDate)}
               </Text>
             </View>
@@ -170,14 +170,14 @@ export default function WorkingMemberQuotes({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header Card */}
+      {/* Purple Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Daily Quotes</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>Daily Quotes</Text>
           </View>
           <TouchableOpacity 
             style={styles.profileIcon}
@@ -258,6 +258,7 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   backButton: {
     padding: 4,
@@ -267,11 +268,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    flexShrink: 1,
   },
   profileIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -281,11 +283,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     overflow: 'hidden',
+    flexShrink: 0,
   },
   profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 
   headerInfo: {
@@ -303,6 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     marginTop: 4,
+    textAlign: 'center',
   },
 
   // List
@@ -365,11 +369,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
+    marginRight: 8,
   },
   dateText: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    flexShrink: 1,
   },
   shareButton: {
     flexDirection: 'row',
@@ -379,6 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     gap: 4,
+    flexShrink: 0,
   },
   shareText: {
     fontFamily: Fonts.SemiBold,
@@ -392,11 +400,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 60,
     gap: 10,
+    paddingHorizontal: 20,
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,

@@ -143,6 +143,7 @@ export default function DonorProfile({ navigation }) {
       Alert.alert('Error', error.message);
     }
   };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -160,11 +161,11 @@ export default function DonorProfile({ navigation }) {
       {/* Green Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Profile</Text>
-          <TouchableOpacity onPress={() => setEditing(!editing)}>
+          <TouchableOpacity onPress={() => setEditing(!editing)} activeOpacity={0.7}>
             <Text style={styles.editButton}>{editing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
         </View>
@@ -176,7 +177,7 @@ export default function DonorProfile({ navigation }) {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.profileSection}>
-          <TouchableOpacity onPress={pickImage} disabled={!editing}>
+          <TouchableOpacity onPress={pickImage} disabled={!editing} activeOpacity={0.7}>
             <View style={styles.profileImageContainer}>
               {formData.profilePhoto ? (
                 <Image source={{ uri: formData.profilePhoto }} style={styles.profileImage} />
@@ -241,6 +242,7 @@ export default function DonorProfile({ navigation }) {
                 value={formData.fullName}
                 onChangeText={(text) => setFormData({...formData, fullName: text})}
                 placeholder="Enter full name"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{formData.fullName || 'N/A'}</Text>
@@ -261,6 +263,7 @@ export default function DonorProfile({ navigation }) {
                 onChangeText={(text) => setFormData({...formData, phone: text})}
                 keyboardType="phone-pad"
                 placeholder="Enter phone number"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{formData.phone || 'Not provided'}</Text>
@@ -277,6 +280,7 @@ export default function DonorProfile({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter address"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{formData.address || 'Not provided'}</Text>
@@ -293,6 +297,7 @@ export default function DonorProfile({ navigation }) {
                 multiline
                 numberOfLines={2}
                 placeholder="Tell us about yourself"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{formData.bio || 'No bio available'}</Text>
@@ -317,13 +322,13 @@ export default function DonorProfile({ navigation }) {
         </View>
 
         {editing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
             <MaterialIcons name="save" size={20} color="#ffffff" />
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
           <MaterialIcons name="logout" size={20} color="#ffffff" />
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -365,11 +370,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   editButton: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   scrollView: {
@@ -391,6 +400,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   profileSection: {
@@ -433,6 +444,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#10b981',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   statsContainer: {
@@ -454,12 +467,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   razorpayCard: {
@@ -480,6 +497,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStats: {
     flexDirection: 'row',
@@ -494,11 +513,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStatLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStatDivider: {
     width: 1,
@@ -527,11 +550,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   value: {
     fontFamily: Fonts.Regular,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -542,6 +569,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   textArea: {
     height: 80,
@@ -556,6 +584,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -577,6 +607,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#10b981',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   saveButton: {
@@ -593,6 +625,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -608,6 +642,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   versionContainer: {
     alignItems: 'center',
@@ -617,5 +653,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

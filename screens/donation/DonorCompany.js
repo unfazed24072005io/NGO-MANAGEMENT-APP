@@ -63,7 +63,6 @@ export default function MemberCompany({ navigation }) {
     }
   };
 
-  // Get field with proper fallback
   const getField = (field, fallback = 'Not provided') => {
     if (!companyData) return fallback;
     const keys = field.split('.');
@@ -115,7 +114,7 @@ export default function MemberCompany({ navigation }) {
         <MaterialIcons name="business" size={60} color="#d1d5db" />
         <Text style={styles.emptyTitle}>No Organization Data</Text>
         <Text style={styles.emptySubtext}>Please contact the administrator to set up the organization profile.</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchCompanyData}>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCompanyData} activeOpacity={0.7}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -127,7 +126,7 @@ export default function MemberCompany({ navigation }) {
       {/* Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Organization Profile</Text>
@@ -380,17 +379,17 @@ export default function MemberCompany({ navigation }) {
           </View>
 
           {getField('email') && getField('email') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => sendEmail(getField('email'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => sendEmail(getField('email'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#eff6ff' }]}>
                 <MaterialIcons name="email" size={20} color="#3b82f6" />
               </View>
-              <Text style={styles.contactText}>{getField('email')}</Text>
+              <Text style={styles.contactText} numberOfLines={1}>{getField('email')}</Text>
               <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
             </TouchableOpacity>
           )}
 
           {getField('contactNo') && getField('contactNo') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => callPhone(getField('contactNo'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => callPhone(getField('contactNo'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#d1fae5' }]}>
                 <MaterialIcons name="phone" size={20} color="#10b981" />
               </View>
@@ -404,16 +403,16 @@ export default function MemberCompany({ navigation }) {
               <View style={[styles.contactIcon, { backgroundColor: '#fef2f2' }]}>
                 <MaterialIcons name="location-on" size={20} color="#ef4444" />
               </View>
-              <Text style={styles.contactText}>{getField('address')}</Text>
+              <Text style={styles.contactText} numberOfLines={2}>{getField('address')}</Text>
             </View>
           )}
 
           {getField('website') && getField('website') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => openLink(getField('website'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => openLink(getField('website'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#f3e8ff' }]}>
                 <MaterialIcons name="language" size={20} color="#8b5cf6" />
               </View>
-              <Text style={[styles.contactText, styles.linkText]}>{getField('website')}</Text>
+              <Text style={[styles.contactText, styles.linkText]} numberOfLines={1}>{getField('website')}</Text>
               <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
             </TouchableOpacity>
           )}
@@ -461,6 +460,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   scrollView: {
@@ -481,6 +482,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyContainer: {
@@ -495,6 +498,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1f2937',
     marginTop: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptySubtext: {
     fontFamily: Fonts.Regular,
@@ -503,6 +508,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     marginBottom: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   retryButton: {
     backgroundColor: '#3b82f6',
@@ -514,6 +521,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Cover
@@ -545,6 +554,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Logo
@@ -579,6 +590,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 36,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Card
@@ -603,6 +616,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#1f2937',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   tagline: {
     fontFamily: Fonts.Italic,
@@ -610,6 +625,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   description: {
     fontFamily: Fonts.Regular,
@@ -618,6 +635,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     lineHeight: 22,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Status
@@ -647,11 +666,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#10b981',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   establishedText: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Section Header
@@ -665,6 +688,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Detail Row
@@ -683,11 +708,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   iconCircle: {
     width: 36,
@@ -716,6 +745,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceRow: {
     flexDirection: 'row',
@@ -730,11 +761,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceDescription: {
     flex: 1,
@@ -748,6 +783,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     lineHeight: 24,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Mission & Vision
@@ -778,6 +815,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   mvText: {
     fontFamily: Fonts.Regular,
@@ -785,6 +824,8 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     lineHeight: 22,
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Leadership
@@ -813,11 +854,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   leaderName: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Contact
@@ -841,38 +886,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   linkText: {
     color: '#3b82f6',
-  },
-
-  // Social Media
-  socialGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  socialIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  socialLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: '#6b7280',
   },
 
   // Footer
@@ -887,5 +905,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

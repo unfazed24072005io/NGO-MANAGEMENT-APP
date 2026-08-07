@@ -118,23 +118,23 @@ export default function WorkingMemberSuggestion({ navigation }) {
         </View>
         <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
         <View style={[styles.suggestionStatus, { backgroundColor: getStatusColor(item.status) + '15' }]}>
-          <Text style={[styles.suggestionStatusText, { color: getStatusColor(item.status) }]}>{item.status || 'pending'}</Text>
+          <Text style={[styles.suggestionStatusText, { color: getStatusColor(item.status) }]} numberOfLines={1}>{item.status || 'pending'}</Text>
         </View>
       </View>
       <Text style={styles.suggestionDescription} numberOfLines={2}>{item.description}</Text>
       <View style={styles.suggestionFooter}>
-        <Text style={styles.suggestionCategory}>📂 {item.category || 'General'}</Text>
+        <Text style={styles.suggestionCategory} numberOfLines={1}>📂 {item.category || 'General'}</Text>
         {item.department && (
           <View style={styles.departmentBadge}>
             <MaterialIcons name="business" size={12} color="#8b5cf6" />
-            <Text style={styles.departmentText}>{item.department}</Text>
+            <Text style={styles.departmentText} numberOfLines={1}>{item.department}</Text>
           </View>
         )}
         <View style={styles.priorityBadge}>
           <MaterialIcons name="flag" size={12} color={getPriorityColor(item.priority)} />
-          <Text style={[styles.priorityText, { color: getPriorityColor(item.priority) }]}>{item.priority || 'medium'}</Text>
+          <Text style={[styles.priorityText, { color: getPriorityColor(item.priority) }]} numberOfLines={1}>{item.priority || 'medium'}</Text>
         </View>
-        <Text style={styles.suggestionDate}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</Text>
+        <Text style={styles.suggestionDate} numberOfLines={1}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -147,7 +147,7 @@ export default function WorkingMemberSuggestion({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Suggestions</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>My Suggestions</Text>
           <TouchableOpacity style={styles.addButton} onPress={() => { resetForm(); setModalVisible(true); }}>
             <MaterialIcons name="add" size={24} color="#ffffff" />
           </TouchableOpacity>
@@ -176,9 +176,9 @@ export default function WorkingMemberSuggestion({ navigation }) {
       {/* Submit Suggestion Modal */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Submit Suggestion</Text>
+              <Text style={styles.modalTitle} numberOfLines={1}>Submit Suggestion</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
@@ -186,31 +186,64 @@ export default function WorkingMemberSuggestion({ navigation }) {
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Title *</Text>
-              <TextInput style={styles.formInput} value={formData.title} onChangeText={(text) => setFormData({...formData, title: text})} placeholder="Enter title" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.title} 
+                onChangeText={(text) => setFormData({...formData, title: text})} 
+                placeholder="Enter title"
+                placeholderTextColor="#9ca3af"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Description *</Text>
-              <TextInput style={[styles.formInput, styles.formTextArea]} value={formData.description} onChangeText={(text) => setFormData({...formData, description: text})} placeholder="Describe your suggestion" multiline numberOfLines={4} />
+              <TextInput 
+                style={[styles.formInput, styles.formTextArea]} 
+                value={formData.description} 
+                onChangeText={(text) => setFormData({...formData, description: text})} 
+                placeholder="Describe your suggestion" 
+                multiline 
+                numberOfLines={4}
+                textAlignVertical="top"
+                placeholderTextColor="#9ca3af"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Category</Text>
-              <TextInput style={styles.formInput} value={formData.category} onChangeText={(text) => setFormData({...formData, category: text})} placeholder="e.g., General, Technical, Event" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.category} 
+                onChangeText={(text) => setFormData({...formData, category: text})} 
+                placeholder="e.g., General, Technical, Event"
+                placeholderTextColor="#9ca3af"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Department</Text>
-              <TextInput style={styles.formInput} value={formData.department} onChangeText={(text) => setFormData({...formData, department: text})} placeholder="e.g., HR, IT, Operations" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.department} 
+                onChangeText={(text) => setFormData({...formData, department: text})} 
+                placeholder="e.g., HR, IT, Operations"
+                placeholderTextColor="#9ca3af"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Priority</Text>
               <View style={styles.priorityContainer}>
                 {['low', 'medium', 'high'].map((priority) => (
-                  <TouchableOpacity key={priority} style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} onPress={() => setFormData({...formData, priority})}>
+                  <TouchableOpacity 
+                    key={priority} 
+                    style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} 
+                    onPress={() => setFormData({...formData, priority})}
+                  >
                     <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(priority) }]} />
-                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</Text>
+                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]} numberOfLines={1}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -228,7 +261,7 @@ export default function WorkingMemberSuggestion({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Suggestion Details</Text>
+              <Text style={styles.modalTitle} numberOfLines={1}>Suggestion Details</Text>
               <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
@@ -237,13 +270,17 @@ export default function WorkingMemberSuggestion({ navigation }) {
             {selectedItem && (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailTitle}>{selectedItem.title}</Text>
+                  <Text style={styles.detailTitle} numberOfLines={2}>{selectedItem.title}</Text>
                   <View style={styles.detailStatusRow}>
                     <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedItem.status) + '15' }]}>
-                      <Text style={[styles.detailStatusText, { color: getStatusColor(selectedItem.status) }]}>{selectedItem.status || 'pending'}</Text>
+                      <Text style={[styles.detailStatusText, { color: getStatusColor(selectedItem.status) }]} numberOfLines={1}>
+                        {selectedItem.status || 'pending'}
+                      </Text>
                     </View>
                     <View style={[styles.detailPriorityBadge, { backgroundColor: getPriorityColor(selectedItem.priority) + '15' }]}>
-                      <Text style={[styles.detailPriorityText, { color: getPriorityColor(selectedItem.priority) }]}>{selectedItem.priority}</Text>
+                      <Text style={[styles.detailPriorityText, { color: getPriorityColor(selectedItem.priority) }]} numberOfLines={1}>
+                        {selectedItem.priority}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -273,7 +310,9 @@ export default function WorkingMemberSuggestion({ navigation }) {
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Status</Text>
                   <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedItem.status) + '15' }]}>
-                    <Text style={[styles.detailStatusText, { color: getStatusColor(selectedItem.status) }]}>{selectedItem.status || 'pending'}</Text>
+                    <Text style={[styles.detailStatusText, { color: getStatusColor(selectedItem.status) }]} numberOfLines={1}>
+                      {selectedItem.status || 'pending'}
+                    </Text>
                   </View>
                 </View>
 
@@ -323,6 +362,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
   addButton: { padding: 4 },
 
@@ -347,7 +387,8 @@ const styles = StyleSheet.create({
     height: 32, 
     borderRadius: 16, 
     justifyContent: 'center', 
-    alignItems: 'center' 
+    alignItems: 'center',
+    flexShrink: 0,
   },
   suggestionTitle: { 
     fontFamily: Fonts.SemiBold,
@@ -358,7 +399,8 @@ const styles = StyleSheet.create({
   suggestionStatus: { 
     paddingHorizontal: 8, 
     paddingVertical: 2, 
-    borderRadius: 10 
+    borderRadius: 10,
+    flexShrink: 0,
   },
   suggestionStatusText: { 
     fontFamily: Fonts.SemiBold,
@@ -394,6 +436,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
     gap: 2,
+    flexShrink: 0,
   },
   departmentText: {
     fontFamily: Fonts.SemiBold,
@@ -403,7 +446,8 @@ const styles = StyleSheet.create({
   priorityBadge: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 4 
+    gap: 4,
+    flexShrink: 0,
   },
   priorityText: { 
     fontFamily: Fonts.SemiBold,
@@ -413,24 +457,28 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11, 
     color: '#9ca3af', 
-    marginLeft: 'auto' 
+    marginLeft: 'auto',
+    flexShrink: 0,
   },
 
   emptyState: { 
     alignItems: 'center', 
     justifyContent: 'center', 
     paddingTop: 60, 
-    gap: 12 
+    gap: 12,
+    paddingHorizontal: 20,
   },
   emptyStateText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    textAlign: 'center',
   },
   emptyStateSubtext: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    textAlign: 'center',
   },
   emptyButton: { 
     backgroundColor: '#3b82f6', 
@@ -466,7 +514,8 @@ const styles = StyleSheet.create({
   modalTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    flex: 1,
   },
 
   formField: { marginBottom: 12 },
@@ -484,6 +533,7 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    color: '#1f2937',
   },
   formTextArea: { height: 100, textAlignVertical: 'top' },
 
@@ -510,6 +560,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+    flexShrink: 0,
   },
   priorityButtonText: { 
     fontFamily: Fonts.SemiBold,
@@ -542,12 +593,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     gap: 8, 
-    marginTop: 8 
+    marginTop: 8,
+    flexWrap: 'wrap',
   },
   detailStatusBadge: { 
     paddingHorizontal: 10, 
     paddingVertical: 4, 
-    borderRadius: 12 
+    borderRadius: 12,
+    flexShrink: 0,
   },
   detailStatusText: { 
     fontFamily: Fonts.SemiBold,
@@ -556,7 +609,8 @@ const styles = StyleSheet.create({
   detailPriorityBadge: { 
     paddingHorizontal: 10, 
     paddingVertical: 4, 
-    borderRadius: 12 
+    borderRadius: 12,
+    flexShrink: 0,
   },
   detailPriorityText: { 
     fontFamily: Fonts.SemiBold,

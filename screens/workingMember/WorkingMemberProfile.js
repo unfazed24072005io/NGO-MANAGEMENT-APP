@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { signOut } from 'firebase/auth';
 import { Fonts } from '../../config/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Svg, Defs, Pattern, Rect, Image as SvgImage } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +31,11 @@ export default function WorkingMemberProfile({ navigation }) {
     department: '',
     position: '',
     employeeId: '',
-    reportingTo: ''
+    reportingTo: '',
+    fatherName: '',
+    dob: '',
+    aadharNumber: '',
+    membershipStatus: 'Active'
   });
 
   useEffect(() => {
@@ -64,7 +69,11 @@ export default function WorkingMemberProfile({ navigation }) {
           department: data.department || 'Not assigned',
           position: data.position || 'Working Member',
           employeeId: data.employeeId || `WM-${userId.slice(0, 6).toUpperCase()}`,
-          reportingTo: data.reportingTo || 'N/A'
+          reportingTo: data.reportingTo || 'N/A',
+          fatherName: data.fatherName || '',
+          dob: data.dob || '',
+          aadharNumber: data.aadharNumber || '',
+          membershipStatus: data.membershipStatus || 'Active'
         });
       }
     } catch (error) {
@@ -139,6 +148,10 @@ export default function WorkingMemberProfile({ navigation }) {
         department: formData.department,
         position: formData.position,
         profilePhoto: formData.profilePhoto,
+        fatherName: formData.fatherName,
+        dob: formData.dob,
+        aadharNumber: formData.aadharNumber,
+        membershipStatus: formData.membershipStatus,
         updatedAt: new Date().toISOString()
       });
 
@@ -214,7 +227,7 @@ export default function WorkingMemberProfile({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Working Member Profile</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>Working Member Profile</Text>
           <TouchableOpacity onPress={() => setEditing(!editing)}>
             <Text style={styles.editButton}>{editing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
@@ -244,9 +257,123 @@ export default function WorkingMemberProfile({ navigation }) {
               )}
             </View>
           </TouchableOpacity>
-          <Text style={styles.profileName}>{formData.fullName || 'Working Member'}</Text>
-          <Text style={styles.profileBio}>{formData.bio || 'Working Member'}</Text>
+          <Text style={styles.profileName} numberOfLines={1}>{formData.fullName || 'Working Member'}</Text>
+          <Text style={styles.profileBio} numberOfLines={1}>{formData.bio || 'Working Member'}</Text>
           {editing && <Text style={styles.changePhotoText}>Tap to change photo</Text>}
+        </View>
+
+        {/* Identity Card - Hindi Version */}
+        <View style={styles.idCardWrapper}>
+          <View style={styles.idCard}>
+            {/* Background Watermark */}
+            <View style={styles.watermarkContainer}>
+              <Svg height="100%" width="100%" style={StyleSheet.absoluteFillObject}>
+                <Defs>
+                  <Pattern id="watermark" patternUnits="userSpaceOnUse" width={100} height={100}>
+                    <SvgImage
+                      href={require('../../assets/watermark.png')}
+                      width={100}
+                      height={100}
+                      opacity={0.08}
+                    />
+                  </Pattern>
+                </Defs>
+                <Rect width="100%" height="100%" fill="url(#watermark)" />
+              </Svg>
+            </View>
+
+            {/* Top Section - Logos and Title */}
+            <View style={styles.idCardTopSection}>
+              {/* Left Logo */}
+              <View style={styles.idCardLeftLogo}>
+                <Image 
+                  source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7cLJLLXgddsZygiRpdvi-NzOpYcooRXCS7kd9BK6Fcg&s=10' }}
+                  style={styles.idCardLogoImage}
+                  resizeMode="contain"
+                />
+              </View>
+
+              {/* Center Title */}
+              <View style={styles.idCardCenterTitle}>
+                <Text style={styles.idCardMainTitle}>कबीर सत धर्म फाउंडेशन (ट्रस्ट)</Text>
+                <Text style={styles.idCardSubTitle}>भारत सरकार द्वारा मान्यता प्राप्त</Text>
+                <Text style={styles.idCardRegNo}>पंजीकरण संख्या: U8550BR2024NPL067466</Text>
+              </View>
+
+              {/* Right Logo */}
+              <View style={styles.idCardRightLogo}>
+                <Image 
+                  source={{ uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRkyFSf2hPLbia_p0WxL6wQmoXFPTGlaWahT0DXI8nJjQ&s=10' }}
+                  style={styles.idCardLogoImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+
+            {/* Identity Card Title */}
+            <View style={styles.idCardIdentityTitle}>
+              <Text style={styles.idCardIdentityText}>पहचान पत्र</Text>
+            </View>
+
+            {/* ID Card Body - Left Fields & Right Photo */}
+<View style={styles.idCardBody}>
+  {/* Left Fields */}
+  <View style={styles.idCardLeftFields}>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>नाम :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={1}>{formData.fullName || 'N/A'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>पिता/पति का नाम :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={1}>{formData.fatherName || 'N/A'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>जन्म तिथि :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={1}>{formData.dob || 'N/A'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>आधार संख्या :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={1}>{formData.aadharNumber || 'N/A'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>सदस्यता स्थिति :</Text>
+      <Text style={[styles.idCardFieldValue, styles.idCardStatusValue]} numberOfLines={1}>{formData.membershipStatus || 'Active'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>मोबाइल नंबर :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={1}>{formData.phone || 'N/A'}</Text>
+    </View>
+    <View style={styles.idCardField}>
+      <Text style={styles.idCardFieldLabel}>पता :</Text>
+      <Text style={styles.idCardFieldValue} numberOfLines={2}>{formData.address || 'N/A'}</Text>
+    </View>
+  </View>
+
+  {/* Right Photo - Positioned lower */}
+  <View style={styles.idCardRightPhoto}>
+    <View style={styles.idCardPhotoWrapper}>
+      {formData.profilePhoto ? (
+        <Image source={{ uri: formData.profilePhoto }} style={styles.idCardPhoto} />
+      ) : (
+        <View style={styles.idCardPhotoPlaceholder}>
+          <MaterialIcons name="person" size={60} color="#8b5cf6" />
+        </View>
+      )}
+    </View>
+    <Text style={styles.idCardPhotoLabel}>फोटो</Text>
+  </View>
+</View>
+
+            {/* ID Card Footer */}
+            <View style={styles.idCardFooter}>
+              <Text style={styles.idCardFooterText}>प्रबंधक</Text>
+              <View style={styles.idCardFooterCenter}>
+                <View style={styles.idCardSignatureLine} />
+                <Text style={styles.idCardSignatureLabel}>सदस्य हस्ताक्षर</Text>
+              </View>
+              <Text style={styles.idCardFooterText}>सचिव</Text>
+            </View>
+          </View>
         </View>
 
         {/* Personal Information Card */}
@@ -261,15 +388,80 @@ export default function WorkingMemberProfile({ navigation }) {
                 value={formData.fullName}
                 onChangeText={(text) => setFormData({...formData, fullName: text})}
                 placeholder="Enter full name"
+                placeholderTextColor="#9ca3af"
               />
             ) : (
-              <Text style={styles.value}>{formData.fullName || 'N/A'}</Text>
+              <Text style={styles.value} numberOfLines={1}>{formData.fullName || 'N/A'}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Father/Husband Name</Text>
+            {editing ? (
+              <TextInput
+                style={styles.input}
+                value={formData.fatherName}
+                onChangeText={(text) => setFormData({...formData, fatherName: text})}
+                placeholder="Enter father/husband name"
+                placeholderTextColor="#9ca3af"
+              />
+            ) : (
+              <Text style={styles.value} numberOfLines={1}>{formData.fatherName || 'N/A'}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Date of Birth</Text>
+            {editing ? (
+              <TextInput
+                style={styles.input}
+                value={formData.dob}
+                onChangeText={(text) => setFormData({...formData, dob: text})}
+                placeholder="DD/MM/YYYY"
+                placeholderTextColor="#9ca3af"
+              />
+            ) : (
+              <Text style={styles.value} numberOfLines={1}>{formData.dob || 'N/A'}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Aadhar Number</Text>
+            {editing ? (
+              <TextInput
+                style={styles.input}
+                value={formData.aadharNumber}
+                onChangeText={(text) => setFormData({...formData, aadharNumber: text})}
+                placeholder="Enter Aadhar number"
+                placeholderTextColor="#9ca3af"
+                keyboardType="numeric"
+              />
+            ) : (
+              <Text style={styles.value} numberOfLines={1}>{formData.aadharNumber || 'N/A'}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>Membership Status</Text>
+            {editing ? (
+              <TextInput
+                style={styles.input}
+                value={formData.membershipStatus}
+                onChangeText={(text) => setFormData({...formData, membershipStatus: text})}
+                placeholder="Active/Inactive"
+                placeholderTextColor="#9ca3af"
+              />
+            ) : (
+              <View style={styles.statusBadge}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>{formData.membershipStatus}</Text>
+              </View>
             )}
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{formData.email}</Text>
+            <Text style={styles.value} numberOfLines={1}>{formData.email}</Text>
           </View>
 
           <View style={styles.field}>
@@ -281,9 +473,10 @@ export default function WorkingMemberProfile({ navigation }) {
                 onChangeText={(text) => setFormData({...formData, phone: text})}
                 keyboardType="phone-pad"
                 placeholder="Enter phone number"
+                placeholderTextColor="#9ca3af"
               />
             ) : (
-              <Text style={styles.value}>{formData.phone || 'Not provided'}</Text>
+              <Text style={styles.value} numberOfLines={1}>{formData.phone || 'Not provided'}</Text>
             )}
           </View>
 
@@ -297,6 +490,8 @@ export default function WorkingMemberProfile({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter address"
+                placeholderTextColor="#9ca3af"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{formData.address || 'Not provided'}</Text>
@@ -313,6 +508,8 @@ export default function WorkingMemberProfile({ navigation }) {
                 multiline
                 numberOfLines={2}
                 placeholder="Tell us about yourself"
+                placeholderTextColor="#9ca3af"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{formData.bio || 'No bio available'}</Text>
@@ -329,11 +526,12 @@ export default function WorkingMemberProfile({ navigation }) {
                 value={formData.department}
                 onChangeText={(text) => setFormData({...formData, department: text})}
                 placeholder="Enter department"
+                placeholderTextColor="#9ca3af"
               />
             ) : (
               <View style={styles.badgeContainer}>
                 <MaterialIcons name="business" size={16} color="#8b5cf6" />
-                <Text style={styles.value}>{formData.department}</Text>
+                <Text style={styles.value} numberOfLines={1}>{formData.department}</Text>
               </View>
             )}
           </View>
@@ -346,11 +544,12 @@ export default function WorkingMemberProfile({ navigation }) {
                 value={formData.position}
                 onChangeText={(text) => setFormData({...formData, position: text})}
                 placeholder="Enter position"
+                placeholderTextColor="#9ca3af"
               />
             ) : (
               <View style={styles.badgeContainer}>
                 <MaterialIcons name="work" size={16} color="#8b5cf6" />
-                <Text style={styles.value}>{formData.position}</Text>
+                <Text style={styles.value} numberOfLines={1}>{formData.position}</Text>
               </View>
             )}
           </View>
@@ -359,7 +558,7 @@ export default function WorkingMemberProfile({ navigation }) {
             <Text style={styles.label}>Employee ID</Text>
             <View style={styles.badgeContainer}>
               <MaterialIcons name="badge" size={16} color="#8b5cf6" />
-              <Text style={styles.value}>{formData.employeeId}</Text>
+              <Text style={styles.value} numberOfLines={1}>{formData.employeeId}</Text>
             </View>
           </View>
 
@@ -367,7 +566,7 @@ export default function WorkingMemberProfile({ navigation }) {
             <Text style={styles.label}>Reporting To</Text>
             <View style={styles.badgeContainer}>
               <MaterialIcons name="person" size={16} color="#f59e0b" />
-              <Text style={styles.value}>{formData.reportingTo}</Text>
+              <Text style={styles.value} numberOfLines={1}>{formData.reportingTo}</Text>
             </View>
           </View>
 
@@ -375,97 +574,9 @@ export default function WorkingMemberProfile({ navigation }) {
             <Text style={styles.label}>Joined Date</Text>
             <View style={styles.dateBadge}>
               <MaterialIcons name="calendar-today" size={14} color="#6b7280" />
-              <Text style={styles.dateText}>{formData.joinedDate}</Text>
+              <Text style={styles.dateText} numberOfLines={1}>{formData.joinedDate}</Text>
             </View>
           </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Status</Text>
-            <View style={styles.statusBadge}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Active</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Professional ID Card */}
-        <View style={styles.idCardWrapper}>
-          <LinearGradient
-            colors={['#4c1d95', '#7c3aed', '#8b5cf6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.idCard}
-          >
-            {/* Card Header */}
-            <View style={styles.idCardHeader}>
-              <View style={styles.idCardLogoContainer}>
-                <View style={styles.idCardLogo}>
-                  <MaterialIcons name="volunteer-activism" size={24} color="#ffffff" />
-                </View>
-                <Text style={styles.idCardOrgName}>NGO</Text>
-              </View>
-              <View style={styles.idCardBadge}>
-                <Text style={styles.idCardBadgeText}>WORKING</Text>
-              </View>
-            </View>
-
-            {/* Card Body */}
-            <View style={styles.idCardBody}>
-              <View style={styles.idCardPhotoContainer}>
-                {formData.profilePhoto ? (
-                  <Image source={{ uri: formData.profilePhoto }} style={styles.idCardPhoto} />
-                ) : (
-                  <View style={styles.idCardPhotoPlaceholder}>
-                    <MaterialIcons name="person" size={40} color="#8b5cf6" />
-                  </View>
-                )}
-              </View>
-              <View style={styles.idCardInfo}>
-                <Text style={styles.idCardName}>{formData.fullName || 'Working Member'}</Text>
-                <Text style={styles.idCardRole}>{formData.position || 'Working Member'}</Text>
-                <View style={styles.idCardIdRow}>
-                  <MaterialIcons name="badge" size={14} color="rgba(255,255,255,0.7)" />
-                  <Text style={styles.idCardIdText}>ID: {cardId}</Text>
-                </View>
-                <View style={styles.idCardDeptRow}>
-                  <MaterialIcons name="business" size={12} color="rgba(255,255,255,0.6)" />
-                  <Text style={styles.idCardDeptText}>{formData.department || 'Not assigned'}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Card Divider */}
-            <View style={styles.idCardDivider} />
-
-            {/* Card Footer */}
-            <View style={styles.idCardFooter}>
-              <View style={styles.idCardDetail}>
-                <MaterialIcons name="email" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.idCardDetailText} numberOfLines={1}>
-                  {formData.email || 'N/A'}
-                </Text>
-              </View>
-              <View style={styles.idCardDetail}>
-                <MaterialIcons name="phone" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.idCardDetailText}>{formData.phone || 'N/A'}</Text>
-              </View>
-              <View style={styles.idCardDetail}>
-                <MaterialIcons name="calendar-today" size={14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.idCardDetailText}>Joined: {formData.joinedDate}</Text>
-              </View>
-            </View>
-
-            {/* Card Bottom */}
-            <View style={styles.idCardBottom}>
-              <View style={styles.idCardStatus}>
-                <View style={styles.idCardStatusDot} />
-                <Text style={styles.idCardStatusText}>ACTIVE</Text>
-              </View>
-              <Text style={styles.idCardValidUntil}>
-                Valid: {new Date().getFullYear() + 1}-12-31
-              </Text>
-            </View>
-          </LinearGradient>
         </View>
 
         {/* Certificates Section */}
@@ -474,7 +585,7 @@ export default function WorkingMemberProfile({ navigation }) {
             <Text style={styles.cardTitle}>Certificates</Text>
             <View style={styles.certHeaderRight}>
               {certificates.length > 0 && (
-                <Text style={styles.certCount}>{certificates.length} earned</Text>
+                <Text style={styles.certCount} numberOfLines={1}>{certificates.length} earned</Text>
               )}
               <MaterialIcons name="chevron-right" size={20} color="#8b5cf6" />
             </View>
@@ -493,16 +604,16 @@ export default function WorkingMemberProfile({ navigation }) {
                     <MaterialIcons name={getCertificateIcon(cert.type)} size={16} color={getCertificateColor(cert.type)} />
                   </View>
                   <View style={styles.certItemContent}>
-                    <Text style={styles.certItemTitle}>{cert.title || getCertificateTypeLabel(cert.type)}</Text>
+                    <Text style={styles.certItemTitle} numberOfLines={1}>{cert.title || getCertificateTypeLabel(cert.type)}</Text>
                     <View style={styles.certItemMeta}>
-                      <Text style={styles.certItemType}>{getCertificateTypeLabel(cert.type)}</Text>
-                      <Text style={styles.certItemDate}>
+                      <Text style={styles.certItemType} numberOfLines={1}>{getCertificateTypeLabel(cert.type)}</Text>
+                      <Text style={styles.certItemDate} numberOfLines={1}>
                         {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
                       </Text>
                     </View>
                   </View>
                   {cert.amount && (
-                    <Text style={styles.certItemAmount}>₹{cert.amount}</Text>
+                    <Text style={styles.certItemAmount} numberOfLines={1}>₹{cert.amount}</Text>
                   )}
                   <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
                 </TouchableOpacity>
@@ -512,7 +623,7 @@ export default function WorkingMemberProfile({ navigation }) {
                   style={styles.viewAllCertificates}
                   onPress={() => setShowAllCertificates(!showAllCertificates)}
                 >
-                  <Text style={styles.viewAllText}>
+                  <Text style={styles.viewAllText} numberOfLines={1}>
                     {showAllCertificates ? 'Show Less' : `View All ${certificates.length} Certificates`}
                   </Text>
                   <MaterialIcons 
@@ -592,9 +703,9 @@ export default function WorkingMemberProfile({ navigation }) {
             <View style={styles.moreSettingsIcon}>
               <MaterialIcons name="settings" size={24} color="#ffffff" />
             </View>
-            <View>
+            <View style={styles.moreSettingsTextContainer}>
               <Text style={styles.moreSettingsTitle}>More Settings</Text>
-              <Text style={styles.moreSettingsSubtitle}>Applications, Classes & Organisation</Text>
+              <Text style={styles.moreSettingsSubtitle} numberOfLines={1}>Applications, Classes & Organisation</Text>
             </View>
           </View>
           <MaterialIcons name="chevron-right" size={24} color="#ffffff" />
@@ -626,7 +737,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
 
-  // Purple Header
   headerCard: {
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
@@ -649,11 +759,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
   editButton: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    paddingHorizontal: 4,
   },
 
   scrollView: {
@@ -723,10 +835,188 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1f2937',
     marginTop: 8,
+    maxWidth: width - 60,
   },
   profileBio: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
+    color: '#6b7280',
+    maxWidth: width - 60,
+  },
+
+  // Identity Card Styles
+  idCardWrapper: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  idCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  watermarkContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.1,
+  },
+  idCardTopSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  idCardLeftLogo: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  idCardRightLogo: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  idCardLogoImage: {
+    width: 50,
+    height: 50,
+  },
+  idCardCenterTitle: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  idCardMainTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 16,
+    color: '#1f2937',
+    textAlign: 'center',
+  },
+  idCardSubTitle: {
+    fontFamily: Fonts.Regular,
+    fontSize: 10,
+    color: '#4b5563',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  idCardRegNo: {
+    fontFamily: Fonts.Regular,
+    fontSize: 9,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  idCardIdentityTitle: {
+    alignItems: 'center',
+    marginVertical: 6,
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  idCardIdentityText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 18,
+    color: '#1f2937',
+    letterSpacing: 2,
+  },
+  idCardBody: {
+    flexDirection: 'row',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  idCardLeftFields: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  idCardField: {
+    marginBottom: 4,
+  },
+  idCardFieldLabel: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#4b5563',
+  },
+  idCardFieldValue: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#1f2937',
+    marginLeft: 4,
+  },
+  idCardStatusValue: {
+    color: '#10b981',
+    fontFamily: Fonts.SemiBold,
+  },
+  idCardRightPhoto: {
+    width: 90,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingLeft: 8,
+  },
+  idCardPhoto: {
+    width: 140,
+    height: 160,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginLeft: -50
+  },
+  idCardPhotoPlaceholder: {
+    width: 80,
+    height: 90,
+    borderRadius: 4,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  idCardPhotoLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 8,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  idCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  idCardFooterText: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 11,
+    color: '#4b5563',
+  },
+  idCardFooterCenter: {
+    alignItems: 'center',
+  },
+  idCardSignatureLine: {
+    width: 80,
+    height: 1,
+    backgroundColor: '#9ca3af',
+    marginBottom: 2,
+  },
+  idCardSignatureLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 8,
     color: '#6b7280',
   },
 
@@ -819,185 +1109,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  // Professional ID Card
-  idCardWrapper: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  idCard: {
-    width: '100%',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  idCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  idCardLogoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  idCardLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  idCardOrgName: {
-    fontFamily: Fonts.Bold,
-    fontSize: 20,
-    color: '#ffffff',
-    letterSpacing: 2,
-  },
-  idCardBadge: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  idCardBadgeText: {
-    fontFamily: Fonts.Bold,
-    fontSize: 11,
-    color: '#ffffff',
-    letterSpacing: 1,
-  },
-  idCardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-  },
-  idCardPhotoContainer: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  idCardPhoto: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.5)',
-  },
-  idCardPhotoPlaceholder: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.5)',
-  },
-  idCardInfo: {
-    flex: 1,
-  },
-  idCardName: {
-    fontFamily: Fonts.Bold,
-    fontSize: 18,
-    color: '#ffffff',
-  },
-  idCardRole: {
-    fontFamily: Fonts.Regular,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 2,
-  },
-  idCardIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  idCardIdText: {
-    fontFamily: 'monospace',
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-  },
-  idCardDeptRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 2,
-  },
-  idCardDeptText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  idCardDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginVertical: 8,
-  },
-  idCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 4,
-    paddingVertical: 4,
-  },
-  idCardDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  idCardDetailText: {
-    fontFamily: Fonts.Regular,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.8)',
-    maxWidth: width * 0.25,
-  },
-  idCardBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  idCardStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  idCardStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#34d399',
-    shadowColor: '#34d399',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-  },
-  idCardStatusText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 11,
-    color: '#34d399',
-    letterSpacing: 1,
-  },
-  idCardValidUntil: {
-    fontFamily: Fonts.Regular,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-  },
-
   // Certificates Section
   certHeader: {
     flexDirection: 'row',
@@ -1009,6 +1120,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   certCount: {
     fontFamily: Fonts.Regular,
@@ -1041,6 +1153,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   certItemContent: {
     flex: 1,
@@ -1054,6 +1167,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'wrap',
   },
   certItemType: {
     fontFamily: Fonts.Regular,
@@ -1073,6 +1187,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#10b981',
+    flexShrink: 0,
   },
   noCertContainer: {
     alignItems: 'center',
@@ -1103,11 +1218,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   settingLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    flexShrink: 1,
   },
   versionText: {
     fontFamily: Fonts.Regular,
@@ -1135,6 +1252,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+  },
+  moreSettingsTextContainer: {
+    flex: 1,
   },
   moreSettingsIcon: {
     width: 44,
@@ -1143,6 +1264,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   moreSettingsTitle: {
     fontFamily: Fonts.SemiBold,

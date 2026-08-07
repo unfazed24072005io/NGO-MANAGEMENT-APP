@@ -345,11 +345,12 @@ export default function ECommerceManagement({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -358,6 +359,7 @@ export default function ECommerceManagement({ navigation }) {
     <TouchableOpacity
       style={[styles.filterChip, active && styles.filterChipActive]}
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
         {label}
@@ -376,7 +378,7 @@ export default function ECommerceManagement({ navigation }) {
           </View>
         )}
         <View style={styles.productInfo}>
-          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
           <Text style={styles.productCategory}>{product.category}</Text>
           <View style={styles.productPriceContainer}>
             {product.discount > 0 ? (
@@ -429,6 +431,7 @@ export default function ECommerceManagement({ navigation }) {
             setFormData(product);
             setModalVisible(true);
           }}
+          activeOpacity={0.7}
         >
           <MaterialIcons name="edit" size={14} color="#ffffff" />
           <Text style={styles.actionButtonText}>Edit</Text>
@@ -436,6 +439,7 @@ export default function ECommerceManagement({ navigation }) {
         <TouchableOpacity 
           style={[styles.actionButton, styles.deleteButton]} 
           onPress={() => handleDeleteProduct(product.id)}
+          activeOpacity={0.7}
         >
           <MaterialIcons name="delete" size={14} color="#ffffff" />
           <Text style={styles.actionButtonText}>Delete</Text>
@@ -451,6 +455,7 @@ export default function ECommerceManagement({ navigation }) {
         setSelectedOrder(order);
         setOrderModalVisible(true);
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.orderHeader}>
         <Text style={styles.orderId}>Order #{order.id?.slice(0, 8)}</Text>
@@ -481,7 +486,7 @@ export default function ECommerceManagement({ navigation }) {
           </View>
         )}
         <View style={styles.inventoryInfo}>
-          <Text style={styles.inventoryName}>{item.name}</Text>
+          <Text style={styles.inventoryName} numberOfLines={1}>{item.name}</Text>
           <Text style={styles.inventoryCategory}>{item.category}</Text>
           <Text style={styles.inventoryPrice}>₹{item.price}</Text>
           {item.sizes && item.sizes.length > 0 && (
@@ -522,6 +527,7 @@ export default function ECommerceManagement({ navigation }) {
               resetForm();
               setModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="add" size={20} color="#ffffff" />
           </TouchableOpacity>
@@ -529,7 +535,7 @@ export default function ECommerceManagement({ navigation }) {
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder={
@@ -540,10 +546,11 @@ export default function ECommerceManagement({ navigation }) {
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -558,6 +565,7 @@ export default function ECommerceManagement({ navigation }) {
               setSearchQuery('');
               handleSearch('');
             }}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="inventory" size={16} color={activeTab === 'products' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'products' && styles.activeTabText]}>
@@ -572,6 +580,7 @@ export default function ECommerceManagement({ navigation }) {
               setSearchQuery('');
               handleSearch('');
             }}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="shopping-bag" size={16} color={activeTab === 'orders' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'orders' && styles.activeTabText]}>
@@ -586,6 +595,7 @@ export default function ECommerceManagement({ navigation }) {
               setSearchQuery('');
               handleSearch('');
             }}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="warehouse" size={16} color={activeTab === 'inventory' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'inventory' && styles.activeTabText]}>
@@ -674,6 +684,7 @@ export default function ECommerceManagement({ navigation }) {
                   resetForm();
                   setModalVisible(true);
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.emptyBtnText}>Add your first product</Text>
               </TouchableOpacity>
@@ -691,7 +702,7 @@ export default function ECommerceManagement({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingProduct ? 'Edit Product' : 'Add Product'}
@@ -708,6 +719,7 @@ export default function ECommerceManagement({ navigation }) {
                 value={formData.name}
                 onChangeText={(text) => setFormData({...formData, name: text})}
                 placeholder="Enter product name"
+                textAlignVertical="center"
               />
             </View>
 
@@ -719,6 +731,7 @@ export default function ECommerceManagement({ navigation }) {
                 onChangeText={(text) => setFormData({...formData, shortDescription: text})}
                 placeholder="Brief description for product listing"
                 maxLength={100}
+                textAlignVertical="center"
               />
             </View>
 
@@ -731,6 +744,7 @@ export default function ECommerceManagement({ navigation }) {
                 placeholder="Full product description, features, benefits..."
                 multiline
                 numberOfLines={4}
+                textAlignVertical="top"
               />
             </View>
 
@@ -743,6 +757,7 @@ export default function ECommerceManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, price: text})}
                   placeholder="₹"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -753,6 +768,7 @@ export default function ECommerceManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, stock: text})}
                   placeholder="0"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -765,6 +781,7 @@ export default function ECommerceManagement({ navigation }) {
                   value={formData.category}
                   onChangeText={(text) => setFormData({...formData, category: text})}
                   placeholder="Category"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -774,6 +791,7 @@ export default function ECommerceManagement({ navigation }) {
                   value={formData.color}
                   onChangeText={(text) => setFormData({...formData, color: text})}
                   placeholder="e.g., Black, Blue"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -787,6 +805,7 @@ export default function ECommerceManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, discount: text})}
                   placeholder="0"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -795,12 +814,14 @@ export default function ECommerceManagement({ navigation }) {
                   <TouchableOpacity 
                     style={[styles.discountTypeOption, formData.discountType === 'percentage' && styles.discountTypeActive]}
                     onPress={() => setFormData({...formData, discountType: 'percentage'})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.discountTypeText, formData.discountType === 'percentage' && styles.discountTypeTextActive]}>%</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.discountTypeOption, formData.discountType === 'fixed' && styles.discountTypeActive]}
                     onPress={() => setFormData({...formData, discountType: 'fixed'})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.discountTypeText, formData.discountType === 'fixed' && styles.discountTypeTextActive]}>₹</Text>
                   </TouchableOpacity>
@@ -819,6 +840,7 @@ export default function ECommerceManagement({ navigation }) {
                       (formData.sizes || []).includes(size) && styles.sizeOptionActive
                     ]}
                     onPress={() => toggleSize(size)}
+                    activeOpacity={0.7}
                   >
                     <Text style={[
                       styles.sizeOptionText,
@@ -839,6 +861,7 @@ export default function ECommerceManagement({ navigation }) {
                   value={formData.material}
                   onChangeText={(text) => setFormData({...formData, material: text})}
                   placeholder="e.g., Cotton, Leather"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -849,6 +872,7 @@ export default function ECommerceManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, weight: text})}
                   placeholder="e.g., 250"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -860,12 +884,13 @@ export default function ECommerceManagement({ navigation }) {
                 value={formData.dimensions}
                 onChangeText={(text) => setFormData({...formData, dimensions: text})}
                 placeholder="e.g., 10x15x5 cm"
+                textAlignVertical="center"
               />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Images</Text>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImages} activeOpacity={0.7}>
                 <MaterialIcons name="photo-library" size={20} color="#FF7722" />
                 <Text style={styles.uploadButtonText}>Upload Images</Text>
               </TouchableOpacity>
@@ -876,6 +901,7 @@ export default function ECommerceManagement({ navigation }) {
                     <TouchableOpacity 
                       style={styles.removeImageButton}
                       onPress={() => removeImage(index)}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="close" size={12} color="#ffffff" />
                     </TouchableOpacity>
@@ -891,6 +917,7 @@ export default function ECommerceManagement({ navigation }) {
                   <TouchableOpacity 
                     style={[styles.statusOption, formData.status === 'active' && styles.statusOptionActive]}
                     onPress={() => setFormData({...formData, status: 'active'})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.statusOptionText, formData.status === 'active' && styles.statusOptionTextActive]}>
                       Active
@@ -899,6 +926,7 @@ export default function ECommerceManagement({ navigation }) {
                   <TouchableOpacity 
                     style={[styles.statusOption, formData.status === 'inactive' && styles.statusOptionActive]}
                     onPress={() => setFormData({...formData, status: 'inactive'})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.statusOptionText, formData.status === 'inactive' && styles.statusOptionTextActive]}>
                       Inactive
@@ -908,16 +936,18 @@ export default function ECommerceManagement({ navigation }) {
               </View>
               <View style={[styles.formField, styles.formHalf]}>
                 <Text style={styles.formLabel}>Featured</Text>
-                <Switch
-                  value={formData.featured}
-                  onValueChange={(value) => setFormData({...formData, featured: value})}
-                  trackColor={{ false: '#767577', true: '#FF7722' }}
-                  thumbColor={formData.featured ? '#ffffff' : '#f4f3f4'}
-                />
+                <View style={styles.switchWrapper}>
+                  <Switch
+                    value={formData.featured}
+                    onValueChange={(value) => setFormData({...formData, featured: value})}
+                    trackColor={{ false: '#767577', true: '#FF7722' }}
+                    thumbColor={formData.featured ? '#ffffff' : '#f4f3f4'}
+                  />
+                </View>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSaveProduct} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSaveProduct} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>
                 {loading ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
               </Text>
@@ -993,6 +1023,7 @@ export default function ECommerceManagement({ navigation }) {
                       <TouchableOpacity 
                         style={[styles.orderActionButton, styles.orderActionComplete]}
                         onPress={() => updateOrderStatus(selectedOrder.id, 'completed')}
+                        activeOpacity={0.7}
                       >
                         <MaterialIcons name="check-circle" size={16} color="#ffffff" />
                         <Text style={styles.orderActionText}>Complete</Text>
@@ -1000,6 +1031,7 @@ export default function ECommerceManagement({ navigation }) {
                       <TouchableOpacity 
                         style={[styles.orderActionButton, styles.orderActionCancel]}
                         onPress={() => updateOrderStatus(selectedOrder.id, 'cancelled')}
+                        activeOpacity={0.7}
                       >
                         <MaterialIcons name="cancel" size={16} color="#ffffff" />
                         <Text style={styles.orderActionText}>Cancel</Text>
@@ -1010,6 +1042,7 @@ export default function ECommerceManagement({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.orderActionButton, styles.orderActionProcess]}
                       onPress={() => updateOrderStatus(selectedOrder.id, 'processing')}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="settings" size={16} color="#ffffff" />
                       <Text style={styles.orderActionText}>Process</Text>
@@ -1055,6 +1088,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -1089,6 +1124,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activeTabText: {
     color: '#ffffff',
@@ -1101,7 +1138,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -1110,26 +1147,30 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
   statsContainer: {
-    maxHeight: 70,
+    maxHeight: 65,
     marginBottom: 8,
   },
   statsContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 10,
+    padding: 6,
     minWidth: 70,
     width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 65,
+    height: 58,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -1138,24 +1179,28 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   statIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 14,
+    fontSize: 13,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Filter Chips inside header
@@ -1181,6 +1226,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   filterChipTextActive: {
     color: '#FF7722',
@@ -1188,8 +1235,9 @@ const styles = StyleSheet.create({
 
   // List Content
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   // Product Card
@@ -1198,7 +1246,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -1227,18 +1275,24 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productCategory: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productShortDesc: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productPriceContainer: {
     flexDirection: 'row',
@@ -1250,15 +1304,19 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10B981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productPriceDiscounted: {
-    color: '#1feb10',
+    color: '#059669',
   },
   productOriginalPrice: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productFooter: {
     flexDirection: 'row',
@@ -1279,11 +1337,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productStock: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   featuredBadge: {
     flexDirection: 'row',
@@ -1298,6 +1360,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#F59E0B',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   discountBadge: {
     backgroundColor: '#EF4444',
@@ -1309,6 +1373,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   sizesBadge: {
     backgroundColor: '#FFF5EB',
@@ -1320,6 +1386,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     color: '#FF7722',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productActions: {
     flexDirection: 'row',
@@ -1330,6 +1398,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1345,6 +1414,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Order Card
@@ -1353,6 +1424,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -1366,6 +1438,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderStatusBadge: {
     paddingHorizontal: 8,
@@ -1376,23 +1450,31 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderCustomer: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#10B981',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9CA3AF',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Inventory Card
@@ -1401,6 +1483,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -1429,24 +1512,32 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inventoryCategory: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inventoryPrice: {
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#10B981',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inventorySizes: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inventoryFooter: {
     flexDirection: 'row',
@@ -1467,11 +1558,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inventoryStockCount: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -1484,6 +1579,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyBtn: {
     paddingHorizontal: 20,
@@ -1495,6 +1592,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
@@ -1520,6 +1619,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formField: {
     marginBottom: 12,
@@ -1529,6 +1630,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: {
     borderWidth: 1,
@@ -1538,6 +1641,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#F9FAFB',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   formTextArea: {
     height: 80,
@@ -1566,6 +1670,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#FF7722',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   imagePreviewContainer: {
     flexDirection: 'row',
@@ -1597,6 +1703,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  switchWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 4,
+  },
   statusOption: {
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1612,6 +1723,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#6B7280',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusOptionTextActive: {
     color: '#ffffff',
@@ -1637,6 +1750,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   sizeOptionTextActive: {
     color: '#ffffff',
@@ -1661,6 +1776,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   discountTypeTextActive: {
     color: '#ffffff',
@@ -1670,12 +1787,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Order Detail Modal
@@ -1687,11 +1807,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDetailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 16,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderAmountLarge: {
     fontFamily: Fonts.Bold,
@@ -1710,17 +1834,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderItemQty: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6B7280',
     marginHorizontal: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderItemPrice: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#10B981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderActionsContainer: {
     flexDirection: 'row',
@@ -1734,6 +1864,7 @@ const styles = StyleSheet.create({
   orderActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -1752,5 +1883,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 13,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

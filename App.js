@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, SafeAreaView, View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Modal } from 'react-native';
+import { Platform, SafeAreaView, View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Modal, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import WorkingMemberMemberDetail from './screens/workingMember/WorkingMemberMemberDetail';
 import { createStackNavigator } from '@react-navigation/stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import { loadFonts, Fonts } from './config/fonts';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
+import { Asset } from 'expo-asset';
+import * as Font from 'expo-font';
 
 // Import the new tab screens
 import HomeScreen from './screens/HomeScreen';
@@ -101,44 +106,109 @@ import ComplaintsScreen from './screens/admin/ComplaintsScreen';
 import CartScreen from './screens/member/CartScreen';
 import CheckoutScreen from './screens/member/CheckoutScreen';
 
+// Splash Screen Component
+function CustomSplashScreen() {
+  return (
+    <View style={styles.splashContainer}>
+      <Image
+        source={require('./assets/splash.png')}
+        style={styles.splashImage}
+        resizeMode="contain"
+      />
+      <ActivityIndicator size="large" color="#8b5cf6" style={styles.splashLoader} />
+    </View>
+  );
+}
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// ============ PUBLIC TABS (Home, Shop, Events, Profile) - SAFFRON THEME ============
+// Custom Tab Bar Component with Safe Area
+const CustomTabBar = ({ state, descriptors, navigation, tabs, activeColor, inactiveColor, notificationButton, notificationColor }) => {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[
+      styles.tabBarContainer,
+      {
+        paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : Math.max(insets.bottom, 8),
+        height: Platform.OS === 'ios' ? 85 + Math.max(insets.bottom, 0) : 75 + Math.max(insets.bottom, 0),
+      }
+    ]}>
+      {tabs.map((tab, index) => {
+        const isFocused = state.index === index;
+        const route = state.routes[index];
+        
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={index}
+            style={styles.tabButton}
+            onPress={onPress}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons 
+              name={tab.icon} 
+              size={26} 
+              color={isFocused ? activeColor : inactiveColor} 
+            />
+            <Text style={[
+              styles.tabLabel,
+              { color: isFocused ? activeColor : inactiveColor }
+            ]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+
+      {notificationButton && (
+        <View style={[
+          styles.notificationWrapper,
+          { bottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 0) + 30 : Math.max(insets.bottom, 0) + 30 }
+        ]}>
+          <TouchableOpacity
+            style={[styles.notificationButton, { backgroundColor: notificationColor || activeColor }]}
+            onPress={notificationButton.onPress}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="notifications" size={28} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ============ PUBLIC TABS ============
 function PublicTabs() {
+  const tabs = [
+    { name: 'Home', icon: 'home', label: 'Home' },
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home';
-          } else if (route.name === 'Shop') {
-            iconName = focused ? 'shopping-bag' : 'shopping-bag';
-          } else if (route.name === 'Events') {
-            iconName = focused ? 'event' : 'event';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person';
-          }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#FF7722',
-        tabBarInactiveTintColor: '#9ca3af',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#FF7722"
+          inactiveColor="#9ca3af"
+        />
+      )}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
@@ -148,42 +218,32 @@ function PublicTabs() {
 
 // ============ DONATION TABS ============
 function DonationTabs() {
+  const tabs = [
+    { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+    { name: 'Donate', icon: 'favorite', label: 'Donate' },
+    { name: 'MyDonations', icon: 'receipt', label: 'History' },
+    { name: 'Company', icon: 'business', label: 'Company' },
+    { name: 'Certificate', icon: 'card-membership', label: 'Certificate' },
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Dashboard') iconName = 'dashboard';
-          else if (route.name === 'Donate') iconName = 'favorite';
-          else if (route.name === 'MyDonations') iconName = 'receipt';
-          else if (route.name === 'Certificate') iconName = 'card-membership';
-          else if (route.name === 'Company') iconName = 'business';
-          else if (route.name === 'Profile') iconName = 'person';
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#10b981',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#10b981"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
-      <Tab.Screen name="Dashboard" component={DonationDashboard} options={{ title: 'Home' }} />
+      <Tab.Screen name="Dashboard" component={DonationDashboard} />
       <Tab.Screen name="Donate" component={DonateScreen} />
-      <Tab.Screen name="MyDonations" component={MyDonations} options={{ title: 'History' }} />
+      <Tab.Screen name="MyDonations" component={MyDonations} />
       <Tab.Screen name="Company" component={DonorCompany} />
-      <Tab.Screen name="Certificate" component={DonationCertificate} options={{ title: 'Certificate' }} />
+      <Tab.Screen name="Certificate" component={DonationCertificate} />
       <Tab.Screen name="Profile" component={DonorProfile} />
     </Tab.Navigator>
   );
@@ -191,33 +251,23 @@ function DonationTabs() {
 
 // ============ ADMIN NOTIFICATION TABS ============
 function AdminNotificationTabs() {
+  const tabs = [
+    { name: 'Notifications', icon: 'notifications', label: 'Notifications' },
+    { name: 'Suggestions', icon: 'lightbulb', label: 'Suggestions' },
+    { name: 'Complaints', icon: 'report-problem', label: 'Complaints' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Notifications') iconName = 'notifications';
-          else if (route.name === 'Suggestions') iconName = 'lightbulb';
-          else if (route.name === 'Complaints') iconName = 'report-problem';
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#FF7722',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#FF7722"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
@@ -228,33 +278,23 @@ function AdminNotificationTabs() {
 
 // ============ MEMBER NOTIFICATION TABS ============
 function MemberNotificationTabs() {
+  const tabs = [
+    { name: 'Notifications', icon: 'notifications', label: 'Notifications' },
+    { name: 'Suggestions', icon: 'lightbulb', label: 'Suggestions' },
+    { name: 'Complaints', icon: 'report-problem', label: 'Complaints' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Notifications') iconName = 'notifications';
-          else if (route.name === 'Suggestions') iconName = 'lightbulb';
-          else if (route.name === 'Complaints') iconName = 'report-problem';
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#3b82f6"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
@@ -265,33 +305,23 @@ function MemberNotificationTabs() {
 
 // ============ WORKING MEMBER NOTIFICATION TABS ============
 function WorkingMemberNotificationTabs() {
+  const tabs = [
+    { name: 'Notifications', icon: 'notifications', label: 'Notifications' },
+    { name: 'Suggestions', icon: 'lightbulb', label: 'Suggestions' },
+    { name: 'Complaints', icon: 'report-problem', label: 'Complaints' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Notifications') iconName = 'notifications';
-          else if (route.name === 'Suggestions') iconName = 'lightbulb';
-          else if (route.name === 'Complaints') iconName = 'report-problem';
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#8b5cf6',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#8b5cf6"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
       <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Suggestions" component={SuggestionsScreen} />
@@ -300,51 +330,32 @@ function WorkingMemberNotificationTabs() {
   );
 }
 
-// ============ ORGANIZATION SETTINGS TABS (SAFFRON THEME) ============
-// ============ ORGANIZATION SETTINGS TABS (SAFFRON THEME) ============
+// ============ ORGANIZATION SETTINGS TABS ============
 function OrganizationSettingsTabs() {
+  const tabs = [
+    { name: 'Dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { name: 'WorkingMembers', icon: 'people-outline', label: 'Working' },
+    { name: 'Finances', icon: 'attach-money', label: 'Finances' },
+    { name: 'Commission', icon: 'workspace-premium', label: 'Commission' },
+    { name: 'Employees', icon: 'people', label: 'Employees' },
+    { name: 'Classes', icon: 'video-library', label: 'Classes' },
+    { name: 'Quotes', icon: 'format-quote', label: 'Quotes' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Dashboard') {
-            iconName = 'dashboard';
-          } else if (route.name === 'WorkingMembers') {
-            iconName = 'people-outline';
-          } else if (route.name === 'Finances') {
-            iconName = 'attach-money';
-          } else if (route.name === 'Commission') {
-            iconName = 'workspace-premium';
-          } else if (route.name === 'Employees') {
-            iconName = 'people';
-          } else if (route.name === 'Classes') {
-            iconName = 'video-library';
-          } else if (route.name === 'Quotes') {
-            iconName = 'format-quote';
-          }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#FF7722',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#FF7722"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
       <Tab.Screen name="Dashboard" component={CompanyManagement} />
-      <Tab.Screen name="WorkingMembers" component={WorkingMemberManagement} options={{ title: 'Working' }} />
+      <Tab.Screen name="WorkingMembers" component={WorkingMemberManagement} />
       <Tab.Screen name="Finances" component={FinancesManagement} />
       <Tab.Screen name="Commission" component={CommissionManagement} />
       <Tab.Screen name="Employees" component={EmployeeManagement} />
@@ -356,43 +367,28 @@ function OrganizationSettingsTabs() {
 
 // ============ MEMBER MORE SETTINGS TABS ============
 function MemberMoreSettingsTabs() {
+  const tabs = [
+    { name: 'Applications', icon: 'handshake', label: 'Apps' },
+    { name: 'Classes', icon: 'video-library', label: 'Classes' },
+    { name: 'Organisation', icon: 'business', label: 'Org' },
+    { name: 'Quotes', icon: 'format-quote', label: 'Quotes' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Applications') {
-            iconName = focused ? 'handshake' : 'handshake';
-          } else if (route.name === 'Classes') {
-            iconName = focused ? 'video-library' : 'video-library';
-          } else if (route.name === 'Organisation') {
-            iconName = focused ? 'business' : 'business';
-          } else if (route.name === 'Quotes') {
-            iconName = focused ? 'format-quote' : 'format-quote';
-          }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#3b82f6',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#3b82f6"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
-      <Tab.Screen name="Applications" component={MemberApplications} options={{ title: 'Apps' }} />
+      <Tab.Screen name="Applications" component={MemberApplications} />
       <Tab.Screen name="Classes" component={MemberClasses} />
-      <Tab.Screen name="Organisation" component={CompanyManagement} options={{ title: 'Org' }} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} />
       <Tab.Screen name="Quotes" component={MemberQuotes} />
     </Tab.Navigator>
   );
@@ -400,46 +396,30 @@ function MemberMoreSettingsTabs() {
 
 // ============ WORKING MEMBER MORE SETTINGS TABS ============
 function WorkingMemberMoreSettingsTabs() {
+  const tabs = [
+    { name: 'Applications', icon: 'handshake', label: 'Apps' },
+    { name: 'Classes', icon: 'video-library', label: 'Classes' },
+    { name: 'Commission', icon: 'attach-money', label: 'Commission' },
+    { name: 'Organisation', icon: 'business', label: 'Org' },
+    { name: 'Quotes', icon: 'format-quote', label: 'Quotes' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Applications') {
-            iconName = focused ? 'handshake' : 'handshake';
-          } else if (route.name === 'Classes') {
-            iconName = focused ? 'video-library' : 'video-library';
-          } else if (route.name === 'Organisation') {
-            iconName = focused ? 'business' : 'business';
-          } else if (route.name === 'Commission') {
-            iconName = focused ? 'attach-money' : 'attach-money';
-          } else if (route.name === 'Quotes') {
-            iconName = focused ? 'format-quote' : 'format-quote';
-          }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#8b5cf6',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#8b5cf6"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
-      <Tab.Screen name="Applications" component={WorkingMemberApplications} options={{ title: 'Apps' }} />
+      <Tab.Screen name="Applications" component={WorkingMemberApplications} />
       <Tab.Screen name="Classes" component={WorkingMemberClasses} />
       <Tab.Screen name="Commission" component={WorkingMemberCommission} />
-      <Tab.Screen name="Organisation" component={CompanyManagement} options={{ title: 'Org' }} />
+      <Tab.Screen name="Organisation" component={CompanyManagement} />
       <Tab.Screen name="Quotes" component={WorkingMemberQuotes} />
     </Tab.Navigator>
   );
@@ -447,35 +427,22 @@ function WorkingMemberMoreSettingsTabs() {
 
 // ============ EMPLOYEE TABS ============
 function EmployeeTabsNav() {
+  const tabs = [
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+    { name: 'Tasks', icon: 'assignment', label: 'Tasks' },
+  ];
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-          if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person';
-          } else if (route.name === 'Tasks') {
-            iconName = focused ? 'assignment' : 'assignment';
-          }
-          return <MaterialIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#FF7722',
-        tabBarInactiveTintColor: '#7f8c8d',
-        tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopWidth: 1,
-          borderTopColor: '#e8ecf1',
-          height: 75,
-          paddingBottom: 8,
-          paddingTop: 6,
-        },
-        tabBarLabelStyle: {
-          fontFamily: Fonts.SemiBold,
-          fontSize: 11,
-          marginTop: 2,
-        },
-        headerShown: false,
-      })}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          tabs={tabs}
+          activeColor="#FF7722"
+          inactiveColor="#7f8c8d"
+        />
+      )}
     >
       <Tab.Screen name="Profile" component={EmployeeProfile} />
       <Tab.Screen name="Tasks" component={EmployeeTasks} />
@@ -483,391 +450,191 @@ function EmployeeTabsNav() {
   );
 }
 
-// ============ ADMIN TABS (SAFFRON THEME) ============
+// ============ ADMIN TABS ============
 function AdminTabs() {
+  const tabs = [
+    { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+    { name: 'Members', icon: 'people', label: 'Members' },
+    { name: 'E-Commerce', icon: 'shopping-cart', label: 'Shop' },
+    { name: 'Events', icon: 'event', label: 'Events' },
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+  ];
+
+  const notificationButton = {
+    onPress: () => {
+      // Navigate to notification tabs
+      navigationRef?.navigate('AdminNotificationTabs');
+    }
+  };
+
   let navigationRef = null;
 
   return (
-    <>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
-            if (route.name === 'Dashboard') iconName = 'dashboard';
-            else if (route.name === 'Members') iconName = 'people';
-            else if (route.name === 'E-Commerce') iconName = 'shopping-cart';
-            else if (route.name === 'Events') iconName = 'event';
-            else if (route.name === 'Profile') iconName = 'person';
-            return <MaterialIcons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#FF7722',
-          tabBarInactiveTintColor: '#7f8c8d',
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopWidth: 1,
-            borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 8,
-            paddingTop: 6,
-          },
-          tabBarLabelStyle: {
-            fontFamily: Fonts.SemiBold,
-            fontSize: 11,
-            marginTop: 2,
-          },
-          headerShown: false,
-        })}
-        tabBar={(props) => {
-          const { state, navigation } = props;
-          navigationRef = navigation;
-          
-          const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
-            { name: 'Members', icon: 'people', label: 'Members' },
-            { name: 'E-Commerce', icon: 'shopping-cart', label: 'Shop' },
-            { name: 'Events', icon: 'event', label: 'Events' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
-          ];
-
-          return (
-            <View style={styles.tabBarContainer}>
-              {tabs.map((tab, index) => {
-                const isFocused = state.index === index;
-                const route = state.routes[index];
-                
-                const onPress = () => {
-                  const event = navigation.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-
-                  if (!isFocused && !event.defaultPrevented) {
-                    navigation.navigate(route.name);
-                  }
-                };
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.tabButton}
-                    onPress={onPress}
-                  >
-                    <MaterialIcons 
-                      name={tab.icon} 
-                      size={26} 
-                      color={isFocused ? '#FF7722' : '#7f8c8d'} 
-                    />
-                    <Text style={[
-                      styles.tabLabel,
-                      { color: isFocused ? '#FF7722' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <View style={styles.notificationWrapper}>
-                <TouchableOpacity
-                  style={styles.adminNotificationButton}
-                  onPress={() => {
-                    if (navigationRef) {
-                      navigationRef.navigate('AdminNotificationTabs');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="notifications" size={28} color="#ffffff" />
-                  <Text style={styles.notificationLabel}></Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      >
-        <Tab.Screen name="Dashboard" component={AdminDashboard} />
-        <Tab.Screen name="Members" component={MemberListManagement} />
-        <Tab.Screen name="E-Commerce" component={ECommerceManagement} />
-        <Tab.Screen name="Events" component={EventsManagement} />
-        <Tab.Screen name="Profile" component={AdminProfile} />
-      </Tab.Navigator>
-    </>
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => {
+        navigationRef = props.navigation;
+        return (
+          <CustomTabBar
+            {...props}
+            tabs={tabs}
+            activeColor="#FF7722"
+            inactiveColor="#7f8c8d"
+            notificationButton={notificationButton}
+            notificationColor="#FF7722"
+          />
+        );
+      }}
+    >
+      <Tab.Screen name="Dashboard" component={AdminDashboard} />
+      <Tab.Screen name="Members" component={MemberListManagement} />
+      <Tab.Screen name="E-Commerce" component={ECommerceManagement} />
+      <Tab.Screen name="Events" component={EventsManagement} />
+      <Tab.Screen name="Profile" component={AdminProfile} />
+    </Tab.Navigator>
   );
 }
 
-// ============ MEMBER TABS ============
 // ============ MEMBER TABS ============
 function MemberTabs() {
+  const tabs = [
+    { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+    { name: 'Events', icon: 'event', label: 'Events' },
+    { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
+    { name: 'Donate', icon: 'favorite', label: 'Donate' },
+    { name: 'Orders', icon: 'receipt', label: 'Orders' },
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+  ];
+
+  const notificationButton = {
+    onPress: () => navigationRef?.navigate('MemberNotificationTabs')
+  };
+
   let navigationRef = null;
 
   return (
-    <>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
-            if (route.name === 'Dashboard') iconName = 'dashboard';
-            else if (route.name === 'Events') iconName = 'event';
-            else if (route.name === 'Shop') iconName = 'shopping-cart';
-            else if (route.name === 'Donate') iconName = 'favorite';
-            else if (route.name === 'Orders') iconName = 'receipt';
-            else if (route.name === 'Profile') iconName = 'person';
-            return <MaterialIcons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#3b82f6',
-          tabBarInactiveTintColor: '#7f8c8d',
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopWidth: 1,
-            borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 8,
-            paddingTop: 6,
-          },
-          tabBarLabelStyle: {
-            fontFamily: Fonts.SemiBold,
-            fontSize: 11,
-            marginTop: 2,
-          },
-          headerShown: false,
-        })}
-        tabBar={(props) => {
-          const { state, navigation } = props;
-          navigationRef = navigation;
-          
-          const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
-            { name: 'Events', icon: 'event', label: 'Events' },
-            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
-            { name: 'Donate', icon: 'favorite', label: 'Donate' },
-            { name: 'Orders', icon: 'receipt', label: 'Orders' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
-          ];
-
-          return (
-            <View style={styles.tabBarContainer}>
-              {tabs.map((tab, index) => {
-                const isFocused = state.index === index;
-                const route = state.routes[index];
-                
-                const onPress = () => {
-                  const event = navigation.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-
-                  if (!isFocused && !event.defaultPrevented) {
-                    navigation.navigate(route.name);
-                  }
-                };
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.tabButton}
-                    onPress={onPress}
-                  >
-                    <MaterialIcons 
-                      name={tab.icon} 
-                      size={26} 
-                      color={isFocused ? '#3b82f6' : '#7f8c8d'} 
-                    />
-                    <Text style={[
-                      styles.tabLabel,
-                      { color: isFocused ? '#3b82f6' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <View style={styles.notificationWrapper}>
-                <TouchableOpacity
-                  style={styles.notificationButton}
-                  onPress={() => {
-                    if (navigationRef) {
-                      navigationRef.navigate('MemberNotificationTabs');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="notifications" size={28} color="#ffffff" />
-                  <Text style={styles.notificationLabel}></Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      >
-        <Tab.Screen name="Dashboard" component={MemberDashboard} />
-        <Tab.Screen name="Events" component={MemberEvents} />
-        <Tab.Screen name="Shop" component={MemberECommerce} />
-        <Tab.Screen name="Donate" component={DonationScreen} />
-        <Tab.Screen name="Orders" component={MyOrders} />
-        <Tab.Screen name="Profile" component={MemberProfile} />
-      </Tab.Navigator>
-    </>
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => {
+        navigationRef = props.navigation;
+        return (
+          <CustomTabBar
+            {...props}
+            tabs={tabs}
+            activeColor="#3b82f6"
+            inactiveColor="#7f8c8d"
+            notificationButton={notificationButton}
+            notificationColor="#3b82f6"
+          />
+        );
+      }}
+    >
+      <Tab.Screen name="Dashboard" component={MemberDashboard} />
+      <Tab.Screen name="Events" component={MemberEvents} />
+      <Tab.Screen name="Shop" component={MemberECommerce} />
+      <Tab.Screen name="Donate" component={DonationScreen} />
+      <Tab.Screen name="Orders" component={MyOrders} />
+      <Tab.Screen name="Profile" component={MemberProfile} />
+    </Tab.Navigator>
   );
 }
 
-// ============ WORKING MEMBER TABS (UPDATED WITH WALLET & ORDERS) ============
+// ============ WORKING MEMBER TABS ============
 function WorkingMemberTabs() {
+  const tabs = [
+    { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
+    { name: 'Members', icon: 'people', label: 'Members' },
+    { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
+    { name: 'Events', icon: 'event', label: 'Events' },
+    { name: 'Donate', icon: 'favorite', label: 'Donate' },
+    { name: 'Orders', icon: 'receipt', label: 'Orders' },
+    { name: 'Wallet', icon: 'account-balance-wallet', label: 'Wallet' },
+    { name: 'Profile', icon: 'person', label: 'Profile' },
+  ];
+
+  const notificationButton = {
+    onPress: () => navigationRef?.navigate('WorkingMemberNotificationTabs')
+  };
+
   let navigationRef = null;
 
   return (
-    <>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
-            if (route.name === 'Dashboard') iconName = 'dashboard';
-            else if (route.name === 'Members') iconName = 'people';
-            else if (route.name === 'Shop') iconName = 'shopping-cart';
-            else if (route.name === 'Events') iconName = 'event';
-            else if (route.name === 'Donate') iconName = 'favorite';
-            else if (route.name === 'Orders') iconName = 'receipt';
-            else if (route.name === 'Wallet') iconName = 'account-balance-wallet';
-            else if (route.name === 'Profile') iconName = 'person';
-            return <MaterialIcons name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: '#8b5cf6',
-          tabBarInactiveTintColor: '#7f8c8d',
-          tabBarStyle: {
-            backgroundColor: '#ffffff',
-            borderTopWidth: 1,
-            borderTopColor: '#e8ecf1',
-            height: 75,
-            paddingBottom: 8,
-            paddingTop: 6,
-          },
-          tabBarLabelStyle: {
-            fontFamily: Fonts.SemiBold,
-            fontSize: 11,
-            marginTop: 2,
-          },
-          headerShown: false,
-        })}
-        tabBar={(props) => {
-          const { state, navigation } = props;
-          navigationRef = navigation;
-          
-          const tabs = [
-            { name: 'Dashboard', icon: 'dashboard', label: 'Home' },
-            { name: 'Members', icon: 'people', label: 'Members' },
-            { name: 'Shop', icon: 'shopping-cart', label: 'Shop' },
-            { name: 'Events', icon: 'event', label: 'Events' },
-            { name: 'Donate', icon: 'favorite', label: 'Donate' },
-            { name: 'Orders', icon: 'receipt', label: 'Orders' },
-            { name: 'Wallet', icon: 'account-balance-wallet', label: 'Wallet' },
-            { name: 'Profile', icon: 'person', label: 'Profile' },
-          ];
-
-          return (
-            <View style={styles.tabBarContainer}>
-              {tabs.map((tab, index) => {
-                const isFocused = state.index === index;
-                const route = state.routes[index];
-                
-                const onPress = () => {
-                  const event = navigation.emit({
-                    type: 'tabPress',
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-
-                  if (!isFocused && !event.defaultPrevented) {
-                    navigation.navigate(route.name);
-                  }
-                };
-
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.tabButton}
-                    onPress={onPress}
-                  >
-                    <MaterialIcons 
-                      name={tab.icon} 
-                      size={26} 
-                      color={isFocused ? '#8b5cf6' : '#7f8c8d'} 
-                    />
-                    <Text style={[
-                      styles.tabLabel,
-                      { color: isFocused ? '#8b5cf6' : '#7f8c8d' }
-                    ]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <View style={styles.notificationWrapper}>
-                <TouchableOpacity
-                  style={styles.workingNotificationButton}
-                  onPress={() => {
-                    if (navigationRef) {
-                      navigationRef.navigate('WorkingMemberNotificationTabs');
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <MaterialIcons name="notifications" size={28} color="#ffffff" />
-                  <Text style={styles.notificationLabel}></Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          );
-        }}
-      >
-        <Tab.Screen name="Dashboard" component={WorkingMemberDashboard} />
-        <Tab.Screen name="Members" component={WorkingMemberRegisteredMembers} />
-        <Tab.Screen name="Shop" component={WorkingMemberECommerce} />
-        <Tab.Screen name="Events" component={WorkingMemberEvents} />
-        <Tab.Screen name="Donate" component={WorkingMemberDonation} />
-        <Tab.Screen name="Orders" component={WorkingMemberMyOrders} />
-        <Tab.Screen name="Wallet" component={WorkingMemberWallet} />
-        <Tab.Screen name="Profile" component={WorkingMemberProfile} />
-      </Tab.Navigator>
-    </>
+    <Tab.Navigator
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => {
+        navigationRef = props.navigation;
+        return (
+          <CustomTabBar
+            {...props}
+            tabs={tabs}
+            activeColor="#8b5cf6"
+            inactiveColor="#7f8c8d"
+            notificationButton={notificationButton}
+            notificationColor="#8b5cf6"
+          />
+        );
+      }}
+    >
+      <Tab.Screen name="Dashboard" component={WorkingMemberDashboard} />
+      <Tab.Screen name="Members" component={WorkingMemberRegisteredMembers} />
+      <Tab.Screen name="Shop" component={WorkingMemberECommerce} />
+      <Tab.Screen name="Events" component={WorkingMemberEvents} />
+      <Tab.Screen name="Donate" component={WorkingMemberDonation} />
+      <Tab.Screen name="Orders" component={WorkingMemberMyOrders} />
+      <Tab.Screen name="Wallet" component={WorkingMemberWallet} />
+      <Tab.Screen name="Profile" component={WorkingMemberProfile} />
+    </Tab.Navigator>
   );
 }
 
 // ============ MAIN APP ============
 export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    const loadAppFonts = async () => {
+    async function prepare() {
       try {
+        // Keep splash screen visible while loading
+        await SplashScreen.preventAutoHideAsync();
+
+        // Load fonts using your existing loadFonts function
         await loadFonts();
         setFontsLoaded(true);
-      } catch (error) {
-        console.error('Error loading fonts:', error);
-        setFontsLoaded(true);
+
+        // Load images/assets
+        await Asset.loadAsync([
+          require('./assets/splash.png'),
+          require('./assets/icon.png'),
+        ]);
+
+        // Artificially delay for smooth transition (optional)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (e) {
+        console.warn('Error loading app:', e);
+      } finally {
+        setAppIsReady(true);
+        // Hide splash screen
+        await SplashScreen.hideAsync();
       }
-    };
-    loadAppFonts();
+    }
+
+    prepare();
   }, []);
 
-  if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
-        <ActivityIndicator size="large" color="#FF7722" />
-      </View>
-    );
+  if (!appIsReady || !fontsLoaded) {
+    return <CustomSplashScreen />;
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+    <SafeAreaProvider>
+      <StatusBar style="auto" />
       <NavigationContainer>
         <Stack.Navigator 
           initialRouteName="PublicTabs"
           screenOptions={{ headerShown: false }}
         >
-          {/* Public Tabs - Shows Home, Shop, Events, Profile */}
+          {/* Public Tabs */}
           <Stack.Screen name="PublicTabs" component={PublicTabs} />
           
           {/* Member More Settings */}
@@ -937,7 +704,7 @@ export default function App() {
           <Stack.Screen name="WorkingMemberMemberDetail" component={WorkingMemberMemberDetail} />
         </Stack.Navigator>
       </NavigationContainer>
-    </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -947,12 +714,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e8ecf1',
-    height: 75,
-    paddingBottom: 8,
-    paddingTop: 4,
+    paddingTop: 6,
+    paddingHorizontal: 5,
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 5,
     position: 'relative',
   },
   tabButton: {
@@ -968,23 +733,15 @@ const styles = StyleSheet.create({
   },
   notificationWrapper: {
     position: 'absolute',
-    top: -35,
     left: '50%',
     marginLeft: -32,
     zIndex: 999,
     alignItems: 'center',
   },
-  notificationLabel: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 9,
-    color: '#ffffff',
-    marginTop: 1,
-  },
   notificationButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -993,30 +750,19 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  adminNotificationButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#FF7722',
+  // Splash Screen Styles
+  splashContainer: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  workingNotificationButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#8b5cf6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+  splashImage: {
+    width: 200,
+    height: 200,
+    marginBottom: 30,
+  },
+  splashLoader: {
+    marginTop: 20,
   },
 });

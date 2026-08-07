@@ -220,7 +220,7 @@ export default function OnlineClassManagement({ navigation }) {
       <View style={styles.statIconContainer}>
         <MaterialIcons name={icon} size={20} color={color} />
       </View>
-      <View>
+      <View style={styles.statTextContainer}>
         <Text style={styles.statCount}>{count}</Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
@@ -754,6 +754,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -777,6 +779,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -800,15 +805,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  statTextContainer: {
+    flex: 1,
+  },
   statCount: {
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   listContent: {
     paddingHorizontal: 16,
@@ -834,6 +846,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -843,12 +857,16 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDetails: {
     flexDirection: 'row',
@@ -864,6 +882,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classFooter: {
     flexDirection: 'row',
@@ -881,6 +901,8 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   capacityBadge: {
     flexDirection: 'row',
@@ -891,6 +913,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classActions: {
     flexDirection: 'row',
@@ -901,6 +925,7 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -919,6 +944,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     alignItems: 'center',
@@ -930,11 +957,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -958,6 +989,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formField: {
     marginBottom: 12,
@@ -974,6 +1007,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: {
     borderWidth: 1,
@@ -983,6 +1018,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formTextArea: {
     height: 80,
@@ -999,6 +1036,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   levelOptionActive: {
     backgroundColor: '#FF7722',
@@ -1008,6 +1046,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   levelOptionTextActive: {
     color: '#ffffff',
@@ -1024,6 +1064,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 28,
   },
   statusOptionActive: {
     backgroundColor: '#FF7722',
@@ -1033,6 +1075,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusOptionTextActive: {
     color: '#ffffff',
@@ -1042,12 +1086,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -1061,11 +1108,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   linkText: {
     color: '#3b82f6',
@@ -1080,6 +1131,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailActions: {
     flexDirection: 'row',
@@ -1092,6 +1145,7 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1107,5 +1161,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

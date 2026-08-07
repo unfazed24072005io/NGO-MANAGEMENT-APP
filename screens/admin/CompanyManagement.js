@@ -491,13 +491,14 @@ export default function CompanyManagement({ navigation }) {
             key={tab}
             style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
             onPress={() => setActiveTab(tab)}
+            activeOpacity={0.7}
           >
             <MaterialIcons 
               name={
                 tab === 'services' ? 'handshake' :
                 tab === 'applications' ? 'people' : 'emoji-events'
               } 
-              size={20} 
+              size={18} 
               color={activeTab === tab ? '#FF7722' : '#6b7280'} 
             />
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
@@ -571,6 +572,7 @@ export default function CompanyManagement({ navigation }) {
               <TouchableOpacity 
                 style={styles.createButton}
                 onPress={() => setCreateCompetitionModalVisible(true)}
+                activeOpacity={0.7}
               >
                 <MaterialIcons name="add" size={20} color="#ffffff" />
               </TouchableOpacity>
@@ -583,6 +585,7 @@ export default function CompanyManagement({ navigation }) {
                 <TouchableOpacity 
                   style={styles.createCompetitionButton}
                   onPress={() => setCreateCompetitionModalVisible(true)}
+                  activeOpacity={0.7}
                 >
                   <Text style={styles.createCompetitionButtonText}>Create Competition</Text>
                 </TouchableOpacity>
@@ -604,7 +607,7 @@ export default function CompanyManagement({ navigation }) {
         onRequestClose={() => setApplicationModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             {selectedApplication && (
               <>
                 <View style={styles.modalHeader}>
@@ -742,6 +745,7 @@ export default function CompanyManagement({ navigation }) {
                       setApplicationModalVisible(false);
                       openVerifyModal(selectedApplication);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="check-circle" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Verify Application</Text>
@@ -755,6 +759,7 @@ export default function CompanyManagement({ navigation }) {
                       setApplicationModalVisible(false);
                       openFundReleaseModal(selectedApplication);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="payments" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Release Fund</Text>
@@ -793,12 +798,14 @@ export default function CompanyManagement({ navigation }) {
               <TouchableOpacity 
                 style={[styles.confirmModalButton, styles.confirmCancelButton]}
                 onPress={() => setVerifyConfirmModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.confirmCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.confirmModalButton, styles.confirmVerifyButton]}
                 onPress={handleVerifyApplication}
+                activeOpacity={0.7}
               >
                 <Text style={styles.confirmVerifyText}>Verify</Text>
               </TouchableOpacity>
@@ -826,6 +833,7 @@ export default function CompanyManagement({ navigation }) {
                 onChangeText={setFundAmount}
                 keyboardType="numeric"
                 placeholder="Enter amount"
+                textAlignVertical="center"
               />
             </View>
 
@@ -838,6 +846,7 @@ export default function CompanyManagement({ navigation }) {
                 placeholder="Add remarks"
                 multiline
                 numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
 
@@ -849,6 +858,7 @@ export default function CompanyManagement({ navigation }) {
                   setFundAmount('');
                   setFundRemarks('');
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
@@ -856,6 +866,7 @@ export default function CompanyManagement({ navigation }) {
                 style={[styles.modalButton, styles.modalConfirmButton]}
                 onPress={confirmFundRelease}
                 disabled={!fundAmount}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalConfirmText}>Release Fund</Text>
               </TouchableOpacity>
@@ -894,12 +905,14 @@ export default function CompanyManagement({ navigation }) {
                 onPress={() => {
                   setFundConfirmModalVisible(false);
                 }}
+                activeOpacity={0.7}
               >
                 <Text style={styles.confirmCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.confirmModalButton, styles.confirmFundButton]}
                 onPress={handleReleaseFund}
+                activeOpacity={0.7}
               >
                 <Text style={styles.confirmFundText}>Release Fund</Text>
               </TouchableOpacity>
@@ -916,7 +929,7 @@ export default function CompanyManagement({ navigation }) {
         onRequestClose={() => setCreateCompetitionModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>Create Competition</Text>
             
             <View style={styles.field}>
@@ -926,6 +939,7 @@ export default function CompanyManagement({ navigation }) {
                 value={competitionForm.title}
                 onChangeText={(text) => setCompetitionForm({...competitionForm, title: text})}
                 placeholder="Enter competition title"
+                textAlignVertical="center"
               />
             </View>
 
@@ -938,6 +952,7 @@ export default function CompanyManagement({ navigation }) {
                 placeholder="Enter description"
                 multiline
                 numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
 
@@ -948,6 +963,7 @@ export default function CompanyManagement({ navigation }) {
                 value={competitionForm.category}
                 onChangeText={(text) => setCompetitionForm({...competitionForm, category: text})}
                 placeholder="e.g., Essay, Quiz, Art"
+                textAlignVertical="center"
               />
             </View>
 
@@ -959,6 +975,7 @@ export default function CompanyManagement({ navigation }) {
                 onChangeText={(text) => setCompetitionForm({...competitionForm, prize: text})}
                 placeholder="Enter prize amount"
                 keyboardType="numeric"
+                textAlignVertical="center"
               />
             </View>
 
@@ -969,6 +986,7 @@ export default function CompanyManagement({ navigation }) {
                 value={competitionForm.venue}
                 onChangeText={(text) => setCompetitionForm({...competitionForm, venue: text})}
                 placeholder="Enter venue"
+                textAlignVertical="center"
               />
             </View>
 
@@ -980,6 +998,7 @@ export default function CompanyManagement({ navigation }) {
                 onChangeText={(text) => setCompetitionForm({...competitionForm, maxParticipants: text})}
                 placeholder="Enter max participants"
                 keyboardType="numeric"
+                textAlignVertical="center"
               />
             </View>
 
@@ -991,6 +1010,7 @@ export default function CompanyManagement({ navigation }) {
                     key={status}
                     style={[styles.statusOption, competitionForm.status === status && styles.statusOptionActive]}
                     onPress={() => setCompetitionForm({...competitionForm, status})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.statusOptionText, competitionForm.status === status && styles.statusOptionTextActive]}>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -1004,12 +1024,14 @@ export default function CompanyManagement({ navigation }) {
               <TouchableOpacity 
                 style={[styles.modalButton, styles.modalCancelButton]}
                 onPress={() => setCreateCompetitionModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.modalConfirmButton]}
                 onPress={handleCreateCompetition}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalConfirmText}>Create</Text>
               </TouchableOpacity>
@@ -1026,7 +1048,7 @@ export default function CompanyManagement({ navigation }) {
         onRequestClose={() => setCompetitionDetailModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             {selectedCompetition && (
               <>
                 <View style={styles.modalHeader}>
@@ -1094,6 +1116,7 @@ export default function CompanyManagement({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.liveButton]}
                       onPress={() => handleCompetitionAction(selectedCompetition.id, 'makeLive')}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="play-arrow" size={20} color="#ffffff" />
                       <Text style={styles.actionButtonText}>Make Live</Text>
@@ -1104,6 +1127,7 @@ export default function CompanyManagement({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.endButton]}
                       onPress={() => handleCompetitionAction(selectedCompetition.id, 'end')}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="stop" size={20} color="#ffffff" />
                       <Text style={styles.actionButtonText}>End Competition</Text>
@@ -1114,6 +1138,7 @@ export default function CompanyManagement({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.passButton]}
                       onPress={() => handleCompetitionAction(selectedCompetition.id, 'sendPass')}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="confirmation-number" size={20} color="#ffffff" />
                       <Text style={styles.actionButtonText}>Send Pass/Ticket</Text>
@@ -1124,6 +1149,7 @@ export default function CompanyManagement({ navigation }) {
                     <TouchableOpacity 
                       style={[styles.actionButton, styles.certificateButton]}
                       onPress={() => handleCompetitionAction(selectedCompetition.id, 'sendCertificate')}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="verified" size={20} color="#ffffff" />
                       <Text style={styles.actionButtonText}>Send Certificate</Text>
@@ -1185,11 +1211,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   editButton: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   tabContainer: {
@@ -1216,6 +1246,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   tabTextActive: {
     color: '#FF7722',
@@ -1227,6 +1259,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 40,
+    paddingTop: 4,
   },
 
   loadingContainer: {
@@ -1240,6 +1273,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   card: {
@@ -1265,6 +1300,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   badgeContainer: {
     backgroundColor: '#FFF5EB',
@@ -1276,6 +1313,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   createButton: {
     backgroundColor: '#FF7722',
@@ -1304,6 +1343,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceRow: {
     flexDirection: 'row',
@@ -1317,11 +1358,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Application Styles
@@ -1357,16 +1402,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationUserName: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationService: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationStatus: {
     paddingHorizontal: 10,
@@ -1376,12 +1427,16 @@ const styles = StyleSheet.create({
   applicationStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationDetails: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationMeta: {
     flexDirection: 'row',
@@ -1393,11 +1448,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationActions: {
     marginTop: 8,
@@ -1421,6 +1480,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Competition Styles
@@ -1443,6 +1504,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionStatus: {
     paddingHorizontal: 8,
@@ -1452,12 +1515,16 @@ const styles = StyleSheet.create({
   competitionStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 6,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDetails: {
     flexDirection: 'row',
@@ -1473,6 +1540,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   winnerBadge: {
     flexDirection: 'row',
@@ -1488,6 +1557,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#d97706',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Competition Detail Modal
@@ -1499,11 +1570,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDetailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionActions: {
     marginTop: 12,
@@ -1533,6 +1608,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal Styles
@@ -1558,6 +1635,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1569,6 +1648,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalCancelButton: {
     backgroundColor: '#f3f4f6',
@@ -1577,6 +1657,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalConfirmButton: {
     backgroundColor: '#FF7722',
@@ -1585,6 +1667,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   field: {
@@ -1595,6 +1679,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -1605,6 +1691,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   textArea: {
     height: 80,
@@ -1621,6 +1708,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statusOptionActive: {
     backgroundColor: '#FF7722',
@@ -1629,6 +1717,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusOptionTextActive: {
     color: '#ffffff',
@@ -1644,6 +1734,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   createCompetitionButton: {
     backgroundColor: '#FF7722',
@@ -1655,6 +1747,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Application Detail Modal
@@ -1672,11 +1766,15 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -1690,11 +1788,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailActionButton: {
     flexDirection: 'row',
@@ -1709,6 +1811,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   fundDetailCard: {
@@ -1722,6 +1826,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#059669',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fundDetailRow: {
     flexDirection: 'row',
@@ -1732,11 +1838,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#047857',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fundDetailValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#047857',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Confirm Modal
@@ -1769,6 +1879,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   confirmModalMessage: {
     fontFamily: Fonts.Regular,
@@ -1777,12 +1889,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
+    includeFontPadding: false,
   },
   confirmModalDetail: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#4b5563',
     lineHeight: 20,
+    includeFontPadding: false,
   },
   confirmModalButtons: {
     flexDirection: 'row',
@@ -1794,6 +1908,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   confirmCancelButton: {
     backgroundColor: '#f3f4f6',
@@ -1802,6 +1917,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   confirmVerifyButton: {
     backgroundColor: '#FF7722',
@@ -1810,6 +1927,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   confirmFundButton: {
     backgroundColor: '#10b981',
@@ -1818,5 +1937,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

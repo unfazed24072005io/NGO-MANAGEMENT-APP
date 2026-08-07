@@ -10,34 +10,61 @@ import { createUserWithEmailAndPassword, signInWithPhoneNumber, RecaptchaVerifie
 import { auth, db } from '../config/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Fonts } from '../config/fonts';
+import { Picker } from '@react-native-picker/picker';
 
 export default function RegisterScreen({ navigation, route }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState('member');
-  const [registrationMethod, setRegistrationMethod] = useState('email'); // 'email' or 'phone'
+  const [registrationMethod, setRegistrationMethod] = useState('email');
   const [verificationId, setVerificationId] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [otp, setOtp] = useState('');
   const [recaptchaVerifier, setRecaptchaVerifier] = useState(null);
   
-  // Check if coming from donation flow
   const isDonationFlow = route?.params?.donationFlow || false;
-  
-  // If donation flow, default to donor role
   const defaultRole = isDonationFlow ? 'donor' : 'member';
   
   const [formData, setFormData] = useState({
+    // Personal Details
     fullName: '',
-    email: '',
+    fatherName: '',
+    dob: '',
+    gender: '',
+    education: '',
+    caste: '',
+    spouseName: '',
+    aadharNumber: '',
     phone: '',
+    email: '',
     address: '',
+    
+    // Location Details
+    village: '',
+    postOffice: '',
+    thana: '',
+    district: '',
+    state: '',
+    pinCode: '',
+    nationality: '',
+    profession: '',
+    
+    // Membership Details
+    membershipNumber: '',
+    membershipDate: '',
+    guruAshram: '',
+    memberType: '',
+    contributionAmount: '',
+    
+    // Account Security
     password: '',
     confirmPassword: '',
+    
+    // Document Uploads
+    profilePhoto: null,
     aadharFront: null,
     aadharBack: null,
     panCard: null,
-    profilePhoto: null,
     signature: null,
   });
 
@@ -113,9 +140,29 @@ export default function RegisterScreen({ navigation, route }) {
 
       const userData = {
         fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase() || '',
+        fatherName: formData.fatherName.trim(),
+        dob: formData.dob,
+        gender: formData.gender,
+        education: formData.education,
+        caste: formData.caste,
+        spouseName: formData.spouseName,
+        aadharNumber: formData.aadharNumber,
         phone: formData.phone.trim(),
-        address: formData.address.trim() || '',
+        email: formData.email.trim().toLowerCase() || '',
+        address: formData.address.trim(),
+        village: formData.village,
+        postOffice: formData.postOffice,
+        thana: formData.thana,
+        district: formData.district,
+        state: formData.state,
+        pinCode: formData.pinCode,
+        nationality: formData.nationality,
+        profession: formData.profession,
+        membershipNumber: formData.membershipNumber,
+        membershipDate: formData.membershipDate,
+        guruAshram: formData.guruAshram,
+        memberType: formData.memberType,
+        contributionAmount: formData.contributionAmount,
         role: finalRole,
         status: finalRole === 'donor' ? 'active' : (finalRole === 'working' ? 'active' : 'pending'),
         profilePhoto: formData.profilePhoto || null,
@@ -230,9 +277,29 @@ export default function RegisterScreen({ navigation, route }) {
 
       const userData = {
         fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase(),
+        fatherName: formData.fatherName.trim(),
+        dob: formData.dob,
+        gender: formData.gender,
+        education: formData.education,
+        caste: formData.caste,
+        spouseName: formData.spouseName,
+        aadharNumber: formData.aadharNumber,
         phone: formData.phone.trim() || '',
-        address: formData.address.trim() || '',
+        email: formData.email.trim().toLowerCase(),
+        address: formData.address.trim(),
+        village: formData.village,
+        postOffice: formData.postOffice,
+        thana: formData.thana,
+        district: formData.district,
+        state: formData.state,
+        pinCode: formData.pinCode,
+        nationality: formData.nationality,
+        profession: formData.profession,
+        membershipNumber: formData.membershipNumber,
+        membershipDate: formData.membershipDate,
+        guruAshram: formData.guruAshram,
+        memberType: formData.memberType,
+        contributionAmount: formData.contributionAmount,
         role: finalRole,
         status: finalRole === 'donor' ? 'active' : (finalRole === 'working' ? 'active' : 'pending'),
         profilePhoto: formData.profilePhoto || null,
@@ -459,7 +526,7 @@ export default function RegisterScreen({ navigation, route }) {
   const renderPersonalInfo = () => (
     <View>
       <Text style={styles.stepTitle}>Personal Information</Text>
-      <Text style={styles.subStep}>Enter your basic details</Text>
+      <Text style={styles.subStep}>Enter your basic personal details</Text>
       
       <View style={styles.fieldContainer}>
         <TextInput
@@ -468,6 +535,90 @@ export default function RegisterScreen({ navigation, route }) {
           placeholderTextColor="#9ca3af"
           value={formData.fullName}
           onChangeText={(text) => setFormData({...formData, fullName: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Father/Husband Name"
+          placeholderTextColor="#9ca3af"
+          value={formData.fatherName}
+          onChangeText={(text) => setFormData({...formData, fatherName: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Date of Birth (DD/MM/YYYY)"
+          placeholderTextColor="#9ca3af"
+          value={formData.dob}
+          onChangeText={(text) => setFormData({...formData, dob: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <View style={styles.pickerWrapper}>
+          <Picker
+            selectedValue={formData.gender}
+            onValueChange={(itemValue) => setFormData({...formData, gender: itemValue})}
+            style={styles.picker}
+          >
+            <Picker.Item label="Select Gender" value="" />
+            <Picker.Item label="Male" value="Male" />
+            <Picker.Item label="Female" value="Female" />
+            <Picker.Item label="Other" value="Other" />
+          </Picker>
+          <View style={styles.bottomLine} />
+        </View>
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Educational Qualification"
+          placeholderTextColor="#9ca3af"
+          value={formData.education}
+          onChangeText={(text) => setFormData({...formData, education: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Caste"
+          placeholderTextColor="#9ca3af"
+          value={formData.caste}
+          onChangeText={(text) => setFormData({...formData, caste: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Spouse Name"
+          placeholderTextColor="#9ca3af"
+          value={formData.spouseName}
+          onChangeText={(text) => setFormData({...formData, spouseName: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Aadhar Number"
+          placeholderTextColor="#9ca3af"
+          value={formData.aadharNumber}
+          onChangeText={(text) => setFormData({...formData, aadharNumber: text})}
+          keyboardType="numeric"
+          maxLength={12}
         />
         <View style={styles.bottomLine} />
       </View>
@@ -526,7 +677,7 @@ export default function RegisterScreen({ navigation, route }) {
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
             <Text style={styles.sendOtpText}>
-              {showOtpInput ? 'Verify OTP & Register' : 'Send OTP'}
+              {showOtpInput ? 'Verify OTP & Continue' : 'Send OTP'}
             </Text>
           )}
         </TouchableOpacity>
@@ -538,20 +689,18 @@ export default function RegisterScreen({ navigation, route }) {
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         
-        {registrationMethod === 'email' && (
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(4)}>
-            <Text style={styles.buttonText}>Next →</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(4)}>
+          <Text style={styles.buttonText}>Next →</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ============ STEP 4: Address & Password ============
-  const renderAddressAndPassword = () => (
+  // ============ STEP 4: Address & Location ============
+  const renderAddress = () => (
     <View>
-      <Text style={styles.stepTitle}>Address & Security</Text>
-      <Text style={styles.subStep}>Enter your address and set password</Text>
+      <Text style={styles.stepTitle}>Address & Location</Text>
+      <Text style={styles.subStep}>Enter your address and location details</Text>
       
       <View style={styles.fieldContainer}>
         <TextInput
@@ -562,6 +711,7 @@ export default function RegisterScreen({ navigation, route }) {
           onChangeText={(text) => setFormData({...formData, address: text})}
           multiline
           numberOfLines={2}
+          textAlignVertical="top"
         />
         <View style={styles.bottomLine} />
       </View>
@@ -569,11 +719,10 @@ export default function RegisterScreen({ navigation, route }) {
       <View style={styles.fieldContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Password * (min 6 characters)"
+          placeholder="Village"
           placeholderTextColor="#9ca3af"
-          value={formData.password}
-          onChangeText={(text) => setFormData({...formData, password: text})}
-          secureTextEntry
+          value={formData.village}
+          onChangeText={(text) => setFormData({...formData, village: text})}
         />
         <View style={styles.bottomLine} />
       </View>
@@ -581,11 +730,78 @@ export default function RegisterScreen({ navigation, route }) {
       <View style={styles.fieldContainer}>
         <TextInput
           style={styles.input}
-          placeholder="Confirm Password *"
+          placeholder="Post Office"
           placeholderTextColor="#9ca3af"
-          value={formData.confirmPassword}
-          onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
-          secureTextEntry
+          value={formData.postOffice}
+          onChangeText={(text) => setFormData({...formData, postOffice: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Thana/Police Station"
+          placeholderTextColor="#9ca3af"
+          value={formData.thana}
+          onChangeText={(text) => setFormData({...formData, thana: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="District"
+          placeholderTextColor="#9ca3af"
+          value={formData.district}
+          onChangeText={(text) => setFormData({...formData, district: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="State"
+          placeholderTextColor="#9ca3af"
+          value={formData.state}
+          onChangeText={(text) => setFormData({...formData, state: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="PIN Code"
+          placeholderTextColor="#9ca3af"
+          value={formData.pinCode}
+          onChangeText={(text) => setFormData({...formData, pinCode: text})}
+          keyboardType="numeric"
+          maxLength={6}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nationality"
+          placeholderTextColor="#9ca3af"
+          value={formData.nationality}
+          onChangeText={(text) => setFormData({...formData, nationality: text})}
+        />
+        <View style={styles.bottomLine} />
+      </View>
+
+      <View style={styles.fieldContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Profession"
+          placeholderTextColor="#9ca3af"
+          value={formData.profession}
+          onChangeText={(text) => setFormData({...formData, profession: text})}
         />
         <View style={styles.bottomLine} />
       </View>
@@ -603,7 +819,149 @@ export default function RegisterScreen({ navigation, route }) {
     </View>
   );
 
-  // ============ STEP 5: Profile Photo ============
+  // ============ STEP 5: Membership Details ============
+  const renderMembershipDetails = () => {
+    if (isDonationFlow) {
+      setTimeout(() => setStep(8), 100);
+      return null;
+    }
+
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Membership Details</Text>
+        <Text style={styles.subStep}>Enter your membership information</Text>
+        
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Membership Number"
+            placeholderTextColor="#9ca3af"
+            value={formData.membershipNumber}
+            onChangeText={(text) => setFormData({...formData, membershipNumber: text})}
+          />
+          <View style={styles.bottomLine} />
+        </View>
+
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Membership Date (DD/MM/YYYY)"
+            placeholderTextColor="#9ca3af"
+            value={formData.membershipDate}
+            onChangeText={(text) => setFormData({...formData, membershipDate: text})}
+          />
+          <View style={styles.bottomLine} />
+        </View>
+
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Guru Ashram"
+            placeholderTextColor="#9ca3af"
+            value={formData.guruAshram}
+            onChangeText={(text) => setFormData({...formData, guruAshram: text})}
+          />
+          <View style={styles.bottomLine} />
+        </View>
+
+        <View style={styles.fieldContainer}>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={formData.memberType}
+              onValueChange={(itemValue) => setFormData({...formData, memberType: itemValue})}
+              style={styles.picker}
+            >
+              <Picker.Item label="Select Member Type" value="" />
+              <Picker.Item label="Founder Member (₹5000+)" value="Founder Member" />
+              <Picker.Item label="Collector Member (₹3500)" value="Collector Member" />
+              <Picker.Item label="Distinguished Member (₹1500)" value="Distinguished Member" />
+              <Picker.Item label="Lifetime Member (₹2500)" value="Lifetime Member" />
+              <Picker.Item label="Honored Member (₹500)" value="Honored Member" />
+              <Picker.Item label="General Member (₹100)" value="General Member" />
+            </Picker>
+            <View style={styles.bottomLine} />
+          </View>
+        </View>
+
+        {formData.memberType && (
+          <View style={styles.fieldContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Contribution Amount (₹)"
+              placeholderTextColor="#9ca3af"
+              value={formData.contributionAmount}
+              onChangeText={(text) => setFormData({...formData, contributionAmount: text})}
+              keyboardType="numeric"
+            />
+            <View style={styles.bottomLine} />
+          </View>
+        )}
+
+        <View style={styles.stepButtons}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // ============ STEP 6: Password ============
+  const renderPassword = () => {
+    if (registrationMethod === 'phone') {
+      setTimeout(() => setStep(7), 100);
+      return null;
+    }
+
+    return (
+      <View>
+        <Text style={styles.stepTitle}>Account Security</Text>
+        <Text style={styles.subStep}>Set your password for account security</Text>
+        
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Password * (min 6 characters)"
+            placeholderTextColor="#9ca3af"
+            value={formData.password}
+            onChangeText={(text) => setFormData({...formData, password: text})}
+            secureTextEntry
+          />
+          <View style={styles.bottomLine} />
+        </View>
+
+        <View style={styles.fieldContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Confirm Password *"
+            placeholderTextColor="#9ca3af"
+            value={formData.confirmPassword}
+            onChangeText={(text) => setFormData({...formData, confirmPassword: text})}
+            secureTextEntry
+          />
+          <View style={styles.bottomLine} />
+        </View>
+
+        <View style={styles.stepButtons}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
+            <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
+            <Text style={styles.buttonText}>Back</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
+            <Text style={styles.buttonText}>Next →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // ============ STEP 7: Profile Photo ============
   const renderProfilePhoto = () => (
     <View>
       <Text style={styles.stepTitle}>Profile Photo</Text>
@@ -622,22 +980,22 @@ export default function RegisterScreen({ navigation, route }) {
       </View>
 
       <View style={styles.stepButtons}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep(4)}>
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(registrationMethod === 'phone' ? 5 : 6)}>
           <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
           <Text style={styles.buttonText}>Back</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(6)}>
+        <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
           <Text style={styles.buttonText}>Next →</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ============ STEP 6: Aadhar Front ============
+  // ============ STEP 8: Aadhar Front ============
   const renderAadharFront = () => {
     if (isDonationFlow) {
-      setStep(9);
+      setTimeout(() => setStep(11), 100);
       return null;
     }
 
@@ -659,12 +1017,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(5)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(7)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(9)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -672,7 +1030,7 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 7: Aadhar Back ============
+  // ============ STEP 9: Aadhar Back ============
   const renderAadharBack = () => {
     if (isDonationFlow) return null;
 
@@ -694,12 +1052,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(6)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(8)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(8)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(10)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -707,7 +1065,7 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 8: PAN Card ============
+  // ============ STEP 10: PAN Card ============
   const renderPANCard = () => {
     if (isDonationFlow) return null;
 
@@ -729,12 +1087,12 @@ export default function RegisterScreen({ navigation, route }) {
         </View>
 
         <View style={styles.stepButtons}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setStep(7)}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setStep(9)}>
             <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
             <Text style={styles.buttonText}>Back</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(9)}>
+          <TouchableOpacity style={styles.nextButton} onPress={() => setStep(11)}>
             <Text style={styles.buttonText}>Next →</Text>
           </TouchableOpacity>
         </View>
@@ -742,7 +1100,7 @@ export default function RegisterScreen({ navigation, route }) {
     );
   };
 
-  // ============ STEP 9: Signature & Submit ============
+  // ============ STEP 11: Signature & Submit ============
   const renderSignature = () => {
     const isDonor = isDonationFlow || role === 'donor';
     const buttonColor = isDonor ? '#FF7722' : (role === 'working' ? '#8b5cf6' : '#FF7722');
@@ -751,8 +1109,8 @@ export default function RegisterScreen({ navigation, route }) {
 
     return (
       <View>
-        <Text style={styles.stepTitle}>Signature</Text>
-        <Text style={styles.subStep}>Upload your signature</Text>
+        <Text style={styles.stepTitle}>Signature & Declaration</Text>
+        <Text style={styles.subStep}>Upload your signature and complete registration</Text>
 
         <View style={styles.uploadContainer}>
           <TouchableOpacity style={styles.uploadButton} onPress={() => pickImage('signature')}>
@@ -766,9 +1124,24 @@ export default function RegisterScreen({ navigation, route }) {
           )}
         </View>
 
+        <View style={styles.declarationContainer}>
+          <Text style={styles.declarationText}>
+            मैं, {formData.fullName || '___________'} कबीर सत धर्म फाउंडेशन (ट्रस्ट) में अपनी मर्जी से सदस्यता ग्रहण कर रहा/रही हूं।
+          </Text>
+          <Text style={styles.declarationText}>
+            मैं इस ट्रस्ट के सभी नियमों का पालन करूंगा/करूंगी।
+          </Text>
+          <Text style={styles.declarationText}>
+            मैं कोई भी ऐसा कार्य नहीं करूंगा/करूंगी, जिससे ट्रस्ट को किसी प्रकार का कोई नुकसान हो।
+          </Text>
+          <Text style={styles.declarationText}>
+            मैं यह भी वचनबद्ध करता/करती हूं कि ट्रस्ट को आगे बढ़ाने के लिए हर संभव प्रयास करता रहूंगा/रहूंगी।
+          </Text>
+        </View>
+
         <View style={styles.stepButtons}>
           {!isDonationFlow && (
-            <TouchableOpacity style={styles.backButton} onPress={() => setStep(8)}>
+            <TouchableOpacity style={styles.backButton} onPress={() => setStep(10)}>
               <MaterialIcons name="arrow-back" size={20} color="#ffffff" />
               <Text style={styles.buttonText}>Back</Text>
             </TouchableOpacity>
@@ -798,26 +1171,42 @@ export default function RegisterScreen({ navigation, route }) {
     if (step === 1) return renderRoleSelection();
     if (step === 2) return renderRegistrationMethod();
     if (step === 3) return renderPersonalInfo();
-    if (step === 4) return renderAddressAndPassword();
-    if (step === 5) return renderProfilePhoto();
-    if (step === 6) return renderAadharFront();
-    if (step === 7) return renderAadharBack();
-    if (step === 8) return renderPANCard();
-    if (step === 9) return renderSignature();
+    if (step === 4) return renderAddress();
+    if (step === 5) return renderMembershipDetails();
+    if (step === 6) return renderPassword();
+    if (step === 7) return renderProfilePhoto();
+    if (step === 8) return renderAadharFront();
+    if (step === 9) return renderAadharBack();
+    if (step === 10) return renderPANCard();
+    if (step === 11) return renderSignature();
     return null;
   };
 
   const getTotalSteps = () => {
     if (isDonationFlow) return 5;
-    return 9;
+    if (registrationMethod === 'phone') return 10;
+    return 11;
   };
 
+  // Skip steps for phone registration
+  if (registrationMethod === 'phone' && step === 6) {
+    setTimeout(() => setStep(7), 100);
+  }
+
+  // Skip steps for donation flow
   if (isDonationFlow && step === 1) {
     setTimeout(() => setStep(2), 100);
   }
+  if (isDonationFlow && step === 5) {
+    setTimeout(() => setStep(8), 100);
+  }
+  if (isDonationFlow && step === 8) {
+    setTimeout(() => setStep(11), 100);
+  }
 
-  if (registrationMethod === 'phone' && step === 4) {
-    setTimeout(() => setStep(5), 100);
+  // Skip aadhar/pan for donor flow
+  if (isDonationFlow && step >= 8 && step <= 10) {
+    setTimeout(() => setStep(11), 100);
   }
 
   return (
@@ -888,6 +1277,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     color: '#1f2937',
     marginBottom: 30,
+    textTransform: 'lowercase',
   },
   progressContainer: {
     marginBottom: 30,
@@ -962,6 +1352,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingVertical: 8,
   },
+  pickerWrapper: {
+    backgroundColor: 'transparent',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+    color: '#1f2937',
+  },
   uploadContainer: {
     marginVertical: 8,
     padding: 16,
@@ -993,6 +1391,21 @@ const styles = StyleSheet.create({
     marginTop: 12,
     alignSelf: 'center',
   },
+  declarationContainer: {
+    backgroundColor: '#fef9f0',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    marginVertical: 12,
+  },
+  declarationText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#1f2937',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
   stepButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1006,7 +1419,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF7722',
     paddingVertical: 16,
     borderRadius: 50,
-    flex: 0.45,
+    flex: 1,
     shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -1020,7 +1433,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#6b7280',
     paddingVertical: 16,
     borderRadius: 50,
-    flex: 0.45,
+    flex: 1,
     gap: 8,
   },
   submitButton: {
@@ -1030,7 +1443,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF7722',
     paddingVertical: 16,
     borderRadius: 50,
-    flex: 0.45,
+    flex: 1,
     gap: 8,
     shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
@@ -1070,6 +1483,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
+    flexWrap: 'wrap',
   },
   signInText: {
     fontFamily: Fonts.Regular,
@@ -1103,6 +1517,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+    flexShrink: 0,
   },
   roleContent: {
     flex: 1,
@@ -1142,6 +1557,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+    flexShrink: 0,
   },
   methodContent: {
     flex: 1,

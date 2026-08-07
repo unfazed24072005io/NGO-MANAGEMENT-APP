@@ -77,7 +77,6 @@ export default function WorkingMemberApplications({ navigation }) {
         const data = docSnap.data();
         const servicesList = [];
         
-        // Old Age Assistance
         if (data.oldAgeAssistance) {
           servicesList.push({
             id: 'oldAge',
@@ -94,7 +93,6 @@ export default function WorkingMemberApplications({ navigation }) {
           });
         }
         
-        // Kanya Marriage Assistance
         if (data.kanyaMarriageAssistance) {
           servicesList.push({
             id: 'kanya',
@@ -111,7 +109,6 @@ export default function WorkingMemberApplications({ navigation }) {
           });
         }
         
-        // Self Employment Assistance
         if (data.selfEmploymentAssistance) {
           servicesList.push({
             id: 'selfEmployment',
@@ -191,7 +188,6 @@ export default function WorkingMemberApplications({ navigation }) {
       return;
     }
 
-    // Check if user already has a pending or verified application for this service
     const existingApp = applications.find(
       app => app.serviceType === applyForm.serviceType && 
       (app.status === 'pending' || app.status === 'verified')
@@ -338,7 +334,7 @@ export default function WorkingMemberApplications({ navigation }) {
       <View style={styles.serviceCard}>
         <View style={styles.serviceCardHeader}>
           <View style={styles.serviceIconContainer}>
-            <MaterialIcons name={service.icon} size={28} color="#8b5cf6" />
+            <MaterialIcons name={service.icon} size={26} color="#8b5cf6" />
           </View>
           <View style={styles.serviceCardContent}>
             <Text style={styles.serviceCardTitle}>{service.title}</Text>
@@ -371,6 +367,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 setSelectedApplication(latestApp);
                 setApplicationDetailModalVisible(true);
               }}
+              activeOpacity={0.7}
             >
               <Text style={styles.viewAppText}>View Details</Text>
             </TouchableOpacity>
@@ -398,6 +395,7 @@ export default function WorkingMemberApplications({ navigation }) {
               });
               setApplyModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="send" size={16} color="#ffffff" />
             <Text style={styles.applyButtonText}>Apply Now</Text>
@@ -414,10 +412,11 @@ export default function WorkingMemberApplications({ navigation }) {
         setSelectedApplication(application);
         setApplicationDetailModalVisible(true);
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.applicationItemLeft}>
         <View style={[styles.applicationItemIcon, { backgroundColor: getStatusColor(application.status) + '15' }]}>
-          <MaterialIcons name={getStatusIcon(application.status)} size={20} color={getStatusColor(application.status)} />
+          <MaterialIcons name={getStatusIcon(application.status)} size={18} color={getStatusColor(application.status)} />
         </View>
         <View>
           <Text style={styles.applicationItemTitle}>
@@ -524,11 +523,11 @@ export default function WorkingMemberApplications({ navigation }) {
       {/* Purple Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Applications</Text>
-          <TouchableOpacity onPress={() => setMyApplicationsTab(!myApplicationsTab)}>
+          <TouchableOpacity onPress={() => setMyApplicationsTab(!myApplicationsTab)} activeOpacity={0.7}>
             <Text style={styles.toggleButton}>
               {myApplicationsTab ? 'Apply' : 'My Apps'}
             </Text>
@@ -552,6 +551,7 @@ export default function WorkingMemberApplications({ navigation }) {
               <TouchableOpacity 
                 style={styles.emptyApplyButton}
                 onPress={() => setMyApplicationsTab(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.emptyApplyButtonText}>Browse Services</Text>
               </TouchableOpacity>
@@ -569,10 +569,11 @@ export default function WorkingMemberApplications({ navigation }) {
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'services' && styles.tabButtonActive]}
               onPress={() => setActiveTab('services')}
+              activeOpacity={0.7}
             >
               <MaterialIcons 
                 name="handshake" 
-                size={20} 
+                size={18} 
                 color={activeTab === 'services' ? '#8b5cf6' : '#6b7280'} 
               />
               <Text style={[styles.tabText, activeTab === 'services' && styles.tabTextActive]}>
@@ -590,10 +591,11 @@ export default function WorkingMemberApplications({ navigation }) {
             <TouchableOpacity
               style={[styles.tabButton, activeTab === 'competitions' && styles.tabButtonActive]}
               onPress={() => setActiveTab('competitions')}
+              activeOpacity={0.7}
             >
               <MaterialIcons 
                 name="emoji-events" 
-                size={20} 
+                size={18} 
                 color={activeTab === 'competitions' ? '#8b5cf6' : '#6b7280'} 
               />
               <Text style={[styles.tabText, activeTab === 'competitions' && styles.tabTextActive]}>
@@ -642,10 +644,10 @@ export default function WorkingMemberApplications({ navigation }) {
         onRequestClose={() => setApplyModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Apply for Service</Text>
-              <TouchableOpacity onPress={() => setApplyModalVisible(false)}>
+              <TouchableOpacity onPress={() => setApplyModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -667,6 +669,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 onChangeText={(text) => setApplyForm({...applyForm, fullName: text})}
                 placeholder="Enter your full name"
                 placeholderTextColor="#9ca3af"
+                textAlignVertical="center"
               />
             </View>
 
@@ -680,6 +683,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   placeholder="Age"
                   placeholderTextColor="#9ca3af"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.field, { flex: 1 }]}>
@@ -690,6 +694,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   onChangeText={(text) => setApplyForm({...applyForm, gender: text})}
                   placeholder="Male/Female"
                   placeholderTextColor="#9ca3af"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -704,6 +709,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   placeholder="Phone number"
                   placeholderTextColor="#9ca3af"
                   keyboardType="phone-pad"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.field, { flex: 1 }]}>
@@ -715,6 +721,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   placeholder="Email"
                   placeholderTextColor="#9ca3af"
                   keyboardType="email-address"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -729,6 +736,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 placeholderTextColor="#9ca3af"
                 multiline
                 numberOfLines={2}
+                textAlignVertical="top"
               />
             </View>
 
@@ -741,6 +749,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   onChangeText={(text) => setApplyForm({...applyForm, occupation: text})}
                   placeholder="Occupation"
                   placeholderTextColor="#9ca3af"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.field, { flex: 1 }]}>
@@ -752,6 +761,7 @@ export default function WorkingMemberApplications({ navigation }) {
                   placeholder="Annual income"
                   placeholderTextColor="#9ca3af"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -764,6 +774,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 onChangeText={(text) => setApplyForm({...applyForm, idProof: text})}
                 placeholder="Aadhar/PAN/Voter ID etc."
                 placeholderTextColor="#9ca3af"
+                textAlignVertical="center"
               />
             </View>
 
@@ -775,6 +786,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 onChangeText={(text) => setApplyForm({...applyForm, ageGroup: text})}
                 placeholder="e.g., 20-40 years"
                 placeholderTextColor="#9ca3af"
+                textAlignVertical="center"
               />
             </View>
 
@@ -788,6 +800,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 placeholderTextColor="#9ca3af"
                 multiline
                 numberOfLines={4}
+                textAlignVertical="top"
               />
             </View>
 
@@ -800,6 +813,7 @@ export default function WorkingMemberApplications({ navigation }) {
                 placeholder="Enter expected amount"
                 placeholderTextColor="#9ca3af"
                 keyboardType="numeric"
+                textAlignVertical="center"
               />
             </View>
 
@@ -807,6 +821,7 @@ export default function WorkingMemberApplications({ navigation }) {
               style={styles.submitButton}
               onPress={handleApply}
               disabled={submitting}
+              activeOpacity={0.7}
             >
               <Text style={styles.submitButtonText}>
                 {submitting ? 'Submitting...' : 'Submit Application'}
@@ -832,14 +847,14 @@ export default function WorkingMemberApplications({ navigation }) {
               <>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Application Details</Text>
-                  <TouchableOpacity onPress={() => setApplicationDetailModalVisible(false)}>
+                  <TouchableOpacity onPress={() => setApplicationDetailModalVisible(false)} activeOpacity={0.7}>
                     <MaterialIcons name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.detailStatusBar}>
                   <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedApplication.status) + '15' }]}>
-                    <MaterialIcons name={getStatusIcon(selectedApplication.status)} size={20} color={getStatusColor(selectedApplication.status)} />
+                    <MaterialIcons name={getStatusIcon(selectedApplication.status)} size={18} color={getStatusColor(selectedApplication.status)} />
                     <Text style={[styles.detailStatusText, { color: getStatusColor(selectedApplication.status) }]}>
                       {selectedApplication.status.charAt(0).toUpperCase() + selectedApplication.status.slice(1)}
                     </Text>
@@ -965,7 +980,7 @@ export default function WorkingMemberApplications({ navigation }) {
               <>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Competition Details</Text>
-                  <TouchableOpacity onPress={() => setCompetitionDetailModalVisible(false)}>
+                  <TouchableOpacity onPress={() => setCompetitionDetailModalVisible(false)} activeOpacity={0.7}>
                     <MaterialIcons name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
@@ -1061,6 +1076,7 @@ export default function WorkingMemberApplications({ navigation }) {
                       myCompetitions.includes(selectedCompetition.id) || 
                       selectedCompetition.participants?.length >= selectedCompetition.maxParticipants
                     }
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons 
                       name={
@@ -1114,12 +1130,16 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   toggleButton: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
     padding: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   tabContainer: {
@@ -1148,6 +1168,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   tabTextActive: {
     color: '#8b5cf6',
@@ -1167,11 +1189,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   servicesContainer: {
@@ -1198,9 +1223,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   serviceIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f5f3ff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1212,12 +1237,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceCardDesc: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   serviceDetails: {
@@ -1237,11 +1266,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   serviceDetailValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   applicationStatusContainer: {
@@ -1260,6 +1293,8 @@ const styles = StyleSheet.create({
   applicationStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAppButton: {
     paddingHorizontal: 12,
@@ -1269,6 +1304,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   applyButton: {
@@ -1284,6 +1321,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // My Applications
@@ -1301,11 +1340,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   myAppsCount: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationItem: {
     flexDirection: 'row',
@@ -1327,11 +1370,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   applicationItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1339,11 +1383,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   applicationItemStatus: {
     paddingHorizontal: 10,
@@ -1353,6 +1401,8 @@ const styles = StyleSheet.create({
   applicationItemStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Competition Styles
@@ -1384,6 +1434,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionStatus: {
     paddingHorizontal: 8,
@@ -1393,12 +1445,16 @@ const styles = StyleSheet.create({
   competitionStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionMeta: {
     flexDirection: 'row',
@@ -1413,6 +1469,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   registeredBadge: {
     flexDirection: 'row',
@@ -1429,6 +1487,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#059669',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fullBadge: {
     flexDirection: 'row',
@@ -1445,6 +1505,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#ef4444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal Styles
@@ -1470,6 +1532,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   field: {
@@ -1484,6 +1548,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -1494,6 +1560,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   textArea: {
     height: 100,
@@ -1510,6 +1577,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   submitButton: {
@@ -1526,6 +1595,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Application Detail Modal
@@ -1546,11 +1617,15 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -1564,11 +1639,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   fundDetailCard: {
@@ -1582,6 +1661,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#059669',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fundDetailRow: {
     flexDirection: 'row',
@@ -1592,11 +1673,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#047857',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fundDetailValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#047857',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Competition Detail Modal
@@ -1605,6 +1690,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDetailStatus: {
     marginBottom: 12,
@@ -1617,11 +1704,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDetailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   competitionDetailRow: {
     flexDirection: 'row',
@@ -1648,6 +1739,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#d97706',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   notificationBadge: {
@@ -1664,6 +1757,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   registerCompetitionButton: {
@@ -1683,6 +1778,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -1695,12 +1792,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyApplyButton: {
     backgroundColor: '#8b5cf6',
@@ -1712,6 +1813,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   loadingContainer: {
@@ -1725,5 +1828,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

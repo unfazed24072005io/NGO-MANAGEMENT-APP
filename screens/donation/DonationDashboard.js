@@ -79,7 +79,6 @@ export default function DonationDashboard({ navigation }) {
         donationCount++;
       });
 
-      // Add Razorpay donations to stats
       const razorpayTotal = getTotalDonations();
       const razorpayCount = getDonationCount();
 
@@ -111,14 +110,12 @@ export default function DonationDashboard({ navigation }) {
         donationsList.push({ id: doc.id, ...doc.data() });
       });
 
-      // Add Razorpay donations to recent
       const razorpayHistory = getDonationHistory();
       const user = auth.currentUser;
       const userRazorpayDonations = razorpayHistory.filter(
         donation => donation.email === user?.email || donation.phone === user?.phoneNumber
       );
       
-      // Merge and sort by date
       const allDonations = [...donationsList, ...userRazorpayDonations];
       allDonations.sort((a, b) => {
         const dateA = new Date(a.createdAt || a.timestamp);
@@ -142,9 +139,9 @@ export default function DonationDashboard({ navigation }) {
   };
 
   const QuickActionButton = ({ title, icon, onPress, color }) => (
-    <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
+    <TouchableOpacity style={styles.quickActionButton} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.quickActionIconBg, { backgroundColor: color || '#059669' }]}>
-        <MaterialIcons name={icon} size={28} color="#ffffff" />
+        <MaterialIcons name={icon} size={24} color="#ffffff" />
       </View>
       <Text style={styles.quickActionText}>{title}</Text>
     </TouchableOpacity>
@@ -162,7 +159,7 @@ export default function DonationDashboard({ navigation }) {
         </View>
         <View>
           <Text style={styles.recentItemTitle}>₹{item.amount?.toLocaleString() || 0}</Text>
-          <Text style={styles.recentItemSubtitle}>
+          <Text style={styles.recentItemSubtitle} numberOfLines={1}>
             {item.purpose || item.campaign || 'General Donation'}
             {item.paymentMethod === 'razorpay' && ' • Razorpay'}
           </Text>
@@ -225,6 +222,7 @@ export default function DonationDashboard({ navigation }) {
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('DonorProfile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
@@ -289,7 +287,7 @@ export default function DonationDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Donations</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MyDonations')}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyDonations')} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -306,6 +304,7 @@ export default function DonationDashboard({ navigation }) {
               <TouchableOpacity 
                 style={styles.donateButton}
                 onPress={() => navigation.navigate('Donate')}
+                activeOpacity={0.7}
               >
                 <Text style={styles.donateButtonText}>Make a Donation</Text>
               </TouchableOpacity>
@@ -338,9 +337,10 @@ export default function DonationDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Donate');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="favorite" size={24} color="#ffffff" />
+                  <MaterialIcons name="favorite" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Make a Donation</Text>
@@ -354,9 +354,10 @@ export default function DonationDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('MyDonations');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="receipt" size={24} color="#ffffff" />
+                  <MaterialIcons name="receipt" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Donations</Text>
@@ -370,9 +371,10 @@ export default function DonationDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Certificate');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="verified" size={24} color="#ffffff" />
+                  <MaterialIcons name="verified" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Certificate</Text>
@@ -383,6 +385,7 @@ export default function DonationDashboard({ navigation }) {
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => setFabModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCloseButtonText}>Close</Text>
               </TouchableOpacity>
@@ -409,6 +412,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerCard: {
     backgroundColor: '#10b981',
@@ -430,11 +435,15 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#ffffff',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   subGreeting: {
     fontFamily: Fonts.Italic,
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
     width: 70,
@@ -458,7 +467,7 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
   },
   quickActionButton: {
     flex: 1,
@@ -467,8 +476,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   quickActionIconBg: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -481,9 +490,11 @@ const styles = StyleSheet.create({
   quickActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 6,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -502,14 +513,18 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
+    fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayCard: {
     backgroundColor: '#ffffff',
@@ -530,6 +545,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStats: {
     flexDirection: 'row',
@@ -544,11 +561,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStatLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayStatDivider: {
     width: 1,
@@ -570,11 +591,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     letterSpacing: 0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItem: {
     flexDirection: 'row',
@@ -594,6 +619,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   recentItemIcon: {
     width: 32,
@@ -606,16 +632,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     paddingVertical: 30,
@@ -628,15 +660,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -648,6 +685,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomSpacing: {
     height: 20,
@@ -674,6 +713,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItem: {
     flexDirection: 'row',
@@ -685,9 +726,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   modalItemIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -699,21 +740,28 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#f3f4f6',
   },
   modalCloseButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

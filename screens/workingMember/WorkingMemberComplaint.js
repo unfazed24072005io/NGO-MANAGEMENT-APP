@@ -111,10 +111,14 @@ export default function WorkingMemberComplaint({ navigation }) {
   };
 
   const ComplaintCard = ({ item }) => (
-    <TouchableOpacity style={styles.complaintCard} onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}>
+    <TouchableOpacity 
+      style={styles.complaintCard} 
+      onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}
+      activeOpacity={0.7}
+    >
       <View style={styles.complaintHeader}>
         <View style={[styles.complaintIcon, { backgroundColor: getPriorityColor(item.priority) + '15' }]}>
-          <MaterialIcons name="report-problem" size={20} color={getPriorityColor(item.priority)} />
+          <MaterialIcons name="report-problem" size={18} color={getPriorityColor(item.priority)} />
         </View>
         <Text style={styles.complaintTitle} numberOfLines={1}>{item.title}</Text>
         <View style={[styles.complaintStatus, { backgroundColor: getStatusColor(item.status) + '15' }]}>
@@ -144,11 +148,11 @@ export default function WorkingMemberComplaint({ navigation }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Complaints</Text>
-          <TouchableOpacity style={styles.addButton} onPress={() => { resetForm(); setModalVisible(true); }}>
+          <TouchableOpacity style={styles.addButton} onPress={() => { resetForm(); setModalVisible(true); }} activeOpacity={0.7}>
             <MaterialIcons name="add" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
@@ -165,7 +169,7 @@ export default function WorkingMemberComplaint({ navigation }) {
             <MaterialIcons name="report-problem" size={44} color="#d1d5db" />
             <Text style={styles.emptyStateText}>No complaints</Text>
             <Text style={styles.emptyStateSubtext}>Submit a complaint to get help</Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={() => { resetForm(); setModalVisible(true); }}>
+            <TouchableOpacity style={styles.emptyButton} onPress={() => { resetForm(); setModalVisible(true); }} activeOpacity={0.7}>
               <Text style={styles.emptyButtonText}>Submit Complaint</Text>
             </TouchableOpacity>
           </View>
@@ -176,47 +180,80 @@ export default function WorkingMemberComplaint({ navigation }) {
       {/* Submit Complaint Modal */}
       <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Submit Complaint</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity onPress={() => setModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Title *</Text>
-              <TextInput style={styles.formInput} value={formData.title} onChangeText={(text) => setFormData({...formData, title: text})} placeholder="Enter title" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.title} 
+                onChangeText={(text) => setFormData({...formData, title: text})} 
+                placeholder="Enter title"
+                textAlignVertical="center"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Description *</Text>
-              <TextInput style={[styles.formInput, styles.formTextArea]} value={formData.description} onChangeText={(text) => setFormData({...formData, description: text})} placeholder="Describe your issue" multiline numberOfLines={4} />
+              <TextInput 
+                style={[styles.formInput, styles.formTextArea]} 
+                value={formData.description} 
+                onChangeText={(text) => setFormData({...formData, description: text})} 
+                placeholder="Describe your issue" 
+                multiline 
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Category</Text>
-              <TextInput style={styles.formInput} value={formData.category} onChangeText={(text) => setFormData({...formData, category: text})} placeholder="e.g., General, Technical, Event" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.category} 
+                onChangeText={(text) => setFormData({...formData, category: text})} 
+                placeholder="e.g., General, Technical, Event"
+                textAlignVertical="center"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Department</Text>
-              <TextInput style={styles.formInput} value={formData.department} onChangeText={(text) => setFormData({...formData, department: text})} placeholder="e.g., HR, IT, Operations" />
+              <TextInput 
+                style={styles.formInput} 
+                value={formData.department} 
+                onChangeText={(text) => setFormData({...formData, department: text})} 
+                placeholder="e.g., HR, IT, Operations"
+                textAlignVertical="center"
+              />
             </View>
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Priority</Text>
               <View style={styles.priorityContainer}>
                 {['low', 'medium', 'high'].map((priority) => (
-                  <TouchableOpacity key={priority} style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} onPress={() => setFormData({...formData, priority})}>
+                  <TouchableOpacity 
+                    key={priority} 
+                    style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]} 
+                    onPress={() => setFormData({...formData, priority})}
+                    activeOpacity={0.7}
+                  >
                     <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(priority) }]} />
-                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>{priority.charAt(0).toUpperCase() + priority.slice(1)}</Text>
+                    <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>{loading ? 'Submitting...' : 'Submit'}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -229,7 +266,7 @@ export default function WorkingMemberComplaint({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Complaint Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -293,7 +330,10 @@ export default function WorkingMemberComplaint({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
 
   // Blue Header
   headerCard: {
@@ -309,23 +349,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: { padding: 4 },
+  backButton: { 
+    padding: 4 
+  },
   headerTitle: {
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
-  addButton: { padding: 4 },
+  addButton: { 
+    padding: 4 
+  },
 
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  listContent: { 
+    paddingHorizontal: 16, 
+    paddingBottom: 20,
+    paddingTop: 4,
+  },
 
   complaintCard: { 
     backgroundColor: '#ffffff', 
     borderRadius: 12, 
     padding: 16, 
-    marginBottom: 10, 
+    marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1, 
     borderColor: '#e5e7eb' 
   },
@@ -346,7 +397,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14, 
     color: '#1f2937', 
-    flex: 1 
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintStatus: { 
     paddingHorizontal: 8, 
@@ -355,13 +408,17 @@ const styles = StyleSheet.create({
   },
   complaintStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 10 
+    fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintDescription: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
     color: '#6b7280', 
-    marginLeft: 40 
+    marginLeft: 40,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintFooter: { 
     flexDirection: 'row', 
@@ -371,13 +428,15 @@ const styles = StyleSheet.create({
     paddingTop: 8, 
     borderTopWidth: 1, 
     borderTopColor: '#f3f4f6', 
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
   },
   complaintCategory: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   departmentBadge: {
     flexDirection: 'row',
@@ -392,6 +451,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   priorityBadge: { 
     flexDirection: 'row', 
@@ -400,13 +461,17 @@ const styles = StyleSheet.create({
   },
   priorityText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 11 
+    fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   complaintDate: { 
     fontFamily: Fonts.Regular,
     fontSize: 11, 
     color: '#9ca3af', 
-    marginLeft: 'auto' 
+    marginLeft: 'auto',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: { 
@@ -418,12 +483,16 @@ const styles = StyleSheet.create({
   emptyStateText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyButton: { 
     backgroundColor: '#3b82f6', 
@@ -434,7 +503,9 @@ const styles = StyleSheet.create({
   emptyButtonText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 14 
+    fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modals
@@ -459,15 +530,21 @@ const styles = StyleSheet.create({
   modalTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  formField: { marginBottom: 12 },
+  formField: { 
+    marginBottom: 12 
+  },
   formLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 14, 
     color: '#1f2937', 
-    marginBottom: 4 
+    marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: { 
     borderWidth: 1, 
@@ -477,8 +554,12 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
-  formTextArea: { height: 100, textAlignVertical: 'top' },
+  formTextArea: { 
+    height: 100, 
+    textAlignVertical: 'top' 
+  },
 
   priorityContainer: { 
     flexDirection: 'row', 
@@ -507,29 +588,40 @@ const styles = StyleSheet.create({
   priorityButtonText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  priorityButtonTextActive: { color: '#ffffff' },
+  priorityButtonTextActive: { 
+    color: '#ffffff' 
+  },
 
   submitButton: { 
     backgroundColor: '#10b981', 
     paddingVertical: 12, 
     borderRadius: 8, 
-    alignItems: 'center', 
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12 
   },
   submitButtonText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 16 
+    fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Detail Modal
-  detailSection: { marginBottom: 12 },
+  detailSection: { 
+    marginBottom: 12 
+  },
   detailTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 18, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailStatusRow: { 
     flexDirection: 'row', 
@@ -544,7 +636,9 @@ const styles = StyleSheet.create({
   },
   detailStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailPriorityBadge: { 
     paddingHorizontal: 10, 
@@ -553,17 +647,23 @@ const styles = StyleSheet.create({
   },
   detailPriorityText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
     color: '#6b7280', 
-    marginBottom: 2 
+    marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: { 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -95,7 +95,6 @@ export default function MemberDashboard({ navigation }) {
         totalDonations += doc.data().amount || 0;
       });
 
-      // Add Razorpay donations
       const razorpayTotal = getTotalDonations();
 
       const eventsSnap = await getDocs(query(
@@ -141,14 +140,12 @@ export default function MemberDashboard({ navigation }) {
         donationsList.push({ id: doc.id, ...doc.data() });
       });
 
-      // Get Razorpay donations
       const razorpayHistory = getDonationHistory();
       const user = auth.currentUser;
       const userRazorpayDonations = razorpayHistory.filter(
         donation => donation.email === user?.email || donation.phone === user?.phoneNumber
       );
 
-      // Merge and sort
       const allDonations = [...donationsList, ...userRazorpayDonations];
       allDonations.sort((a, b) => {
         const dateA = new Date(a.createdAt || a.timestamp);
@@ -186,9 +183,9 @@ export default function MemberDashboard({ navigation }) {
   };
 
   const QuickActionButton = ({ title, icon, onPress, badge }) => (
-    <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
+    <TouchableOpacity style={styles.quickActionButton} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.quickActionIconBg}>
-        <MaterialIcons name={icon} size={28} color="#ffffff" />
+        <MaterialIcons name={icon} size={24} color="#ffffff" />
         {badge > 0 && (
           <View style={styles.badgeContainer}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -216,7 +213,7 @@ export default function MemberDashboard({ navigation }) {
             <Text style={styles.recentItemTitle}>
               {type === 'donation' ? `₹${item.amount?.toLocaleString() || 0}` : item.productName || 'Order'}
             </Text>
-            <Text style={styles.recentItemSubtitle}>
+            <Text style={styles.recentItemSubtitle} numberOfLines={1}>
               {type === 'donation' 
                 ? (item.purpose || 'Donation') + (isRazorpay ? ' • Razorpay' : '')
                 : `Order #${item.id?.slice(-6) || 'N/A'}`}
@@ -260,6 +257,7 @@ export default function MemberDashboard({ navigation }) {
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('Profile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
@@ -299,17 +297,17 @@ export default function MemberDashboard({ navigation }) {
           <View style={[styles.statCard, { marginHorizontal: 16, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <MaterialIcons name="security" size={16} color="#3b82f6" />
-              <Text style={{ fontFamily: Fonts.SemiBold, fontSize: 12, color: '#3b82f6' }}>Razorpay</Text>
+              <Text style={{ fontFamily: Fonts.SemiBold, fontSize: 12, color: '#3b82f6', includeFontPadding: false, textAlignVertical: 'center' }}>Razorpay</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 20 }}>
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937' }}>{razorpayStats.count}</Text>
-                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280' }}>Payments</Text>
+                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937', includeFontPadding: false, textAlignVertical: 'center' }}>{razorpayStats.count}</Text>
+                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280', includeFontPadding: false, textAlignVertical: 'center' }}>Payments</Text>
               </View>
               <View style={{ width: 1, backgroundColor: '#e5e7eb' }} />
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937' }}>₹{razorpayStats.totalAmount.toLocaleString()}</Text>
-                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280' }}>Total</Text>
+                <Text style={{ fontFamily: Fonts.Bold, fontSize: 14, color: '#1f2937', includeFontPadding: false, textAlignVertical: 'center' }}>₹{razorpayStats.totalAmount.toLocaleString()}</Text>
+                <Text style={{ fontFamily: Fonts.Regular, fontSize: 9, color: '#6b7280', includeFontPadding: false, textAlignVertical: 'center' }}>Total</Text>
               </View>
             </View>
           </View>
@@ -318,22 +316,22 @@ export default function MemberDashboard({ navigation }) {
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <MaterialIcons name="favorite" size={22} color="#ef4444" />
+            <MaterialIcons name="favorite" size={20} color="#ef4444" />
             <Text style={styles.statValue}>₹{stats.totalDonations.toLocaleString()}</Text>
             <Text style={styles.statLabel}>Donations</Text>
           </View>
           <View style={styles.statCard}>
-            <MaterialIcons name="event" size={22} color="#8b5cf6" />
+            <MaterialIcons name="event" size={20} color="#8b5cf6" />
             <Text style={styles.statValue}>{stats.eventsAttended}</Text>
             <Text style={styles.statLabel}>Events</Text>
           </View>
           <View style={styles.statCard}>
-            <MaterialIcons name="verified" size={22} color="#10b981" />
+            <MaterialIcons name="verified" size={20} color="#10b981" />
             <Text style={styles.statValue}>{stats.certificates}</Text>
             <Text style={styles.statLabel}>Certificates</Text>
           </View>
           <View style={styles.statCard}>
-            <MaterialIcons name="shopping-bag" size={22} color="#f59e0b" />
+            <MaterialIcons name="shopping-bag" size={20} color="#f59e0b" />
             <Text style={styles.statValue}>{stats.orders}</Text>
             <Text style={styles.statLabel}>Orders</Text>
           </View>
@@ -343,7 +341,7 @@ export default function MemberDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Donations</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Donate')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Donate')} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -363,7 +361,7 @@ export default function MemberDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Orders</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Profile', { screen: 'MyOrders' })}>
+            <TouchableOpacity onPress={() => navigation.navigate('Profile', { screen: 'MyOrders' })} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -404,9 +402,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Applications');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="handshake" size={24} color="#ffffff" />
+                  <MaterialIcons name="handshake" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Applications</Text>
@@ -425,9 +424,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Profile', { screen: 'MemberCertificate' });
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#10b981' }]}>
-                  <MaterialIcons name="verified" size={24} color="#ffffff" />
+                  <MaterialIcons name="verified" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Certificates</Text>
@@ -441,9 +441,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Profile', { screen: 'MemberNotice' });
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#8b5cf6' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
+                  <MaterialIcons name="announcement" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Notices</Text>
@@ -457,9 +458,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Profile', { screen: 'MemberComplaint' });
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
-                  <MaterialIcons name="report-problem" size={24} color="#ffffff" />
+                  <MaterialIcons name="report-problem" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Submit Complaint</Text>
@@ -473,9 +475,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Company');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#f59e0b' }]}>
-                  <MaterialIcons name="business" size={24} color="#ffffff" />
+                  <MaterialIcons name="business" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Company Info</Text>
@@ -489,9 +492,10 @@ export default function MemberDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('Events');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#3b82f6' }]}>
-                  <MaterialIcons name="event" size={24} color="#ffffff" />
+                  <MaterialIcons name="event" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>Events</Text>
@@ -502,6 +506,7 @@ export default function MemberDashboard({ navigation }) {
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => setFabModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCloseButtonText}>Close</Text>
               </TouchableOpacity>
@@ -528,6 +533,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Blue Header Card
   headerCard: {
@@ -550,11 +557,15 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#ffffff',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   subGreeting: {
     fontFamily: Fonts.Italic,
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
     width: 70,
@@ -619,6 +630,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   quickActionText: {
     fontFamily: Fonts.SemiBold,
@@ -626,6 +639,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 3,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Stats
   statsContainer: {
@@ -653,11 +668,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Recent Section
   recentSection: {
@@ -675,11 +694,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     letterSpacing: 0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItem: {
     flexDirection: 'row',
@@ -699,6 +722,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   recentItemIcon: {
     width: 32,
@@ -711,16 +735,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     paddingVertical: 20,
@@ -732,6 +762,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomSpacing: {
     height: 20,
@@ -760,6 +792,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItem: {
     flexDirection: 'row',
@@ -771,9 +805,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   modalItemIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -785,11 +819,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   pendingBadge: {
     backgroundColor: '#ef4444',
@@ -801,16 +839,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#f3f4f6',
   },
   modalCloseButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

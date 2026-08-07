@@ -244,11 +244,12 @@ export default function EventsManagement({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
         <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -264,17 +265,18 @@ export default function EventsManagement({ navigation }) {
           setSelectedEvent(event);
           setEventModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         {event.image ? (
           <Image source={{ uri: event.image }} style={styles.eventImage} />
         ) : (
           <View style={styles.eventImagePlaceholder}>
-            <MaterialIcons name="event" size={50} color="#9ca3af" />
+            <MaterialIcons name="event" size={40} color="#9ca3af" />
           </View>
         )}
         <View style={styles.eventContent}>
           <View style={styles.eventHeader}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
+            <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
             {event.featured && (
               <View style={styles.featuredBadge}>
                 <MaterialIcons name="star" size={16} color="#f59e0b" />
@@ -316,6 +318,7 @@ export default function EventsManagement({ navigation }) {
                 setFormData(event);
                 setModalVisible(true);
               }}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="edit" size={14} color="#ffffff" />
               <Text style={styles.eventActionText}>Edit</Text>
@@ -323,6 +326,7 @@ export default function EventsManagement({ navigation }) {
             <TouchableOpacity 
               style={[styles.eventActionButton, styles.deleteButton]}
               onPress={() => handleDeleteEvent(event.id)}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="delete" size={14} color="#ffffff" />
               <Text style={styles.eventActionText}>Delete</Text>
@@ -348,25 +352,27 @@ export default function EventsManagement({ navigation }) {
               resetForm();
               setModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="add" size={20} color="#ffffff" />
+            <MaterialIcons name="add" size={18} color="#ffffff" />
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search events..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -448,7 +454,7 @@ export default function EventsManagement({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingEvent ? 'Edit Event' : 'Create Event'}
@@ -460,7 +466,7 @@ export default function EventsManagement({ navigation }) {
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Event Image</Text>
-              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImage} activeOpacity={0.7}>
                 <MaterialIcons name="photo-library" size={20} color="#FF7722" />
                 <Text style={styles.uploadButtonText}>
                   {formData.image ? 'Change Image' : 'Upload Image'}
@@ -478,6 +484,7 @@ export default function EventsManagement({ navigation }) {
                 value={formData.title}
                 onChangeText={(text) => setFormData({...formData, title: text})}
                 placeholder="Enter event title"
+                textAlignVertical="center"
               />
             </View>
 
@@ -490,6 +497,7 @@ export default function EventsManagement({ navigation }) {
                 placeholder="Enter event description"
                 multiline
                 numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
 
@@ -500,6 +508,7 @@ export default function EventsManagement({ navigation }) {
                   style={styles.formInput}
                   value={formData.date?.toLocaleDateString?.() || ''}
                   placeholder="MM/DD/YYYY"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -509,6 +518,7 @@ export default function EventsManagement({ navigation }) {
                   value={formData.time}
                   onChangeText={(text) => setFormData({...formData, time: text})}
                   placeholder="10:00 AM"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -521,6 +531,7 @@ export default function EventsManagement({ navigation }) {
                   value={formData.location}
                   onChangeText={(text) => setFormData({...formData, location: text})}
                   placeholder="Enter location"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -530,6 +541,7 @@ export default function EventsManagement({ navigation }) {
                   value={formData.venue}
                   onChangeText={(text) => setFormData({...formData, venue: text})}
                   placeholder="Enter venue"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -542,6 +554,7 @@ export default function EventsManagement({ navigation }) {
                   value={formData.category}
                   onChangeText={(text) => setFormData({...formData, category: text})}
                   placeholder="e.g., Workshop"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -552,6 +565,7 @@ export default function EventsManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, capacity: text})}
                   placeholder="Max attendees"
                   keyboardType="numeric"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -563,6 +577,7 @@ export default function EventsManagement({ navigation }) {
                 value={formData.organizer}
                 onChangeText={(text) => setFormData({...formData, organizer: text})}
                 placeholder="Enter organizer name"
+                textAlignVertical="center"
               />
             </View>
 
@@ -575,6 +590,7 @@ export default function EventsManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, contactEmail: text})}
                   placeholder="Email"
                   keyboardType="email-address"
+                  textAlignVertical="center"
                 />
               </View>
               <View style={[styles.formField, styles.formHalf]}>
@@ -585,6 +601,7 @@ export default function EventsManagement({ navigation }) {
                   onChangeText={(text) => setFormData({...formData, contactPhone: text})}
                   placeholder="Phone"
                   keyboardType="phone-pad"
+                  textAlignVertical="center"
                 />
               </View>
             </View>
@@ -598,6 +615,7 @@ export default function EventsManagement({ navigation }) {
                       key={status}
                       style={[styles.statusOption, formData.status === status && styles.statusOptionActive]}
                       onPress={() => setFormData({...formData, status})}
+                      activeOpacity={0.7}
                     >
                       <Text style={[styles.statusOptionText, formData.status === status && styles.statusOptionTextActive]}>
                         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -608,16 +626,18 @@ export default function EventsManagement({ navigation }) {
               </View>
               <View style={[styles.formField, styles.formHalf]}>
                 <Text style={styles.formLabel}>Featured</Text>
-                <Switch
-                  value={formData.featured}
-                  onValueChange={(value) => setFormData({...formData, featured: value})}
-                  trackColor={{ false: '#767577', true: '#f59e0b' }}
-                  thumbColor={formData.featured ? '#ffffff' : '#f4f3f4'}
-                />
+                <View style={styles.switchContainer}>
+                  <Switch
+                    value={formData.featured}
+                    onValueChange={(value) => setFormData({...formData, featured: value})}
+                    trackColor={{ false: '#767577', true: '#f59e0b' }}
+                    thumbColor={formData.featured ? '#ffffff' : '#f4f3f4'}
+                  />
+                </View>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSaveEvent} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSaveEvent} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>
                 {loading ? 'Saving...' : editingEvent ? 'Update Event' : 'Create Event'}
               </Text>
@@ -720,6 +740,7 @@ export default function EventsManagement({ navigation }) {
                       setFormData(selectedEvent);
                       setModalVisible(true);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="edit" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Edit</Text>
@@ -730,6 +751,7 @@ export default function EventsManagement({ navigation }) {
                       setEventModalVisible(false);
                       handleDeleteEvent(selectedEvent.id);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="delete" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Delete</Text>
@@ -774,10 +796,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -790,6 +815,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 13,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Search inside header
@@ -799,7 +826,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -808,6 +835,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
@@ -816,18 +846,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statsContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: 10,
+    padding: 6,
     minWidth: 70,
     width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 65,
+    height: 62,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -836,30 +867,35 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   statIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // List Content
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   // Event Card
@@ -867,7 +903,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     overflow: 'hidden',
@@ -897,6 +933,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   featuredBadge: {
     paddingHorizontal: 8,
@@ -906,6 +944,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventDetails: {
     flexDirection: 'row',
@@ -921,6 +961,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventFooter: {
     flexDirection: 'row',
@@ -942,6 +984,8 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   capacityBadge: {
     flexDirection: 'row',
@@ -952,6 +996,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventActions: {
     flexDirection: 'row',
@@ -962,8 +1008,9 @@ const styles = StyleSheet.create({
   eventActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 4,
     gap: 4,
   },
@@ -977,6 +1024,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Empty State
@@ -990,11 +1039,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
@@ -1026,6 +1079,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formField: {
     marginBottom: 12,
@@ -1035,6 +1090,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: {
     borderWidth: 1,
@@ -1044,6 +1101,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   formTextArea: {
     height: 80,
@@ -1072,6 +1130,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#FF7722',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   imagePreview: {
     width: '100%',
@@ -1083,15 +1143,15 @@ const styles = StyleSheet.create({
   statusOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 4,
   },
   statusOption: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statusOptionActive: {
     backgroundColor: '#FF7722',
@@ -1101,21 +1161,31 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusOptionTextActive: {
     color: '#ffffff',
+  },
+  switchContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingTop: 4,
   },
   submitButton: {
     backgroundColor: '#10b981',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailImage: {
     width: '100%',
@@ -1132,11 +1202,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailStatusBadge: {
     alignSelf: 'flex-start',
@@ -1147,6 +1221,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailActions: {
     flexDirection: 'row',
@@ -1159,6 +1235,7 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1174,5 +1251,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

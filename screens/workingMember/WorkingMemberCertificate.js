@@ -1,3 +1,4 @@
+// screens/workingMember/WorkingMemberCertificate.js
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, 
@@ -33,10 +34,8 @@ export default function WorkingMemberCertificate({ navigation }) {
     fetchDonationCertificates();
   }, []);
 
-  // Auto-open certificate if passed from profile
   useEffect(() => {
     if (route.params?.certificate) {
-      // Check in certificates first, then donation certificates
       let cert = certificates.find(c => c.id === route.params.certificate.id);
       if (!cert) {
         cert = donationCertificates.find(c => c.id === route.params.certificate.id);
@@ -53,11 +52,11 @@ export default function WorkingMemberCertificate({ navigation }) {
     if (!userId) return;
 
     const q = query(
-  collection(db, 'certificates'),  // <-- Changed from 'workingMemberCertificates' to 'certificates'
-  where('memberId', '==', userId),
-  where('status', '==', 'issued'),
-  orderBy('issuedDate', 'desc')
-);
+      collection(db, 'certificates'),
+      where('memberId', '==', userId),
+      where('status', '==', 'issued'),
+      orderBy('issuedDate', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const certList = [];
@@ -113,11 +112,11 @@ export default function WorkingMemberCertificate({ navigation }) {
       }
 
       const certSnap = await getDocs(query(
-  collection(db, 'certificates'),  // <-- Changed from 'workingMemberCertificates' to 'certificates'
-  where('memberId', '==', userId),
-  where('status', '==', 'issued'),
-  orderBy('issuedDate', 'desc')
-));
+        collection(db, 'certificates'),
+        where('memberId', '==', userId),
+        where('status', '==', 'issued'),
+        orderBy('issuedDate', 'desc')
+      ));
       
       const certList = [];
       certSnap.forEach((doc) => {
@@ -182,7 +181,6 @@ export default function WorkingMemberCertificate({ navigation }) {
     }
   };
 
-  // Professional Certificate View Component
   const ProfessionalCertificateView = ({ cert }) => {
     const color = getCertificateColor(cert.type);
     const bgColor = getCertificateBg(cert.type);
@@ -208,12 +206,9 @@ export default function WorkingMemberCertificate({ navigation }) {
           colors={['#f5f0eb', '#ffffff', '#f5f0eb']}
           style={styles.certificateViewWrapper}
         >
-          {/* Decorative Border */}
           <View style={[styles.certificateBorder, { borderColor: color }]}>
-            {/* Inner decorative border */}
             <View style={[styles.certificateInnerBorder, { borderColor: color + '40' }]}>
               
-              {/* Top Ornament */}
               <View style={styles.ornamentContainer}>
                 <View style={[styles.ornamentLine, { backgroundColor: color }]} />
                 <View style={[styles.ornamentIcon, { backgroundColor: bgColor }]}>
@@ -222,7 +217,6 @@ export default function WorkingMemberCertificate({ navigation }) {
                 <View style={[styles.ornamentLine, { backgroundColor: color }]} />
               </View>
 
-              {/* Header */}
               <View style={styles.certHeaderView}>
                 <Text style={[styles.certTitleView, { color }]}>Certificate</Text>
                 <Text style={styles.certSubtitleView}>of Achievement</Text>
@@ -231,10 +225,8 @@ export default function WorkingMemberCertificate({ navigation }) {
                 </View>
               </View>
 
-              {/* Divider */}
               <View style={[styles.certDivider, { backgroundColor: color + '30' }]} />
 
-              {/* Body */}
               <View style={styles.certBodyView}>
                 <Text style={styles.certPresentedText}>This certificate is proudly presented to</Text>
                 <Text style={styles.certDonorName}>{donorName}</Text>
@@ -261,10 +253,8 @@ export default function WorkingMemberCertificate({ navigation }) {
                 </View>
               </View>
 
-              {/* Divider */}
               <View style={[styles.certDivider, { backgroundColor: color + '30' }]} />
 
-              {/* Footer */}
               <View style={styles.certFooterView}>
                 <View style={styles.certFooterInfo}>
                   <Text style={styles.certFooterDate}>Issued on: {date}</Text>
@@ -280,11 +270,11 @@ export default function WorkingMemberCertificate({ navigation }) {
             </View>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.certActionButtons}>
             <TouchableOpacity 
               style={[styles.certActionBtn, styles.certActionShare]}
               onPress={() => handleShare(cert)}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="share" size={18} color="#ffffff" />
               <Text style={styles.certActionBtnText}>Share</Text>
@@ -292,6 +282,7 @@ export default function WorkingMemberCertificate({ navigation }) {
             <TouchableOpacity 
               style={[styles.certActionBtn, styles.certActionDownload]}
               onPress={() => handleDownload(cert)}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="download" size={18} color="#ffffff" />
               <Text style={styles.certActionBtnText}>Download</Text>
@@ -299,6 +290,7 @@ export default function WorkingMemberCertificate({ navigation }) {
             <TouchableOpacity 
               style={[styles.certActionBtn, styles.certActionClose]}
               onPress={() => navigation.navigate('WorkingMemberProfile')}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="arrow-back" size={18} color="#ffffff" />
               <Text style={styles.certActionBtnText}>Profile</Text>
@@ -630,7 +622,6 @@ export default function WorkingMemberCertificate({ navigation }) {
     );
   }
 
-  // Show professional certificate view if selected
   if (showCertificateView && currentCert) {
     return (
       <View style={styles.certificateFullContainer}>
@@ -645,7 +636,6 @@ export default function WorkingMemberCertificate({ navigation }) {
     );
   }
 
-  // If no certificate is found
   return (
     <View style={styles.container}>
       <View style={styles.emptyState}>
@@ -654,6 +644,7 @@ export default function WorkingMemberCertificate({ navigation }) {
         <TouchableOpacity 
           style={styles.goBackButton}
           onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
         >
           <Text style={styles.goBackButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -679,6 +670,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -692,6 +685,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1f2937',
     marginTop: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   goBackButton: {
     backgroundColor: '#8b5cf6',
@@ -704,6 +699,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Professional Certificate View
@@ -770,6 +767,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 32,
     letterSpacing: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certSubtitleView: {
     fontFamily: Fonts.Regular,
@@ -777,6 +776,8 @@ const styles = StyleSheet.create({
     color: '#666',
     letterSpacing: 3,
     fontStyle: 'italic',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certTypeBadge: {
     paddingHorizontal: 16,
@@ -788,6 +789,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     letterSpacing: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDivider: {
     height: 2,
@@ -804,6 +807,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDonorName: {
     fontFamily: Fonts.Bold,
@@ -811,21 +816,29 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     marginVertical: 6,
     letterSpacing: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certContributionText: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certAmountView: {
     fontFamily: Fonts.Bold,
     fontSize: 26,
     marginVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certHoursView: {
     fontFamily: Fonts.Bold,
     fontSize: 24,
     marginVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certPurpose: {
     fontFamily: Fonts.SemiBold,
@@ -833,6 +846,8 @@ const styles = StyleSheet.create({
     color: '#555',
     fontStyle: 'italic',
     marginVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certQuoteContainer: {
     marginTop: 12,
@@ -844,6 +859,8 @@ const styles = StyleSheet.create({
     color: '#777',
     fontStyle: 'italic',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certFooterView: {
     flexDirection: 'row',
@@ -858,12 +875,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#555',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certFooterNumber: {
     fontFamily: 'monospace',
     fontSize: 10,
     color: '#888',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certPaymentBadge: {
     flexDirection: 'row',
@@ -880,6 +901,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certActionButtons: {
     flexDirection: 'row',
@@ -891,6 +914,7 @@ const styles = StyleSheet.create({
   certActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -909,5 +933,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -124,12 +124,10 @@ export default function MemberClasses({ navigation }) {
       return;
     }
 
-    // Check if class requires payment
     if (classItem.fee && classItem.fee > 0) {
       setClassToRegister(classItem);
       setShowPaymentModal(true);
     } else {
-      // Free registration
       handleRegister(classItem);
     }
   };
@@ -159,7 +157,6 @@ export default function MemberClasses({ navigation }) {
 
       await addDoc(collection(db, 'classRegistrations'), registrationData);
 
-      // Update class registered count
       const classRef = doc(db, 'onlineClasses', classItem.id);
       await updateDoc(classRef, {
         registeredCount: increment(1),
@@ -184,10 +181,8 @@ export default function MemberClasses({ navigation }) {
       const user = auth.currentUser;
       const fee = classToRegister.fee || 0;
 
-      // Create Razorpay order
       const orderData = await createRazorpayOrder(fee);
 
-      // Initiate Razorpay payment
       const paymentResult = await initiateRazorpayPayment({
         amount: fee,
         name: user?.displayName || 'Member',
@@ -198,7 +193,6 @@ export default function MemberClasses({ navigation }) {
       });
 
       if (paymentResult.success) {
-        // Verify payment
         const verificationResult = await verifyRazorpayPayment({
           paymentId: paymentResult.paymentId,
           orderId: paymentResult.orderId,
@@ -268,11 +262,12 @@ export default function MemberClasses({ navigation }) {
         };
         handleFilterPress(statusMap[label] || 'all');
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.statIconContainer}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={18} color={color} />
       </View>
-      <View>
+      <View style={styles.statTextContainer}>
         <Text style={styles.statCount}>{count}</Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
@@ -291,6 +286,7 @@ export default function MemberClasses({ navigation }) {
           setSelectedClass(classItem);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.classHeader}>
           <View style={styles.classTitleContainer}>
@@ -374,6 +370,7 @@ export default function MemberClasses({ navigation }) {
                 if (!paymentLoading) setShowPaymentModal(false);
               }}
               disabled={paymentLoading}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
@@ -382,7 +379,7 @@ export default function MemberClasses({ navigation }) {
           {classToRegister && (
             <>
               <View style={styles.paymentInfo}>
-                <MaterialIcons name="video-library" size={40} color="#3b82f6" />
+                <MaterialIcons name="video-library" size={36} color="#3b82f6" />
                 <Text style={styles.paymentClassTitle}>{classToRegister.title}</Text>
                 <Text style={styles.paymentFeeLabel}>Registration Fee</Text>
                 <Text style={styles.paymentFeeAmount}>₹{classToRegister.fee}</Text>
@@ -395,6 +392,7 @@ export default function MemberClasses({ navigation }) {
                 style={[styles.payFeeButton, paymentLoading && styles.payFeeDisabled]}
                 onPress={handlePaymentAndRegister}
                 disabled={paymentLoading}
+                activeOpacity={0.7}
               >
                 {paymentLoading ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -427,7 +425,7 @@ export default function MemberClasses({ navigation }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Online Classes</Text>
@@ -436,17 +434,18 @@ export default function MemberClasses({ navigation }) {
 
         {/* Search */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search classes..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -509,12 +508,12 @@ export default function MemberClasses({ navigation }) {
         onRequestClose={() => setDetailModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             {selectedClass && (
               <>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Class Details</Text>
-                  <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                  <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                     <MaterialIcons name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
@@ -563,7 +562,7 @@ export default function MemberClasses({ navigation }) {
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Google Meet Link</Text>
-                  <TouchableOpacity onPress={() => openMeetLink(selectedClass.googleMeetLink)}>
+                  <TouchableOpacity onPress={() => openMeetLink(selectedClass.googleMeetLink)} activeOpacity={0.7}>
                     <Text style={[styles.detailValue, styles.linkText]}>
                       {selectedClass.googleMeetLink || 'Not available'}
                     </Text>
@@ -600,6 +599,7 @@ export default function MemberClasses({ navigation }) {
                       selectedClass.registeredCount >= selectedClass.capacity ||
                       paymentLoading
                     }
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons 
                       name={
@@ -657,6 +657,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   searchContainer: {
@@ -665,7 +667,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -674,6 +676,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   statsContainer: {
@@ -689,29 +694,38 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 10,
     gap: 6,
+    borderLeftWidth: 3,
   },
   statIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  statTextContainer: {
+    flex: 1,
   },
   statCount: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 9,
+    fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   classCard: {
@@ -719,7 +733,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -745,6 +759,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classStatusBadge: {
     paddingHorizontal: 8,
@@ -754,12 +770,16 @@ const styles = StyleSheet.create({
   classStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDetails: {
     flexDirection: 'row',
@@ -775,6 +795,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classFooter: {
     flexDirection: 'row',
@@ -797,6 +819,8 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   feeBadge: {
     flexDirection: 'row',
@@ -811,6 +835,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: '#d97706',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   capacityBadge: {
     flexDirection: 'row',
@@ -821,6 +847,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   registeredBadge: {
     flexDirection: 'row',
@@ -837,6 +865,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#059669',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -849,12 +879,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   modalContainer: {
@@ -879,6 +913,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   detailSection: {
@@ -893,11 +929,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   linkText: {
     color: '#3b82f6',
@@ -912,6 +952,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   registerButton: {
@@ -931,6 +973,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Payment Modal
@@ -949,18 +993,24 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginTop: 8,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentFeeLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
     marginTop: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentFeeAmount: {
     fontFamily: Fonts.Bold,
-    fontSize: 32,
+    fontSize: 28,
     color: '#3b82f6',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentDescription: {
     fontFamily: Fonts.Regular,
@@ -968,12 +1018,15 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   payFeeButton: {
     backgroundColor: '#3b82f6',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
   },
   payFeeDisabled: {
@@ -983,6 +1036,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentNote: {
     fontFamily: Fonts.Regular,
@@ -990,6 +1045,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   loadingContainer: {
@@ -1002,5 +1059,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

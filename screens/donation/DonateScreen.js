@@ -85,160 +85,149 @@ export default function DonateScreen({ navigation }) {
     setAmount(value);
   };
 
-  // screens/donation/DonateScreen.js - Fix handleDonate function
-
-const handleDonation = async () => {
-  const donationAmount = parseFloat(amount);
-  if (!donationAmount || donationAmount <= 0) {
-    Alert.alert('Error', 'Please enter a valid donation amount');
-    return;
-  }
-
-  if (donationAmount < 10) {
-    Alert.alert('Error', 'Minimum donation amount is ₹10');
-    return;
-  }
-
-  const user = auth.currentUser;
-  if (!user) {
-    Alert.alert('Error', 'Please login to donate');
-    return;
-  }
-
-  // Validate donor details
-  if (!isAnonymous) {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name or select anonymous');
+  const handleDonation = async () => {
+    const donationAmount = parseFloat(amount);
+    if (!donationAmount || donationAmount <= 0) {
+      Alert.alert('Error', 'Please enter a valid donation amount');
       return;
     }
-    if (!email.trim() || !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+
+    if (donationAmount < 10) {
+      Alert.alert('Error', 'Minimum donation amount is ₹10');
       return;
     }
-    if (!phone.trim() || phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert('Error', 'Please login to donate');
       return;
     }
-  }
 
-  setLoading(true);
-  try {
-    const donorName = isAnonymous ? 'Anonymous Donor' : name;
-    const donorEmail = isAnonymous ? 'anonymous@donor.com' : email;
-    const donorPhone = isAnonymous ? '0000000000' : phone;
-
-    // ✅ Step 1: Initiate Razorpay payment
-    const paymentResult = await initiateRazorpayPayment({
-      amount: donationAmount,
-      name: donorName,
-      email: donorEmail,
-      phone: donorPhone,
-      description: purpose,
-    });
-
-    // ✅ Step 2: Check if payment was successful
-    if (paymentResult && paymentResult.success) {
-      
-      // ✅ Step 3: Verify payment (optional - keep or remove)
-      let verificationResult = { success: true };
-      if (paymentResult.paymentId) {
-        verificationResult = await verifyRazorpayPayment({
-          paymentId: paymentResult.paymentId,
-          orderId: paymentResult.orderId,
-          signature: paymentResult.signature,
-        });
+    // Validate donor details
+    if (!isAnonymous) {
+      if (!name.trim()) {
+        Alert.alert('Error', 'Please enter your name or select anonymous');
+        return;
       }
+      if (!email.trim() || !email.includes('@')) {
+        Alert.alert('Error', 'Please enter a valid email address');
+        return;
+      }
+      if (!phone.trim() || phone.length < 10) {
+        Alert.alert('Error', 'Please enter a valid phone number');
+        return;
+      }
+    }
 
-      if (verificationResult.success) {
-        // Step 4: Save donation to Firebase
-        const transactionId = `DON${Date.now()}${Math.floor(Math.random() * 1000)}`;
-        
-        const donationData = {
-          donorId: user.uid,
-          donorName: donorName,
-          donorEmail: donorEmail,
-          donorPhone: donorPhone,
-          amount: donationAmount,
-          paymentMethod: 'razorpay',
-          paymentId: paymentResult.paymentId || 'pending_verification',
-          status: 'completed',
-          purpose: purpose,
-          campaign: purpose,
-          transactionId: transactionId,
-          isAnonymous: isAnonymous,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+    setLoading(true);
+    try {
+      const donorName = isAnonymous ? 'Anonymous Donor' : name;
+      const donorEmail = isAnonymous ? 'anonymous@donor.com' : email;
+      const donorPhone = isAnonymous ? '0000000000' : phone;
 
-        await setDoc(doc(db, 'donations', transactionId), donationData);
+      const paymentResult = await initiateRazorpayPayment({
+        amount: donationAmount,
+        name: donorName,
+        email: donorEmail,
+        phone: donorPhone,
+        description: purpose,
+      });
 
-        // Update donor stats
-        const donorRef = doc(db, 'donors', user.uid);
-        const donorDoc = await getDoc(donorRef);
-        
-        if (donorDoc.exists()) {
-          await updateDoc(donorRef, {
-            totalDonations: increment(donationAmount),
-            donationCount: increment(1),
-            lastDonation: new Date().toISOString(),
-            livesImpacted: increment(Math.floor(donationAmount / 100) + 1),
-            name: donorName,
-            email: donorEmail,
-            phone: donorPhone,
+      if (paymentResult && paymentResult.success) {
+        let verificationResult = { success: true };
+        if (paymentResult.paymentId) {
+          verificationResult = await verifyRazorpayPayment({
+            paymentId: paymentResult.paymentId,
+            orderId: paymentResult.orderId,
+            signature: paymentResult.signature,
           });
-        } else {
-          await setDoc(donorRef, {
-            userId: user.uid,
-            name: donorName,
-            email: donorEmail,
-            phone: donorPhone,
-            totalDonations: donationAmount,
-            donationCount: 1,
-            lastDonation: new Date().toISOString(),
-            livesImpacted: Math.floor(donationAmount / 100) + 1,
+        }
+
+        if (verificationResult.success) {
+          const transactionId = `DON${Date.now()}${Math.floor(Math.random() * 1000)}`;
+          
+          const donationData = {
+            donorId: user.uid,
+            donorName: donorName,
+            donorEmail: donorEmail,
+            donorPhone: donorPhone,
+            amount: donationAmount,
+            paymentMethod: 'razorpay',
+            paymentId: paymentResult.paymentId || 'pending_verification',
+            status: 'completed',
+            purpose: purpose,
+            campaign: purpose,
+            transactionId: transactionId,
+            isAnonymous: isAnonymous,
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          await setDoc(doc(db, 'donations', transactionId), donationData);
+
+          const donorRef = doc(db, 'donors', user.uid);
+          const donorDoc = await getDoc(donorRef);
+          
+          if (donorDoc.exists()) {
+            await updateDoc(donorRef, {
+              totalDonations: increment(donationAmount),
+              donationCount: increment(1),
+              lastDonation: new Date().toISOString(),
+              livesImpacted: increment(Math.floor(donationAmount / 100) + 1),
+              name: donorName,
+              email: donorEmail,
+              phone: donorPhone,
+            });
+          } else {
+            await setDoc(donorRef, {
+              userId: user.uid,
+              name: donorName,
+              email: donorEmail,
+              phone: donorPhone,
+              totalDonations: donationAmount,
+              donationCount: 1,
+              lastDonation: new Date().toISOString(),
+              livesImpacted: Math.floor(donationAmount / 100) + 1,
+              createdAt: new Date().toISOString(),
+            });
+          }
+
+          if (!isAnonymous) {
+            await AsyncStorage.setItem('donorName', name);
+            await AsyncStorage.setItem('donorEmail', email);
+            await AsyncStorage.setItem('donorPhone', phone);
+          }
+
+          setDonationData({
+            ...paymentResult,
+            amount: donationAmount,
+            name: donorName,
+            email: donorEmail,
+            phone: donorPhone,
+            purpose: purpose,
           });
+          setShowSuccessModal(true);
+        } else {
+          Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
         }
-
-        // Save user data
-        if (!isAnonymous) {
-          await AsyncStorage.setItem('donorName', name);
-          await AsyncStorage.setItem('donorEmail', email);
-          await AsyncStorage.setItem('donorPhone', phone);
-        }
-
-        // Show success modal
-        setDonationData({
-          ...paymentResult,
-          amount: donationAmount,
-          name: donorName,
-          email: donorEmail,
-          phone: donorPhone,
-          purpose: purpose,
-        });
-        setShowSuccessModal(true);
       } else {
-        Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+        Alert.alert(
+          'Payment Failed',
+          paymentResult?.error || 'Something went wrong. Please try again.',
+          [{ text: 'OK', style: 'cancel' }]
+        );
       }
-    } else {
-      // Payment failed
+    } catch (error) {
+      console.error('Donation error:', error);
       Alert.alert(
-        'Payment Failed',
-        paymentResult?.error || 'Something went wrong. Please try again.',
+        'Error',
+        'Failed to process donation. Please check your internet connection and try again.',
         [{ text: 'OK', style: 'cancel' }]
       );
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Donation error:', error);
-    Alert.alert(
-      'Error',
-      'Failed to process donation. Please check your internet connection and try again.',
-      [{ text: 'OK', style: 'cancel' }]
-    );
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleSuccessAction = (action) => {
     setShowSuccessModal(false);
@@ -295,12 +284,14 @@ const handleDonation = async () => {
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonSecondary]}
               onPress={() => handleSuccessAction('history')}
+              activeOpacity={0.7}
             >
               <Text style={styles.modalButtonTextSecondary}>View History</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, styles.modalButtonPrimary]}
               onPress={() => handleSuccessAction('certificate')}
+              activeOpacity={0.7}
             >
               <Text style={styles.modalButtonTextPrimary}>Get Certificate</Text>
             </TouchableOpacity>
@@ -309,6 +300,7 @@ const handleDonation = async () => {
           <TouchableOpacity
             style={styles.modalCloseButton}
             onPress={() => handleSuccessAction('close')}
+            activeOpacity={0.7}
           >
             <Text style={styles.modalCloseText}>Close</Text>
           </TouchableOpacity>
@@ -324,7 +316,7 @@ const handleDonation = async () => {
     >
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Make a Donation</Text>
@@ -343,6 +335,7 @@ const handleDonation = async () => {
           <TouchableOpacity
             style={styles.anonymousToggle}
             onPress={() => setIsAnonymous(!isAnonymous)}
+            activeOpacity={0.7}
           >
             <MaterialIcons 
               name={isAnonymous ? 'check-box' : 'check-box-outline-blank'} 
@@ -362,6 +355,7 @@ const handleDonation = async () => {
                   placeholderTextColor="#9ca3af"
                   value={name}
                   onChangeText={setName}
+                  textAlignVertical="center"
                 />
               </View>
 
@@ -375,6 +369,7 @@ const handleDonation = async () => {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  textAlignVertical="center"
                 />
               </View>
 
@@ -388,6 +383,7 @@ const handleDonation = async () => {
                   onChangeText={setPhone}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  textAlignVertical="center"
                 />
               </View>
             </>
@@ -406,6 +402,7 @@ const handleDonation = async () => {
                   selectedAmount === preset && styles.presetButtonActive,
                 ]}
                 onPress={() => handleAmountSelect(preset)}
+                activeOpacity={0.7}
               >
                 <Text
                   style={[
@@ -430,6 +427,7 @@ const handleDonation = async () => {
                 value={customAmount}
                 onChangeText={handleCustomAmount}
                 keyboardType="numeric"
+                textAlignVertical="center"
               />
             </View>
           </View>
@@ -447,6 +445,7 @@ const handleDonation = async () => {
                   purpose === p && styles.purposeButtonActive,
                 ]}
                 onPress={() => setPurpose(p)}
+                activeOpacity={0.7}
               >
                 <Text
                   style={[
@@ -471,10 +470,11 @@ const handleDonation = async () => {
                 paymentMethod === 'razorpay' && styles.paymentOptionActive,
               ]}
               onPress={() => setPaymentMethod('razorpay')}
+              activeOpacity={0.7}
             >
               <MaterialIcons
                 name="security"
-                size={24}
+                size={22}
                 color={paymentMethod === 'razorpay' ? '#10b981' : '#6b7280'}
               />
               <Text
@@ -493,10 +493,11 @@ const handleDonation = async () => {
                 paymentMethod === 'upi' && styles.paymentOptionActive,
               ]}
               onPress={() => setPaymentMethod('upi')}
+              activeOpacity={0.7}
             >
               <MaterialIcons
                 name="payment"
-                size={24}
+                size={22}
                 color={paymentMethod === 'upi' ? '#10b981' : '#6b7280'}
               />
               <Text
@@ -515,10 +516,11 @@ const handleDonation = async () => {
                 paymentMethod === 'card' && styles.paymentOptionActive,
               ]}
               onPress={() => setPaymentMethod('card')}
+              activeOpacity={0.7}
             >
               <MaterialIcons
                 name="credit-card"
-                size={24}
+                size={22}
                 color={paymentMethod === 'card' ? '#10b981' : '#6b7280'}
               />
               <Text
@@ -564,6 +566,7 @@ const handleDonation = async () => {
           ]}
           onPress={handleDonation}
           disabled={!amount || parseFloat(amount) <= 0 || loading}
+          activeOpacity={0.7}
         >
           {loading ? (
             <ActivityIndicator color="#ffffff" />
@@ -615,6 +618,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   content: {
     padding: 16,
@@ -633,6 +638,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -651,6 +658,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 10,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   anonymousToggle: {
     flexDirection: 'row',
@@ -663,6 +671,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginLeft: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   presetContainer: {
     flexDirection: 'row',
@@ -685,6 +695,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   presetTextActive: {
     color: '#10b981',
@@ -697,6 +709,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   customInputContainer: {
     flexDirection: 'row',
@@ -712,6 +726,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     marginRight: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   customInput: {
     flex: 1,
@@ -719,6 +735,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: 12,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   purposeContainer: {
     flexDirection: 'row',
@@ -741,6 +758,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   purposeTextActive: {
     color: '#10b981',
@@ -756,11 +775,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    gap: 8,
+    gap: 6,
   },
   paymentOptionActive: {
     borderColor: '#10b981',
@@ -770,6 +789,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentOptionTextActive: {
     color: '#10b981',
@@ -780,6 +801,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryCard: {
     backgroundColor: '#ffffff',
@@ -798,11 +821,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   divider: {
     height: 1,
@@ -813,11 +840,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   totalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donateButton: {
     flexDirection: 'row',
@@ -840,6 +871,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 18,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   noteText: {
     fontFamily: Fonts.Regular,
@@ -847,6 +880,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Modal Styles
   modalOverlay: {
@@ -854,6 +889,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   modalContent: {
     backgroundColor: '#ffffff',
@@ -877,6 +913,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalSubtitle: {
     fontFamily: Fonts.Regular,
@@ -884,6 +922,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginBottom: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalDetails: {
     width: '100%',
@@ -897,6 +937,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     paddingVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalDetailLabel: {
     fontFamily: Fonts.SemiBold,
@@ -913,6 +955,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtonPrimary: {
     backgroundColor: '#10b981',
@@ -926,11 +969,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalButtonTextSecondary: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     paddingVertical: 8,
@@ -940,5 +987,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

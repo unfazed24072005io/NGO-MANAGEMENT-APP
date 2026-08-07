@@ -39,7 +39,6 @@ export default function EmployeeProfile({ navigation }) {
         return;
       }
 
-      // Get user data
       const userDocRef = doc(db, 'users', userId);
       const userDocSnap = await getDoc(userDocRef);
       
@@ -47,7 +46,6 @@ export default function EmployeeProfile({ navigation }) {
         const userData = userDocSnap.data();
         setUserData(userData);
         
-        // Get employee data using employeeId reference
         if (userData.employeeId) {
           const empDocRef = doc(db, 'employees', userData.employeeId);
           const empDocSnap = await getDoc(empDocRef);
@@ -84,7 +82,6 @@ export default function EmployeeProfile({ navigation }) {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
 
-      // Update user document
       await updateDoc(doc(db, 'users', userId), {
         fullName: formData.fullName,
         phone: formData.phone,
@@ -94,7 +91,6 @@ export default function EmployeeProfile({ navigation }) {
         updatedAt: new Date().toISOString()
       });
 
-      // Update employee document if employeeId exists
       if (userData?.employeeId) {
         await updateDoc(doc(db, 'employees', userData.employeeId), {
           fullName: formData.fullName,
@@ -142,11 +138,11 @@ export default function EmployeeProfile({ navigation }) {
       {/* Saffron Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Profile</Text>
-          <TouchableOpacity onPress={() => setEditing(!editing)}>
+          <TouchableOpacity onPress={() => setEditing(!editing)} activeOpacity={0.7}>
             <Text style={styles.editButton}>{editing ? 'Cancel' : 'Edit'}</Text>
           </TouchableOpacity>
         </View>
@@ -190,6 +186,7 @@ export default function EmployeeProfile({ navigation }) {
                 value={formData.fullName}
                 onChangeText={(text) => setFormData({...formData, fullName: text})}
                 placeholder="Enter full name"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{formData.fullName || 'N/A'}</Text>
@@ -210,6 +207,7 @@ export default function EmployeeProfile({ navigation }) {
                 onChangeText={(text) => setFormData({...formData, phone: text})}
                 keyboardType="phone-pad"
                 placeholder="Enter phone number"
+                textAlignVertical="center"
               />
             ) : (
               <Text style={styles.value}>{formData.phone || 'Not provided'}</Text>
@@ -226,6 +224,7 @@ export default function EmployeeProfile({ navigation }) {
                 multiline
                 numberOfLines={3}
                 placeholder="Enter address"
+                textAlignVertical="top"
               />
             ) : (
               <Text style={styles.value}>{formData.address || 'Not provided'}</Text>
@@ -274,10 +273,11 @@ export default function EmployeeProfile({ navigation }) {
         <TouchableOpacity 
           style={styles.taskButton}
           onPress={() => navigation.navigate('EmployeeTasks')}
+          activeOpacity={0.7}
         >
           <View style={styles.taskButtonLeft}>
             <View style={styles.taskButtonIcon}>
-              <MaterialIcons name="assignment" size={24} color="#ffffff" />
+              <MaterialIcons name="assignment" size={22} color="#ffffff" />
             </View>
             <View>
               <Text style={styles.taskButtonTitle}>My Tasks</Text>
@@ -288,13 +288,13 @@ export default function EmployeeProfile({ navigation }) {
         </TouchableOpacity>
 
         {editing && (
-          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} activeOpacity={0.7}>
             <MaterialIcons name="save" size={20} color="#ffffff" />
             <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.7}>
           <MaterialIcons name="logout" size={20} color="#ffffff" />
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -335,11 +335,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   editButton: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   scrollView: {
@@ -348,6 +352,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 40,
+    paddingTop: 4,
   },
 
   loadingContainer: {
@@ -361,6 +366,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   profileSection: {
@@ -393,17 +400,23 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#1f2937',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profilePosition: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#FF7722',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileDepartment: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   employeeIdBadge: {
     flexDirection: 'row',
@@ -419,6 +432,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   card: {
@@ -439,6 +454,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   field: {
     marginBottom: 12,
@@ -448,11 +465,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   value: {
     fontFamily: Fonts.Regular,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -463,6 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
   textArea: {
     height: 80,
@@ -482,6 +504,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   taskButton: {
@@ -503,11 +527,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   taskButtonIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -516,12 +541,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   taskButtonSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   saveButton: {
@@ -538,6 +567,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   logoutButton: {
     flexDirection: 'row',
@@ -553,6 +584,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   versionContainer: {
     alignItems: 'center',
@@ -562,5 +595,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

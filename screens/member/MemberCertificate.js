@@ -41,7 +41,6 @@ export default function MemberCertificate({ navigation }) {
     setupRealtimeListener();
   }, []);
 
-  // Auto-open certificate if passed from profile
   useEffect(() => {
     if (route.params?.certificate && certificates.length > 0) {
       const cert = certificates.find(c => c.id === route.params.certificate.id);
@@ -90,7 +89,6 @@ export default function MemberCertificate({ navigation }) {
       });
       setLoading(false);
 
-      // Check if we have a certificate to auto-open
       if (route.params?.certificate && certList.length > 0) {
         const cert = certList.find(c => c.id === route.params.certificate.id);
         if (cert) {
@@ -185,7 +183,6 @@ export default function MemberCertificate({ navigation }) {
     }
   };
 
-  // Professional Certificate View Component
   const ProfessionalCertificateView = ({ cert }) => {
     const color = getCertificateColor(cert.type);
     const bgColor = getCertificateBg(cert.type);
@@ -210,12 +207,9 @@ export default function MemberCertificate({ navigation }) {
           colors={['#f5f0eb', '#ffffff', '#f5f0eb']}
           style={styles.certificateViewWrapper}
         >
-          {/* Decorative Border */}
           <View style={[styles.certificateBorder, { borderColor: color }]}>
-            {/* Inner decorative border */}
             <View style={[styles.certificateInnerBorder, { borderColor: color + '40' }]}>
               
-              {/* Top Ornament */}
               <View style={styles.ornamentContainer}>
                 <View style={[styles.ornamentLine, { backgroundColor: color }]} />
                 <View style={[styles.ornamentIcon, { backgroundColor: bgColor }]}>
@@ -224,7 +218,6 @@ export default function MemberCertificate({ navigation }) {
                 <View style={[styles.ornamentLine, { backgroundColor: color }]} />
               </View>
 
-              {/* Header */}
               <View style={styles.certHeaderView}>
                 <Text style={[styles.certTitleView, { color }]}>Certificate</Text>
                 <Text style={styles.certSubtitleView}>of Appreciation</Text>
@@ -233,10 +226,8 @@ export default function MemberCertificate({ navigation }) {
                 </View>
               </View>
 
-              {/* Divider */}
               <View style={[styles.certDivider, { backgroundColor: color + '30' }]} />
 
-              {/* Body */}
               <View style={styles.certBodyView}>
                 <Text style={styles.certPresentedText}>This certificate is proudly presented to</Text>
                 <Text style={styles.certDonorName}>{donorName}</Text>
@@ -257,12 +248,9 @@ export default function MemberCertificate({ navigation }) {
                 </View>
               </View>
 
-              {/* Divider */}
               <View style={[styles.certDivider, { backgroundColor: color + '30' }]} />
 
-              {/* Footer */}
               <View style={styles.certFooterView}>
-                
                 <View style={styles.certFooterInfo}>
                   <Text style={styles.certFooterDate}>Issued on: {date}</Text>
                   <Text style={styles.certFooterNumber}>Certificate No: {certNumber}</Text>
@@ -277,15 +265,15 @@ export default function MemberCertificate({ navigation }) {
             </View>
           </View>
 
-          {/* Action Buttons */}
           <View style={styles.certActionButtons}>
-           <TouchableOpacity 
-  style={[styles.certActionBtn, styles.certActionClose]}
-  onPress={() => navigation.navigate('MemberProfile')}
->
-  <MaterialIcons name="arrow-back" size={18} color="#ffffff" />
-  <Text style={styles.certActionBtnText}>Profile</Text>
-</TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.certActionBtn, styles.certActionClose]}
+              onPress={() => navigation.navigate('MemberProfile')}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="arrow-back" size={18} color="#ffffff" />
+              <Text style={styles.certActionBtnText}>Profile</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </View>
@@ -608,10 +596,10 @@ ${cert.paymentId ? `Payment ID: ${cert.paymentId}` : ''}
     >
       <View style={styles.certHeader}>
         <View style={[styles.certIcon, { backgroundColor: getCertificateBg(cert.type) }]}>
-          <MaterialIcons name={getCertificateIcon(cert.type)} size={24} color={getCertificateColor(cert.type)} />
+          <MaterialIcons name={getCertificateIcon(cert.type)} size={22} color={getCertificateColor(cert.type)} />
         </View>
         <View style={styles.certInfo}>
-          <Text style={styles.certTitle}>{cert.title || `${getTypeLabel(cert.type)} Certificate`}</Text>
+          <Text style={styles.certTitle} numberOfLines={1}>{cert.title || `${getTypeLabel(cert.type)} Certificate`}</Text>
           <Text style={styles.certDate}>
             {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
           </Text>
@@ -624,7 +612,7 @@ ${cert.paymentId ? `Payment ID: ${cert.paymentId}` : ''}
       </View>
       
       {cert.description && (
-        <Text style={styles.certDescription}>{cert.description}</Text>
+        <Text style={styles.certDescription} numberOfLines={2}>{cert.description}</Text>
       )}
       
       {cert.amount && cert.amount > 0 && (
@@ -634,11 +622,11 @@ ${cert.paymentId ? `Payment ID: ${cert.paymentId}` : ''}
       )}
       
       <View style={styles.certActions}>
-        <TouchableOpacity style={styles.certAction} onPress={() => handleShare(cert)}>
+        <TouchableOpacity style={styles.certAction} onPress={() => handleShare(cert)} activeOpacity={0.7}>
           <MaterialIcons name="share" size={18} color="#3b82f6" />
           <Text style={styles.certActionText}>Share</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.certAction} onPress={() => handleDownload(cert)}>
+        <TouchableOpacity style={styles.certAction} onPress={() => handleDownload(cert)} activeOpacity={0.7}>
           <MaterialIcons name="download" size={18} color="#3b82f6" />
           <Text style={styles.certActionText}>Download</Text>
         </TouchableOpacity>
@@ -664,24 +652,72 @@ ${cert.paymentId ? `Payment ID: ${cert.paymentId}` : ''}
     );
   }
 
-  // Show professional certificate view if selected
-  // Show professional certificate view if selected
-// Show professional certificate view if selected
-if (showCertificateView && currentCert) {
+  if (showCertificateView && currentCert) {
+    return (
+      <View style={styles.certificateFullContainer}>
+        <ScrollView 
+          contentContainerStyle={styles.certificateScrollContent}
+          showsVerticalScrollIndicator={false}
+          ref={scrollViewRef}
+        >
+          <ProfessionalCertificateView cert={currentCert} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.certificateFullContainer}>
+    <View style={styles.container}>
+      {/* Blue Header */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+            <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Certificates</Text>
+          <View style={{ width: 32 }} />
+        </View>
+      </View>
+
+      {/* Summary Stats */}
+      <View style={styles.summaryGrid}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{stats.total}</Text>
+          <Text style={styles.summaryLabel}>Total</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{stats.donationCerts}</Text>
+          <Text style={styles.summaryLabel}>Donations</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>₹{stats.totalAmount.toLocaleString()}</Text>
+          <Text style={styles.summaryLabel}>Amount</Text>
+        </View>
+      </View>
+
+      {/* Certificate List */}
       <ScrollView 
-        contentContainerStyle={styles.certificateScrollContent}
         showsVerticalScrollIndicator={false}
-        ref={scrollViewRef}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#3b82f6']} />
+        }
+        contentContainerStyle={styles.listContent}
       >
-        <ProfessionalCertificateView cert={currentCert} />
+        {certificates.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="verified" size={44} color="#d1d5db" />
+            <Text style={styles.emptyStateText}>No certificates yet</Text>
+            <Text style={styles.emptyStateSubtext}>Complete activities to earn certificates</Text>
+          </View>
+        ) : (
+          certificates.map((cert) => (
+            <CertificateCard key={cert.id} cert={cert} />
+          ))
+        )}
+        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
-}
-
-
 }
 
 const styles = StyleSheet.create({
@@ -713,6 +749,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   loadingContainer: {
@@ -726,6 +764,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   summaryGrid: {
@@ -748,17 +788,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   certCard: {
@@ -766,6 +811,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -775,9 +821,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   certIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -789,11 +835,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certStatus: {
     paddingHorizontal: 8,
@@ -804,13 +854,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 9,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
-    marginLeft: 56,
+    marginLeft: 52,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certAmountBadge: {
     backgroundColor: '#10b981',
@@ -818,18 +872,20 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 12,
     alignSelf: 'flex-start',
-    marginLeft: 56,
+    marginLeft: 52,
     marginBottom: 8,
   },
   certAmountText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certActions: {
     flexDirection: 'row',
     gap: 16,
-    marginLeft: 56,
+    marginLeft: 52,
   },
   certAction: {
     flexDirection: 'row',
@@ -840,6 +896,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -852,15 +910,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#ef4444',
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -871,9 +934,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Professional Certificate View
+  certificateFullContainer: {
+    flex: 1,
+    backgroundColor: '#f5f0eb',
+  },
   certificateScrollContent: {
     padding: 16,
     paddingBottom: 40,
@@ -931,6 +1000,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 32,
     letterSpacing: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certSubtitleView: {
     fontFamily: Fonts.Regular,
@@ -938,6 +1009,8 @@ const styles = StyleSheet.create({
     color: '#666',
     letterSpacing: 3,
     fontStyle: 'italic',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certTypeBadge: {
     paddingHorizontal: 16,
@@ -949,6 +1022,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     letterSpacing: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDivider: {
     height: 2,
@@ -965,6 +1040,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDonorName: {
     fontFamily: Fonts.Bold,
@@ -972,16 +1049,22 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     marginVertical: 6,
     letterSpacing: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certContributionText: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certAmountView: {
     fontFamily: Fonts.Bold,
     fontSize: 26,
     marginVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certPurpose: {
     fontFamily: Fonts.SemiBold,
@@ -989,6 +1072,8 @@ const styles = StyleSheet.create({
     color: '#555',
     fontStyle: 'italic',
     marginVertical: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certQuoteContainer: {
     marginTop: 12,
@@ -1000,6 +1085,8 @@ const styles = StyleSheet.create({
     color: '#777',
     fontStyle: 'italic',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certFooterView: {
     flexDirection: 'row',
@@ -1019,16 +1106,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 12,
     letterSpacing: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certSealSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: '#666',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certSealYear: {
     fontFamily: Fonts.Regular,
     fontSize: 7,
     color: '#888',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certFooterInfo: {
     alignItems: 'flex-end',
@@ -1037,12 +1130,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#555',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certFooterNumber: {
     fontFamily: 'monospace',
     fontSize: 10,
     color: '#888',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certPaymentBadge: {
     flexDirection: 'row',
@@ -1058,6 +1155,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certActionButtons: {
     flexDirection: 'row',
@@ -1069,6 +1168,7 @@ const styles = StyleSheet.create({
   certActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1087,5 +1187,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

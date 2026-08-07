@@ -14,6 +14,7 @@ import {
   Linking,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
@@ -183,11 +184,12 @@ export default function WorkingMemberClasses({ navigation }) {
         };
         handleFilterPress(statusMap[label] || 'all');
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.statIconContainer}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={18} color={color} />
       </View>
-      <View>
+      <View style={styles.statTextContainer}>
         <Text style={styles.statCount}>{count}</Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
@@ -205,6 +207,7 @@ export default function WorkingMemberClasses({ navigation }) {
           setSelectedClass(classItem);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.classHeader}>
           <View style={styles.classTitleContainer}>
@@ -264,6 +267,7 @@ export default function WorkingMemberClasses({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#8b5cf6" />
         <Text style={styles.loadingText}>Loading classes...</Text>
       </View>
     );
@@ -274,7 +278,7 @@ export default function WorkingMemberClasses({ navigation }) {
       {/* Purple Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Online Classes</Text>
@@ -283,17 +287,18 @@ export default function WorkingMemberClasses({ navigation }) {
 
         {/* Search */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search classes..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -356,12 +361,12 @@ export default function WorkingMemberClasses({ navigation }) {
         onRequestClose={() => setDetailModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             {selectedClass && (
               <>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Class Details</Text>
-                  <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                  <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                     <MaterialIcons name="close" size={24} color="#6b7280" />
                   </TouchableOpacity>
                 </View>
@@ -401,7 +406,7 @@ export default function WorkingMemberClasses({ navigation }) {
 
                 <View style={styles.detailSection}>
                   <Text style={styles.detailLabel}>Google Meet Link</Text>
-                  <TouchableOpacity onPress={() => openMeetLink(selectedClass.googleMeetLink)}>
+                  <TouchableOpacity onPress={() => openMeetLink(selectedClass.googleMeetLink)} activeOpacity={0.7}>
                     <Text style={[styles.detailValue, styles.linkText]}>
                       {selectedClass.googleMeetLink || 'Not available'}
                     </Text>
@@ -437,6 +442,7 @@ export default function WorkingMemberClasses({ navigation }) {
                       registeredClasses.includes(selectedClass.id) || 
                       selectedClass.registeredCount >= selectedClass.capacity
                     }
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons 
                       name={
@@ -490,6 +496,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   searchContainer: {
@@ -498,7 +506,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -507,6 +515,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   statsContainer: {
@@ -522,29 +533,38 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 10,
     gap: 6,
+    borderLeftWidth: 3,
   },
   statIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  statTextContainer: {
+    flex: 1,
   },
   statCount: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 9,
+    fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   classCard: {
@@ -552,7 +572,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -578,6 +598,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classStatusBadge: {
     paddingHorizontal: 8,
@@ -587,12 +609,16 @@ const styles = StyleSheet.create({
   classStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classDetails: {
     flexDirection: 'row',
@@ -608,6 +634,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   classFooter: {
     flexDirection: 'row',
@@ -625,6 +653,8 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   capacityBadge: {
     flexDirection: 'row',
@@ -635,6 +665,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   registeredBadge: {
     flexDirection: 'row',
@@ -651,6 +683,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#059669',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -663,12 +697,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   modalContainer: {
@@ -693,6 +731,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   detailSection: {
@@ -707,11 +747,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   linkText: {
     color: '#8b5cf6',
@@ -726,6 +770,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   registerButton: {
@@ -745,6 +791,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   loadingContainer: {
@@ -757,5 +805,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

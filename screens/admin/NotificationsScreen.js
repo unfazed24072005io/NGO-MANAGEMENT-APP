@@ -173,11 +173,12 @@ export default function NoticesScreen({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -193,11 +194,12 @@ export default function NoticesScreen({ navigation }) {
           setSelectedItem(item);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.itemHeader}>
           <View style={styles.itemTitleContainer}>
             <View style={[styles.itemIcon, { backgroundColor: statusColor + '15' }]}>
-              <MaterialIcons name="announcement" size={20} color={statusColor} />
+              <MaterialIcons name="announcement" size={18} color={statusColor} />
             </View>
             <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
           </View>
@@ -235,32 +237,36 @@ export default function NoticesScreen({ navigation }) {
               setFormData({...item});
               setModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="edit" size={14} color="#ffffff" />
+            <MaterialIcons name="edit" size={12} color="#ffffff" />
             <Text style={styles.itemActionText}>Edit</Text>
           </TouchableOpacity>
           {item.status === 'active' ? (
             <TouchableOpacity 
               style={[styles.itemActionButton, styles.itemCloseButton]}
               onPress={() => handleStatusUpdate(item.id, 'closed')}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="lock" size={14} color="#ffffff" />
+              <MaterialIcons name="lock" size={12} color="#ffffff" />
               <Text style={styles.itemActionText}>Close</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
               style={[styles.itemActionButton, styles.itemReopenButton]}
               onPress={() => handleStatusUpdate(item.id, 'active')}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="lock-open" size={14} color="#ffffff" />
+              <MaterialIcons name="lock-open" size={12} color="#ffffff" />
               <Text style={styles.itemActionText}>Reopen</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
             style={[styles.itemActionButton, styles.itemDeleteButton]}
             onPress={() => handleDelete(item.id)}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="delete" size={14} color="#ffffff" />
+            <MaterialIcons name="delete" size={12} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -282,25 +288,27 @@ export default function NoticesScreen({ navigation }) {
               resetForm();
               setModalVisible(true);
             }}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="add" size={20} color="#ffffff" />
+            <MaterialIcons name="add" size={18} color="#ffffff" />
             <Text style={styles.addButtonText}>New</Text>
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search notices..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -363,7 +371,7 @@ export default function NoticesScreen({ navigation }) {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingItem ? 'Edit' : 'Create'} Notice
@@ -380,6 +388,7 @@ export default function NoticesScreen({ navigation }) {
                 value={formData.title}
                 onChangeText={(text) => setFormData({...formData, title: text})}
                 placeholder="Enter notice title"
+                textAlignVertical="center"
               />
             </View>
 
@@ -392,6 +401,7 @@ export default function NoticesScreen({ navigation }) {
                 placeholder="Enter notice description"
                 multiline
                 numberOfLines={4}
+                textAlignVertical="top"
               />
             </View>
 
@@ -402,6 +412,7 @@ export default function NoticesScreen({ navigation }) {
                 value={formData.category}
                 onChangeText={(text) => setFormData({...formData, category: text})}
                 placeholder="e.g., General, Technical, Event"
+                textAlignVertical="center"
               />
             </View>
 
@@ -413,6 +424,7 @@ export default function NoticesScreen({ navigation }) {
                     key={priority}
                     style={[styles.priorityButton, formData.priority === priority && styles.priorityButtonActive]}
                     onPress={() => setFormData({...formData, priority})}
+                    activeOpacity={0.7}
                   >
                     <View style={[styles.priorityDot, { backgroundColor: getPriorityColor(priority) }]} />
                     <Text style={[styles.priorityButtonText, formData.priority === priority && styles.priorityButtonTextActive]}>
@@ -431,6 +443,7 @@ export default function NoticesScreen({ navigation }) {
                     key={status}
                     style={[styles.statusButton, formData.status === status && styles.statusButtonActive]}
                     onPress={() => setFormData({...formData, status})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.statusButtonText, formData.status === status && styles.statusButtonTextActive]}>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -440,7 +453,7 @@ export default function NoticesScreen({ navigation }) {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>
                 {loading ? 'Saving...' : editingItem ? 'Update Notice' : 'Create Notice'}
               </Text>
@@ -510,6 +523,7 @@ export default function NoticesScreen({ navigation }) {
                       setFormData({...selectedItem});
                       setModalVisible(true);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="edit" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Edit</Text>
@@ -520,6 +534,7 @@ export default function NoticesScreen({ navigation }) {
                       setDetailModalVisible(false);
                       handleDelete(selectedItem.id);
                     }}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="delete" size={16} color="#ffffff" />
                     <Text style={styles.detailActionText}>Delete</Text>
@@ -562,10 +577,13 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -578,6 +596,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 13,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -585,7 +605,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -594,23 +614,27 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statsWrapper: {
     marginBottom: 4,
   },
   statsScrollContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 6,
     minWidth: 70,
-    width: 80,
+    width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
+    height: 58,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -624,29 +648,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
   itemCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -674,6 +704,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemStatusBadge: {
     flexDirection: 'row',
@@ -691,12 +723,16 @@ const styles = StyleSheet.create({
   itemStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemFooter: {
     flexDirection: 'row',
@@ -720,6 +756,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   priorityBadge: {
     flexDirection: 'row',
@@ -732,11 +770,15 @@ const styles = StyleSheet.create({
   priorityText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   itemActions: {
     flexDirection: 'row',
@@ -747,8 +789,9 @@ const styles = StyleSheet.create({
   itemActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 4,
     gap: 4,
   },
@@ -763,11 +806,14 @@ const styles = StyleSheet.create({
   },
   itemDeleteButton: {
     backgroundColor: '#ef4444',
+    paddingHorizontal: 8,
   },
   itemActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     alignItems: 'center',
@@ -779,12 +825,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -814,6 +864,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formField: {
     marginBottom: 12,
@@ -823,6 +875,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: {
     borderWidth: 1,
@@ -832,6 +886,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   formTextArea: {
     height: 100,
@@ -865,6 +920,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   priorityButtonTextActive: {
     color: '#ffffff',
@@ -889,6 +946,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusButtonTextActive: {
     color: '#ffffff',
@@ -898,12 +957,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailHeader: {
     marginBottom: 16,
@@ -912,6 +974,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailStatusRow: {
     flexDirection: 'row',
@@ -927,6 +991,8 @@ const styles = StyleSheet.create({
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailPriorityBadge: {
     flexDirection: 'row',
@@ -939,6 +1005,8 @@ const styles = StyleSheet.create({
   detailPriorityText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -948,11 +1016,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailActions: {
     flexDirection: 'row',
@@ -966,6 +1038,7 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -981,5 +1054,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

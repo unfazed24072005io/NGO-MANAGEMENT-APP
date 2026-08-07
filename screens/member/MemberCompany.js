@@ -46,7 +46,6 @@ export default function MemberCompany({ navigation }) {
 
   const fetchDonationStats = async () => {
     try {
-      // Get total donations from Firebase
       const donationsSnap = await getDocs(query(
         collection(db, 'donations'),
         where('status', '==', 'completed')
@@ -60,11 +59,9 @@ export default function MemberCompany({ navigation }) {
         totalDonations++;
       });
 
-      // Add Razorpay donations
       const razorpayTotal = getTotalDonations();
       const razorpayCount = getDonationCount();
 
-      // Get campaigns count
       const campaignsSnap = await getDocs(collection(db, 'campaigns'));
       const campaignsCount = campaignsSnap.size;
 
@@ -109,7 +106,6 @@ export default function MemberCompany({ navigation }) {
     }
   };
 
-  // Get field with proper fallback
   const getField = (field, fallback = 'Not provided') => {
     if (!companyData) return fallback;
     const keys = field.split('.');
@@ -161,7 +157,7 @@ export default function MemberCompany({ navigation }) {
         <MaterialIcons name="business" size={60} color="#d1d5db" />
         <Text style={styles.emptyTitle}>No Organization Data</Text>
         <Text style={styles.emptySubtext}>Please contact the administrator to set up the organization profile.</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchCompanyData}>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCompanyData} activeOpacity={0.7}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -173,7 +169,7 @@ export default function MemberCompany({ navigation }) {
       {/* Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Organization Profile</Text>
@@ -261,6 +257,7 @@ export default function MemberCompany({ navigation }) {
           <TouchableOpacity 
             style={styles.donateNowButton}
             onPress={() => navigation.navigate('DonationScreen')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="favorite" size={20} color="#ffffff" />
             <Text style={styles.donateNowText}>Donate Now</Text>
@@ -318,7 +315,6 @@ export default function MemberCompany({ navigation }) {
             <Text style={styles.sectionTitle}>Services Offered</Text>
           </View>
 
-          {/* Old Age Assistance */}
           {getField('oldAgeAssistance') && getField('oldAgeAssistance') !== 'Not provided' && (
             <ServiceCard title="Kabir Old Age Assistance Program" icon="elderly">
               <ServiceRow 
@@ -340,7 +336,6 @@ export default function MemberCompany({ navigation }) {
             </ServiceCard>
           )}
 
-          {/* Kanya Marriage Assistance */}
           {getField('kanyaMarriageAssistance') && getField('kanyaMarriageAssistance') !== 'Not provided' && (
             <ServiceCard title="Kanya (Girl Child) Marriage Assistance Program" icon="child-care">
               <ServiceRow 
@@ -362,7 +357,6 @@ export default function MemberCompany({ navigation }) {
             </ServiceCard>
           )}
 
-          {/* Self Employment Assistance */}
           {getField('selfEmploymentAssistance') && getField('selfEmploymentAssistance') !== 'Not provided' && (
             <ServiceCard title="Self-Employment Assistance Scheme" icon="work">
               <View style={styles.serviceRow}>
@@ -459,17 +453,17 @@ export default function MemberCompany({ navigation }) {
           </View>
 
           {getField('email') && getField('email') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => sendEmail(getField('email'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => sendEmail(getField('email'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#eff6ff' }]}>
                 <MaterialIcons name="email" size={20} color="#3b82f6" />
               </View>
-              <Text style={styles.contactText}>{getField('email')}</Text>
+              <Text style={styles.contactText} numberOfLines={1}>{getField('email')}</Text>
               <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
             </TouchableOpacity>
           )}
 
           {getField('contactNo') && getField('contactNo') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => callPhone(getField('contactNo'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => callPhone(getField('contactNo'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#d1fae5' }]}>
                 <MaterialIcons name="phone" size={20} color="#10b981" />
               </View>
@@ -483,16 +477,16 @@ export default function MemberCompany({ navigation }) {
               <View style={[styles.contactIcon, { backgroundColor: '#fef2f2' }]}>
                 <MaterialIcons name="location-on" size={20} color="#ef4444" />
               </View>
-              <Text style={styles.contactText}>{getField('address')}</Text>
+              <Text style={styles.contactText} numberOfLines={2}>{getField('address')}</Text>
             </View>
           )}
 
           {getField('website') && getField('website') !== 'Not provided' && (
-            <TouchableOpacity style={styles.contactItem} onPress={() => openLink(getField('website'))}>
+            <TouchableOpacity style={styles.contactItem} onPress={() => openLink(getField('website'))} activeOpacity={0.7}>
               <View style={[styles.contactIcon, { backgroundColor: '#f3e8ff' }]}>
                 <MaterialIcons name="language" size={20} color="#8b5cf6" />
               </View>
-              <Text style={[styles.contactText, styles.linkText]}>{getField('website')}</Text>
+              <Text style={[styles.contactText, styles.linkText]} numberOfLines={1}>{getField('website')}</Text>
               <MaterialIcons name="chevron-right" size={20} color="#d1d5db" />
             </TouchableOpacity>
           )}
@@ -511,8 +505,484 @@ export default function MemberCompany({ navigation }) {
   );
 }
 
-// Add these styles to the existing styles
-const additionalStyles = {
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+
+  // Header
+  headerCard: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#ffffff',
+    flex: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+  },
+
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontFamily: Fonts.Regular,
+    marginTop: 10,
+    color: '#6b7280',
+    fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 30,
+  },
+  emptyTitle: {
+    fontFamily: Fonts.Bold,
+    fontSize: 20,
+    color: '#1f2937',
+    marginTop: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  emptySubtext: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+    fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Cover
+  coverSection: {
+    marginTop: 16,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f3f4f6',
+    height: 160,
+  },
+  coverImage: {
+    width: '100%',
+    height: 160,
+    resizeMode: 'cover',
+  },
+  coverPlaceholder: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  coverPlaceholderText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Logo
+  logoSection: {
+    alignItems: 'center',
+    marginTop: -40,
+  },
+  logoContainer: {
+    padding: 4,
+    backgroundColor: '#ffffff',
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  logoPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontFamily: Fonts.Bold,
+    fontSize: 36,
+    color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Card
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  // Organization Info
+  companyName: {
+    fontFamily: Fonts.Bold,
+    fontSize: 22,
+    color: '#1f2937',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  tagline: {
+    fontFamily: Fonts.Italic,
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  description: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#4b5563',
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 22,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Status
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    gap: 12,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10b981',
+    marginRight: 6,
+  },
+  statusText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#10b981',
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  establishedText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Section Header
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Detail Row
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 11,
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  detailValue: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Services
+  serviceCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  serviceTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  serviceLabel: {
+    fontFamily: Fonts.Regular,
+    fontSize: 13,
+    color: '#6b7280',
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  serviceValue: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 14,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  serviceDescription: {
+    flex: 1,
+    textAlign: 'right',
+    fontSize: 13,
+  },
+
+  // About
+  aboutText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#1f2937',
+    lineHeight: 24,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Mission & Vision
+  missionVisionContainer: {
+    gap: 12,
+  },
+  mvItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  mvItemBorder: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  mvIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mvContent: {
+    flex: 1,
+  },
+  mvTitle: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 13,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  mvText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#4b5563',
+    lineHeight: 22,
+    marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Leadership
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 14,
+  },
+  leaderRowBorder: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  leaderIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaderContent: {
+    flex: 1,
+  },
+  leaderRole: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  leaderName: {
+    fontFamily: Fonts.SemiBold,
+    fontSize: 16,
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
+  // Contact
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  contactIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contactText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 14,
+    color: '#1f2937',
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  linkText: {
+    color: '#3b82f6',
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontFamily: Fonts.Regular,
+    fontSize: 12,
+    color: '#9ca3af',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+
   // Donation Stats
   donationStatsContainer: {
     flexDirection: 'row',
@@ -530,12 +1000,16 @@ const additionalStyles = {
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#ef4444',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationStatLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationStatDivider: {
     width: 1,
@@ -561,11 +1035,7 @@ const additionalStyles = {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-};
-
-// Merge styles
-const styles = StyleSheet.create({
-  ...require('./MemberCompany').styles,
-  ...additionalStyles,
 });

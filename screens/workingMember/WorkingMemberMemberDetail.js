@@ -104,8 +104,6 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
     }
   };
 
-  // ============ RENDER FUNCTIONS FOR FLATLIST ============
-  
   const renderProfileSection = () => (
     <View style={styles.profileSection}>
       <View style={styles.avatarContainer}>
@@ -113,7 +111,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
           <Image source={{ uri: member.profilePhoto }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <MaterialIcons name="person" size={60} color="#8b5cf6" />
+            <MaterialIcons name="person" size={54} color="#8b5cf6" />
           </View>
         )}
       </View>
@@ -130,7 +128,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
   const renderDonationSection = () => (
     <View style={[styles.infoCard, styles.donationCard]}>
       <View style={styles.donationHeader}>
-        <MaterialIcons name="volunteer-activism" size={24} color="#8b5cf6" />
+        <MaterialIcons name="volunteer-activism" size={22} color="#8b5cf6" />
         <Text style={styles.infoTitle}>Donation Summary</Text>
       </View>
       
@@ -252,7 +250,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
       <Text style={styles.infoTitle}>Documents</Text>
       
       {member?.aadharFront ? (
-        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Front', 'View document')}>
+        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Front', 'View document')} activeOpacity={0.7}>
           <MaterialIcons name="credit-card" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Aadhar Card (Front)</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -265,7 +263,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
       )}
 
       {member?.aadharBack ? (
-        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Back', 'View document')}>
+        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Aadhar Back', 'View document')} activeOpacity={0.7}>
           <MaterialIcons name="credit-card" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Aadhar Card (Back)</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -278,7 +276,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
       )}
 
       {member?.panCard ? (
-        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('PAN Card', 'View document')}>
+        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('PAN Card', 'View document')} activeOpacity={0.7}>
           <MaterialIcons name="assignment" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>PAN Card</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -291,7 +289,7 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
       )}
 
       {member?.signature ? (
-        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Signature', 'View document')}>
+        <TouchableOpacity style={styles.documentRow} onPress={() => Alert.alert('Signature', 'View document')} activeOpacity={0.7}>
           <MaterialIcons name="edit" size={20} color="#8b5cf6" />
           <Text style={styles.documentText}>Signature</Text>
           <MaterialIcons name="chevron-right" size={20} color="#9ca3af" />
@@ -348,7 +346,6 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
     </View>
   );
 
-  // Data array for FlatList - similar to how ECommerce uses data
   const sections = [
     { id: 'profile', component: renderProfileSection },
     { id: 'donation', component: renderDonationSection },
@@ -379,11 +376,11 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Blue Header Card - Fixed at top (same as ECommerce) */}
+        {/* Purple Header Card - Fixed at top */}
         <View style={styles.headerCard}>
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
                 <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Member Details</Text>
@@ -391,11 +388,12 @@ export default function WorkingMemberMemberDetail({ navigation, route }) {
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('WorkingMemberProfile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#8b5cf6" />
+                <MaterialIcons name="person" size={26} color="#8b5cf6" />
               )}
             </TouchableOpacity>
           </View>
@@ -435,9 +433,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
-  // Blue Header Card - Same as ECommerce
+  // Purple Header Card
   headerCard: {
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
@@ -463,20 +463,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
 
   // FlatList Content
@@ -517,6 +519,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#1f2937',
     marginBottom: 6,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -534,6 +538,8 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Donation Card
@@ -563,12 +569,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationStatValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#8b5cf6',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentDonations: {
     marginTop: 4,
@@ -578,6 +588,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationItem: {
     flexDirection: 'row',
@@ -591,12 +603,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationItemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationStatusBadge: {
     paddingHorizontal: 10,
@@ -606,6 +622,8 @@ const styles = StyleSheet.create({
   donationStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAllDonations: {
     fontFamily: Fonts.Regular,
@@ -613,6 +631,8 @@ const styles = StyleSheet.create({
     color: '#8b5cf6',
     textAlign: 'center',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Info Cards
@@ -632,6 +652,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   infoRow: {
     flexDirection: 'row',
@@ -648,12 +670,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   infoValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Documents
@@ -670,6 +696,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomPadding: {
     height: 20,

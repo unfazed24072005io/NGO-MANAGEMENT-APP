@@ -682,6 +682,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           onChangeText={(text) => setFormData({...formData, address: text})}
           multiline
           numberOfLines={2}
+          textAlignVertical="top"
         />
         <View style={styles.bottomLine} />
       </View>
@@ -946,8 +947,8 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
         <MaterialIcons name={icon} size={18} color={color} />
       </View>
       <View style={styles.statContent}>
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={[styles.statValue, { color }]}>{count}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.statValue, { color }]} numberOfLines={1}>{count}</Text>
       </View>
     </View>
   );
@@ -980,9 +981,9 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           )}
         </View>
         <View style={styles.memberInfo}>
-          <Text style={styles.memberName}>{item.fullName || item.name || 'Unknown'}</Text>
-          <Text style={styles.memberEmail}>{item.email || 'N/A'}</Text>
-          <Text style={styles.memberPhone}>{item.phone || 'N/A'}</Text>
+          <Text style={styles.memberName} numberOfLines={1}>{item.fullName || item.name || 'Unknown'}</Text>
+          <Text style={styles.memberEmail} numberOfLines={1}>{item.email || 'N/A'}</Text>
+          <Text style={styles.memberPhone} numberOfLines={1}>{item.phone || 'N/A'}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
@@ -993,7 +994,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
       </View>
       <View style={styles.memberFooter}>
         <View style={styles.memberFooterLeft}>
-          <Text style={styles.memberDate}>
+          <Text style={styles.memberDate} numberOfLines={1}>
             Joined: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
           </Text>
         </View>
@@ -1001,11 +1002,11 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           {item.totalDonations !== undefined && item.totalDonations > 0 && (
             <View style={styles.donationBadge}>
               <MaterialIcons name="volunteer-activism" size={12} color="#8b5cf6" />
-              <Text style={styles.donationBadgeText}>₹{item.totalDonations}</Text>
+              <Text style={styles.donationBadgeText} numberOfLines={1}>₹{item.totalDonations}</Text>
             </View>
           )}
           {item.commission !== undefined && (
-            <Text style={styles.memberCommission}>Commission: ₹{item.commission?.toFixed(2) || 0}</Text>
+            <Text style={styles.memberCommission} numberOfLines={1}>Commission: ₹{item.commission?.toFixed(2) || 0}</Text>
           )}
         </View>
       </View>
@@ -1030,7 +1031,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Members</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>Members</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity 
@@ -1041,7 +1042,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
               }}
             >
               <MaterialIcons name="person-add" size={18} color="#ffffff" />
-              <Text style={styles.registerButtonText}>Register</Text>
+              <Text style={styles.registerButtonText} numberOfLines={1}>Register</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.profileIcon}
@@ -1133,7 +1134,7 @@ export default function WorkingMemberRegisteredMembers({ navigation }) {
           >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Register New Member</Text>
+                <Text style={styles.modalTitle} numberOfLines={1}>Register New Member</Text>
                 <TouchableOpacity 
                   onPress={() => {
                     if (!registerLoading) {
@@ -1188,11 +1189,13 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 0,
   },
   backButton: {
     padding: 4,
@@ -1202,6 +1205,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    flexShrink: 1,
   },
   registerButton: {
     flexDirection: 'row',
@@ -1220,9 +1224,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1232,11 +1236,12 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
     overflow: 'hidden',
+    flexShrink: 0,
   },
   profileImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 50,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
 
   searchContainer: {
@@ -1331,6 +1336,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
     overflow: 'hidden',
+    flexShrink: 0,
   },
   memberImage: {
     width: 50,
@@ -1362,6 +1368,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
+    flexShrink: 0,
   },
   statusDot: {
     width: 6,
@@ -1383,11 +1390,13 @@ const styles = StyleSheet.create({
   memberFooterLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   memberFooterRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   memberDate: {
     fontFamily: Fonts.Regular,
@@ -1419,16 +1428,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 60,
     gap: 12,
+    paddingHorizontal: 20,
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    textAlign: 'center',
   },
   inviteButton: {
     backgroundColor: '#8b5cf6',
@@ -1477,6 +1489,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    flex: 1,
   },
   progressContainer: {
     marginBottom: 20,

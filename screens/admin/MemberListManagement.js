@@ -182,11 +182,12 @@ export default function MemberListManagement({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -195,6 +196,7 @@ export default function MemberListManagement({ navigation }) {
     <TouchableOpacity
       style={[styles.statusChip, active && styles.activeStatusChip]}
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <Text style={[styles.statusChipText, active && styles.activeStatusChipText]}>
         {label} ({count})
@@ -225,8 +227,8 @@ export default function MemberListManagement({ navigation }) {
             )}
           </View>
           <View style={styles.memberDetails}>
-            <Text style={styles.memberName}>{member.fullName || 'Unknown'}</Text>
-            <Text style={styles.memberEmail}>{member.email}</Text>
+            <Text style={styles.memberName} numberOfLines={1}>{member.fullName || 'Unknown'}</Text>
+            <Text style={styles.memberEmail} numberOfLines={1}>{member.email}</Text>
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(member.status) + '15' }]}>
@@ -265,6 +267,7 @@ export default function MemberListManagement({ navigation }) {
             setSelectedMember(member);
             setModalVisible(true);
           }}
+          activeOpacity={0.7}
         >
           <MaterialIcons name="visibility" size={14} color="#ffffff" />
           <Text style={styles.actionButtonText}>View</Text>
@@ -273,6 +276,7 @@ export default function MemberListManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.actionButton, styles.approveButton]}
             onPress={() => handleStatusUpdate(member.id, 'active')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="check-circle" size={14} color="#ffffff" />
             <Text style={styles.actionButtonText}>Approve</Text>
@@ -282,6 +286,7 @@ export default function MemberListManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.actionButton, styles.suspendButton]}
             onPress={() => handleStatusUpdate(member.id, 'suspended')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="block" size={14} color="#ffffff" />
             <Text style={styles.actionButtonText}>Suspend</Text>
@@ -291,6 +296,7 @@ export default function MemberListManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.actionButton, styles.reactivateButton]}
             onPress={() => handleStatusUpdate(member.id, 'active')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="refresh" size={14} color="#ffffff" />
             <Text style={styles.actionButtonText}>Reactivate</Text>
@@ -300,6 +306,7 @@ export default function MemberListManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.actionButton, styles.deleteButton]}
             onPress={() => handleDelete(member.id)}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="delete" size={14} color="#ffffff" />
           </TouchableOpacity>
@@ -322,17 +329,18 @@ export default function MemberListManagement({ navigation }) {
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search members..."
             placeholderTextColor="#9ca3af"
             value={search}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -515,6 +523,7 @@ export default function MemberListManagement({ navigation }) {
                           handleStatusUpdate(selectedMember.id, 'active');
                           setModalVisible(false);
                         }}
+                        activeOpacity={0.7}
                       >
                         <MaterialIcons name="check-circle" size={16} color="#ffffff" />
                         <Text style={styles.modalActionText}>Approve</Text>
@@ -526,6 +535,7 @@ export default function MemberListManagement({ navigation }) {
                           handleRoleUpdate(selectedMember.id, newRole);
                           setModalVisible(false);
                         }}
+                        activeOpacity={0.7}
                       >
                         <MaterialIcons name="swap-horiz" size={16} color="#ffffff" />
                         <Text style={styles.modalActionText}>
@@ -538,6 +548,7 @@ export default function MemberListManagement({ navigation }) {
                           handleDelete(selectedMember.id);
                           setModalVisible(false);
                         }}
+                        activeOpacity={0.7}
                       >
                         <MaterialIcons name="delete" size={16} color="#ffffff" />
                         <Text style={styles.modalActionText}>Delete</Text>
@@ -584,6 +595,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   // Search inside header
@@ -593,7 +606,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -602,6 +615,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Status Filter Chips inside header
@@ -609,6 +625,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
+    flexWrap: 'wrap',
   },
   statusChip: {
     paddingVertical: 5,
@@ -626,6 +643,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activeStatusChipText: {
     color: '#FF7722',
@@ -636,18 +655,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statsScrollContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 6,
     minWidth: 70,
-    width: 80,
+    width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
+    height: 58,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -661,25 +681,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // List Content
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   // Member Card
@@ -688,7 +713,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    marginTop: 10,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
@@ -722,6 +747,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberDetails: {
     flex: 1,
@@ -730,11 +757,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberEmail: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -752,6 +783,8 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberDetailsRow: {
     flexDirection: 'row',
@@ -770,6 +803,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   roleBadge: {
     paddingHorizontal: 6,
@@ -779,6 +814,8 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -789,8 +826,9 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 4,
     gap: 4,
   },
@@ -808,11 +846,14 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#EF4444',
+    paddingHorizontal: 8,
   },
   actionButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#FFFFFF',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Empty State
@@ -826,6 +867,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 15,
     color: '#6B7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
@@ -834,6 +877,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
@@ -852,6 +896,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#000',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalProfileSection: {
     alignItems: 'center',
@@ -874,12 +920,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 32,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalName: {
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1F2937',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalStatusBadge: {
     paddingHorizontal: 12,
@@ -890,6 +940,8 @@ const styles = StyleSheet.create({
   modalStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoSection: {
     marginBottom: 16,
@@ -902,11 +954,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1F2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalRoleBadge: {
     paddingHorizontal: 8,
@@ -917,6 +973,8 @@ const styles = StyleSheet.create({
   modalRoleText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalImageRow: {
     flexDirection: 'row',
@@ -937,10 +995,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     gap: 8,
+    flexWrap: 'wrap',
   },
   modalActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
@@ -959,5 +1019,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#FFFFFF',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

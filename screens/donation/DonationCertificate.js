@@ -48,7 +48,6 @@ export default function DonationCertificate({ navigation }) {
         certList.push({ id: doc.id, ...doc.data() });
       });
       
-      // Merge with local Razorpay certificates
       const localHistory = getDonationHistory();
       const localCerts = localHistory.map(donation => ({
         id: `local_${donation.paymentId}`,
@@ -61,7 +60,6 @@ export default function DonationCertificate({ navigation }) {
         issuedDate: donation.timestamp,
         status: 'issued',
         isLocal: true,
-        // ✅ FIX: Add safety check for paymentId
         certificateNumber: donation.paymentId 
           ? `CERT-${donation.paymentId.slice(-8)}` 
           : `CERT-${Date.now().toString().slice(-8)}`,
@@ -70,7 +68,6 @@ export default function DonationCertificate({ navigation }) {
       const allCerts = [...certList, ...localCerts];
       setCertificates(allCerts);
       
-      // Update stats
       const donationCerts = allCerts.filter(c => c.type === 'donation').length;
       const achievementCerts = allCerts.filter(c => c.type === 'achievement').length;
       const totalAmount = allCerts.reduce((sum, c) => sum + (c.amount || 0), 0);
@@ -97,13 +94,11 @@ export default function DonationCertificate({ navigation }) {
         return;
       }
 
-      // Get user data
       const userDoc = await getDoc(doc(db, 'donors', userId));
       if (userDoc.exists()) {
         setUserData(userDoc.data());
       }
 
-      // Get certificates from Firebase
       const certSnap = await getDocs(query(
         collection(db, 'donationCertificates'),
         where('donorId', '==', userId)
@@ -114,7 +109,6 @@ export default function DonationCertificate({ navigation }) {
         certList.push({ id: doc.id, ...doc.data() });
       });
       
-      // Get local Razorpay donations
       const localHistory = getDonationHistory();
       const localCerts = localHistory.map(donation => ({
         id: `local_${donation.paymentId}`,
@@ -127,7 +121,6 @@ export default function DonationCertificate({ navigation }) {
         issuedDate: donation.timestamp,
         status: 'issued',
         isLocal: true,
-        // ✅ FIX: Add safety check for paymentId
         certificateNumber: donation.paymentId 
           ? `CERT-${donation.paymentId.slice(-8)}` 
           : `CERT-${Date.now().toString().slice(-8)}`,
@@ -136,7 +129,6 @@ export default function DonationCertificate({ navigation }) {
       const allCerts = [...certList, ...localCerts];
       setCertificates(allCerts);
       
-      // Update stats
       const donationCerts = allCerts.filter(c => c.type === 'donation').length;
       const achievementCerts = allCerts.filter(c => c.type === 'achievement').length;
       const totalAmount = allCerts.reduce((sum, c) => sum + (c.amount || 0), 0);
@@ -481,10 +473,10 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
     >
       <View style={styles.certHeader}>
         <View style={[styles.certIcon, { backgroundColor: getCertificateBgColor(cert.type) }]}>
-          <MaterialIcons name={getCertificateIcon(cert.type)} size={24} color={getCertificateColor(cert.type)} />
+          <MaterialIcons name={getCertificateIcon(cert.type)} size={22} color={getCertificateColor(cert.type)} />
         </View>
         <View style={styles.certInfo}>
-          <Text style={styles.certTitle}>{cert.title || `${getTypeLabel(cert.type)} Certificate`}</Text>
+          <Text style={styles.certTitle} numberOfLines={1}>{cert.title || `${getTypeLabel(cert.type)} Certificate`}</Text>
           <Text style={styles.certDate}>
             {cert.issuedDate ? new Date(cert.issuedDate).toLocaleDateString() : 'N/A'}
           </Text>
@@ -497,7 +489,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
       </View>
       
       {cert.purpose && (
-        <Text style={styles.certPurpose}>Purpose: {cert.purpose}</Text>
+        <Text style={styles.certPurpose} numberOfLines={1}>Purpose: {cert.purpose}</Text>
       )}
       
       {cert.amount && (
@@ -507,7 +499,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
       )}
       
       <View style={styles.certActions}>
-        <TouchableOpacity style={styles.certAction} onPress={() => handleShare(cert)}>
+        <TouchableOpacity style={styles.certAction} onPress={() => handleShare(cert)} activeOpacity={0.7}>
           <MaterialIcons name="share" size={18} color="#10b981" />
           <Text style={styles.certActionText}>Share</Text>
         </TouchableOpacity>
@@ -529,7 +521,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
       {/* Green Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Certificates</Text>
@@ -569,6 +561,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
             <TouchableOpacity 
               style={styles.donateButton}
               onPress={() => navigation.navigate('DonateScreen')}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="favorite" size={20} color="#ffffff" />
               <Text style={styles.donateButtonText}>Make a Donation</Text>
@@ -593,7 +586,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Certificate Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -602,7 +595,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.detailCertificate}>
                   <View style={[styles.detailIcon, { backgroundColor: getCertificateBgColor(selectedCert.type) }]}>
-                    <MaterialIcons name={getCertificateIcon(selectedCert.type)} size={50} color={getCertificateColor(selectedCert.type)} />
+                    <MaterialIcons name={getCertificateIcon(selectedCert.type)} size={40} color={getCertificateColor(selectedCert.type)} />
                   </View>
                   <Text style={styles.detailTitle}>{selectedCert.title || 'Certificate'}</Text>
                   <Text style={styles.detailNumber}>{selectedCert.certificateNumber || 'N/A'}</Text>
@@ -655,6 +648,7 @@ Certificate No: ${cert.certificateNumber || 'N/A'}
                     style={[styles.detailActionButton, styles.detailShareButton]} 
                     onPress={() => handleShare(selectedCert)}
                     disabled={generatingPDF}
+                    activeOpacity={0.7}
                   >
                     {generatingPDF ? (
                       <ActivityIndicator size="small" color="#ffffff" />
@@ -704,6 +698,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   loadingContainer: {
@@ -717,6 +713,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   summaryGrid: {
@@ -739,17 +737,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   certCard: {
@@ -757,6 +760,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -766,9 +770,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   certIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -780,11 +784,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certStatus: {
     paddingHorizontal: 8,
@@ -795,13 +803,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 9,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certPurpose: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 6,
-    marginLeft: 56,
+    marginLeft: 52,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certAmountBadge: {
     backgroundColor: '#10b981',
@@ -809,28 +821,33 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 12,
     alignSelf: 'flex-start',
-    marginLeft: 56,
+    marginLeft: 52,
     marginBottom: 8,
   },
   certAmountText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   certActions: {
     flexDirection: 'row',
     gap: 16,
-    marginLeft: 56,
+    marginLeft: 52,
   },
   certAction: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   certActionText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -843,16 +860,21 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -863,6 +885,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
@@ -888,15 +912,17 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailCertificate: {
     alignItems: 'center',
     marginBottom: 16,
   },
   detailIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -905,12 +931,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailNumber: {
     fontFamily: 'monospace',
     fontSize: 12,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailRazorpayBadge: {
     flexDirection: 'row',
@@ -926,6 +956,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailSection: {
     marginBottom: 12,
@@ -935,11 +967,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailCode: {
     fontFamily: 'monospace',
@@ -957,12 +993,12 @@ const styles = StyleSheet.create({
   detailActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
     flex: 1,
-    justifyContent: 'center',
   },
   detailShareButton: {
     backgroundColor: '#10b981',
@@ -971,5 +1007,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

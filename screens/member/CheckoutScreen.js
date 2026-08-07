@@ -69,13 +69,11 @@ export default function CheckoutScreen({ navigation, route }) {
       return;
     }
 
-    // If payment method is Razorpay, show payment modal
     if (formData.paymentMethod === 'razorpay') {
       setShowPaymentModal(true);
       return;
     }
 
-    // For other payment methods (cash, upi, card)
     await processOrder('offline');
   };
 
@@ -116,10 +114,8 @@ export default function CheckoutScreen({ navigation, route }) {
         orderData.razorpaySignature = paymentData.signature;
       }
 
-      // Save order to Firestore
       await addDoc(collection(db, 'orders'), orderData);
 
-      // Update product stock
       for (const item of cart) {
         const productRef = doc(db, 'products', item.id);
         const productDoc = await getDoc(productRef);
@@ -159,61 +155,58 @@ export default function CheckoutScreen({ navigation, route }) {
   };
 
   const handleRazorpayPayment = async () => {
-  setLoading(true);
-  try {
-    const user = auth.currentUser;
-    const totalAmount = getGrandTotal();
+    setLoading(true);
+    try {
+      const user = auth.currentUser;
+      const totalAmount = getGrandTotal();
 
-    // ✅ Step 1: Initiate Razorpay payment (NO orderId - same as DonationScreen)
-    const paymentResult = await initiateRazorpayPayment({
-      amount: totalAmount,
-      name: formData.name,
-      email: formData.email || user.email,
-      phone: formData.phone,
-      description: `Order - ${cart.length} items`,
-      // ❌ REMOVE orderId - NOT needed
-    });
-
-    if (paymentResult.success) {
-      // ✅ Step 2: Verify payment (same as DonationScreen)
-      const verificationResult = await verifyRazorpayPayment({
-        paymentId: paymentResult.paymentId,
-        orderId: paymentResult.orderId,
-        signature: paymentResult.signature,
+      const paymentResult = await initiateRazorpayPayment({
+        amount: totalAmount,
+        name: formData.name,
+        email: formData.email || user.email,
+        phone: formData.phone,
+        description: `Order - ${cart.length} items`,
       });
 
-      if (verificationResult.success) {
-        // ✅ Step 3: Process order with payment data (same as DonationScreen)
-        await processOrder('razorpay', paymentResult);
+      if (paymentResult.success) {
+        const verificationResult = await verifyRazorpayPayment({
+          paymentId: paymentResult.paymentId,
+          orderId: paymentResult.orderId,
+          signature: paymentResult.signature,
+        });
+
+        if (verificationResult.success) {
+          await processOrder('razorpay', paymentResult);
+        } else {
+          Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+        }
       } else {
-        Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+        Alert.alert('Payment Failed', paymentResult.error || 'Something went wrong');
       }
-    } else {
-      Alert.alert('Payment Failed', paymentResult.error || 'Something went wrong');
+    } catch (error) {
+      console.error('Razorpay error:', error);
+      Alert.alert('Error', 'Payment failed. Please try again.');
+    } finally {
+      setLoading(false);
+      setShowPaymentModal(false);
     }
-  } catch (error) {
-    console.error('Razorpay error:', error);
-    Alert.alert('Error', 'Payment failed. Please try again.');
-  } finally {
-    setLoading(false);
-    setShowPaymentModal(false);
-  }
-};
+  };
 
   const PaymentMethod = ({ method, icon, selected, onSelect }) => (
     <TouchableOpacity 
       style={[styles.paymentMethod, selected && styles.paymentMethodSelected]}
       onPress={() => onSelect(method)}
+      activeOpacity={0.7}
     >
       <View style={[styles.paymentIcon, selected && styles.paymentIconSelected]}>
-        <MaterialIcons name={icon} size={22} color={selected ? '#ffffff' : '#6b7280'} />
+        <MaterialIcons name={icon} size={20} color={selected ? '#ffffff' : '#6b7280'} />
       </View>
       <Text style={[styles.paymentText, selected && styles.paymentTextSelected]}>
         {method.charAt(0).toUpperCase() + method.slice(1)}
       </Text>
       {selected && (
         <View style={styles.checkMark}>
-          <MaterialIcons name="check-circle" size={20} color="#10b981" />
+          <MaterialIcons name="check-circle" size={18} color="#10b981" />
         </View>
       )}
     </TouchableOpacity>
@@ -231,7 +224,7 @@ export default function CheckoutScreen({ navigation, route }) {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Payment</Text>
-            <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+            <TouchableOpacity onPress={() => setShowPaymentModal(false)} activeOpacity={0.7}>
               <MaterialIcons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
           </View>
@@ -274,6 +267,7 @@ export default function CheckoutScreen({ navigation, route }) {
             style={[styles.payButton, loading && styles.payButtonDisabled]}
             onPress={handleRazorpayPayment}
             disabled={loading}
+            activeOpacity={0.7}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -303,12 +297,14 @@ export default function CheckoutScreen({ navigation, route }) {
           <TouchableOpacity 
             style={[styles.successButton, styles.successButtonPrimary]}
             onPress={() => navigation.navigate('MyOrders')}
+            activeOpacity={0.7}
           >
             <Text style={styles.successButtonText}>View Orders</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.successButton, styles.successButtonSecondary]}
             onPress={() => navigation.navigate('MemberTabs')}
+            activeOpacity={0.7}
           >
             <Text style={styles.successButtonTextSecondary}>Continue Shopping</Text>
           </TouchableOpacity>
@@ -322,7 +318,7 @@ export default function CheckoutScreen({ navigation, route }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Checkout</Text>
@@ -347,6 +343,7 @@ export default function CheckoutScreen({ navigation, route }) {
               onChangeText={(text) => setFormData({...formData, name: text})}
               placeholder="Enter your full name"
               placeholderTextColor="#9ca3af"
+              textAlignVertical="center"
             />
           </View>
 
@@ -359,6 +356,7 @@ export default function CheckoutScreen({ navigation, route }) {
               placeholder="Enter your email"
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
+              textAlignVertical="center"
             />
           </View>
 
@@ -372,6 +370,7 @@ export default function CheckoutScreen({ navigation, route }) {
               placeholderTextColor="#9ca3af"
               keyboardType="phone-pad"
               maxLength={10}
+              textAlignVertical="center"
             />
           </View>
 
@@ -385,6 +384,7 @@ export default function CheckoutScreen({ navigation, route }) {
               placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={3}
+              textAlignVertical="top"
             />
           </View>
         </View>
@@ -480,6 +480,7 @@ export default function CheckoutScreen({ navigation, route }) {
             style={[styles.placeOrderButton, loading && styles.disabledButton]}
             onPress={handlePlaceOrder}
             disabled={loading}
+            activeOpacity={0.7}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -528,6 +529,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   scrollView: {
     flex: 1,
@@ -549,6 +552,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   field: {
     marginBottom: 12,
@@ -558,6 +563,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -568,6 +575,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     color: '#1f2937',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   textArea: {
     height: 80,
@@ -576,18 +584,18 @@ const styles = StyleSheet.create({
   paymentGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   paymentMethod: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#f9fafb',
-    gap: 10,
+    gap: 8,
     minWidth: '45%',
   },
   paymentMethodSelected: {
@@ -604,6 +612,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentTextSelected: {
     color: '#3b82f6',
@@ -617,6 +627,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderItem: {
     flexDirection: 'row',
@@ -627,11 +639,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   freeDelivery: {
     color: '#10b981',
@@ -652,6 +668,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDivider: {
     height: 1,
@@ -667,11 +685,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderTotalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cartPreviewItem: {
     flexDirection: 'row',
@@ -685,6 +707,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     flex: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cartPreviewQty: {
     fontFamily: Fonts.Regular,
@@ -692,6 +716,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     flex: 1,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cartPreviewPrice: {
     fontFamily: Fonts.SemiBold,
@@ -699,6 +725,8 @@ const styles = StyleSheet.create({
     color: '#10b981',
     flex: 1,
     textAlign: 'right',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomContainer: {
     backgroundColor: '#ffffff',
@@ -715,11 +743,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomTotal: {
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   placeOrderButton: {
     flexDirection: 'row',
@@ -738,6 +770,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 15,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successContainer: {
     flex: 1,
@@ -751,18 +785,24 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#1f2937',
     marginTop: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderIdText: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successButtons: {
     flexDirection: 'row',
@@ -776,6 +816,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   successButtonPrimary: {
     backgroundColor: '#10b981',
@@ -789,11 +830,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successButtonTextSecondary: {
     fontFamily: Fonts.SemiBold,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Modal Styles
   modalOverlay: {
@@ -818,6 +863,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummary: {
     backgroundColor: '#f9fafb',
@@ -830,6 +877,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummaryRow: {
     flexDirection: 'row',
@@ -840,11 +889,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummaryValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDivider: {
     height: 1,
@@ -855,11 +908,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderTotalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentInfo: {
     backgroundColor: '#f3f4f6',
@@ -878,12 +935,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   payButton: {
     backgroundColor: '#10b981',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   payButtonDisabled: {
     opacity: 0.6,
@@ -892,6 +952,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 18,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentNote: {
     fontFamily: Fonts.Regular,
@@ -899,5 +961,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -1,5 +1,5 @@
 // screens/admin/CommissionManagement.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   Modal,
   TextInput,
   Dimensions,
-  FlatList
+  FlatList,
+  Platform
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
@@ -28,7 +29,7 @@ import {
   orderBy,
   limit,
   onSnapshot,
-addDoc,
+  addDoc,
   runTransaction,
   Timestamp,
   increment
@@ -36,6 +37,7 @@ addDoc,
 import { Fonts } from '../../config/fonts';
 import { CommissionService } from '../../services/CommissionService';
 import { WalletService } from '../../services/WalletService';
+import { PayoutService } from '../../services/PayoutService';
 import { 
   getLevelDetails, 
   LEVELS,
@@ -43,10 +45,154 @@ import {
   isEligibleForPromotion,
   getPromotionRequirements
 } from '../../config/commissionLevels';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const isSmallDevice = width < 375;
 
+// ============ LevelEditModal Component ============
+const LevelEditModal = memo(({ 
+  visible, 
+  selectedLevel, 
+  onClose, 
+  onUpdateField, 
+  onSave,
+  saving,
+  isSmallDevice,
+  formDataLevels
+}) => {
+  if (!selectedLevel) return null;
+
+  const nextLevelIndex = formDataLevels.findIndex(l => l.id === selectedLevel.id) + 1;
+  const nextLevel = nextLevelIndex < formDataLevels.length ? formDataLevels[nextLevelIndex] : null;
+
+  const getDisplayValue = (value) => {
+    if (value === Infinity) return '∞';
+    if (value === '' || value === null || value === undefined) return '';
+    return String(value);
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Edit Level: {selectedLevel.id}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialIcons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalBody}>
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Level Name</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={selectedLevel.name || ''}
+                  onChangeText={(text) => onUpdateField('name', text)}
+                  placeholder="Enter level name"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Direct Commission (%)</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={getDisplayValue(selectedLevel.directCommission)}
+                  onChangeText={(text) => onUpdateField('directCommission', text)}
+                  keyboardType="numeric"
+                  placeholder="Enter direct commission"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Secondary Commission (%)</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={getDisplayValue(selectedLevel.secondaryCommission)}
+                  onChangeText={(text) => onUpdateField('secondaryCommission', text)}
+                  keyboardType="numeric"
+                  placeholder="Enter secondary commission"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View style={styles.sectionDivider}>
+                <Text style={[styles.sectionDividerText, { fontSize: isSmallDevice ? 13 : 14 }]}>💰 Donation Requirements</Text>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Min Donations (₹)</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={getDisplayValue(selectedLevel.minDonations)}
+                  onChangeText={(text) => onUpdateField('minDonations', text)}
+                  keyboardType="numeric"
+                  placeholder="Enter min donations"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Max Donations (₹)</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={getDisplayValue(selectedLevel.maxDonations)}
+                  onChangeText={(text) => onUpdateField('maxDonations', text)}
+                  placeholder="Enter max donations (∞ for unlimited)"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Donations Required for Promotion (₹)</Text>
+                <TextInput
+                  style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={getDisplayValue(selectedLevel.donationsRequiredForPromotion)}
+                  onChangeText={(text) => onUpdateField('donationsRequiredForPromotion', text)}
+                  placeholder="Enter donations required (∞ for no promotion)"
+                  placeholderTextColor="#9ca3af"
+                />
+                {nextLevel && (
+                  <Text style={[styles.helperText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                    Next level ({nextLevel.name}) requires ₹{nextLevel.minDonations?.toLocaleString()} in donations
+                  </Text>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={styles.updateLevelButton}
+                onPress={onSave}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={[styles.updateLevelButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>Update Level</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+});
+
+// ============ Main Component ============
 export default function CommissionManagement({ navigation }) {
+  // ============ ALL HOOKS AT THE TOP ============
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -71,8 +217,8 @@ export default function CommissionManagement({ navigation }) {
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [selectedWorkingMember, setSelectedWorkingMember] = useState(null);
   const [memberPayoutModalVisible, setMemberPayoutModalVisible] = useState(false);
-const [promotionConfirmVisible, setPromotionConfirmVisible] = useState(false);
-const [pendingApproveData, setPendingApproveData] = useState(null);
+  const [promotionConfirmVisible, setPromotionConfirmVisible] = useState(false);
+  const [pendingApproveData, setPendingApproveData] = useState(null);
   const [memberPayoutAmount, setMemberPayoutAmount] = useState('');
   const [editingLevelIndex, setEditingLevelIndex] = useState(null);
   const [donationStats, setDonationStats] = useState({
@@ -80,6 +226,8 @@ const [pendingApproveData, setPendingApproveData] = useState(null);
     totalDonations: 0,
     totalTransactions: 0
   });
+  const [payoutLogs, setPayoutLogs] = useState([]);
+  const [showPayoutLogs, setShowPayoutLogs] = useState(false);
   
   const [formData, setFormData] = useState({
     levels: [
@@ -159,18 +307,60 @@ const [pendingApproveData, setPendingApproveData] = useState(null);
     lastUpdated: null
   });
 
+  // ============ useEffect Hooks ============
   useEffect(() => {
     fetchCommissionData();
     fetchStats();
     setupPendingPayoutsListener();
     fetchDonationCommissionStats();
     fetchPendingPromotions();
+    fetchPayoutLogs();
   }, []);
 
+  // ============ useCallback Hooks ============
+  const updateLevelField = useCallback((field, value) => {
+    if (!selectedLevel) return;
+    
+    setSelectedLevel(prev => {
+      const updated = { ...prev };
+      
+      if (field === 'name') {
+        updated.name = value;
+        return updated;
+      }
+      
+      if (value === '∞') {
+        updated[field] = Infinity;
+        return updated;
+      }
+      
+      if (value === '' || value === null || value === undefined) {
+        updated[field] = '';
+        return updated;
+      }
+      
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue)) {
+        updated[field] = numValue;
+      } else {
+        updated[field] = value;
+      }
+      
+      return updated;
+    });
+  }, [selectedLevel]);
+
+  const getDisplayValue = useCallback((value) => {
+    if (value === Infinity) return '∞';
+    if (value === '' || value === null || value === undefined) return '';
+    return String(value);
+  }, []);
+
+  // ============ Functions ============
   const setupPendingPayoutsListener = () => {
     const q = query(
       collection(db, 'walletTransactions'),
-      where('type', 'in', ['direct_commission', 'secondary_commission']),
+      where('type', 'in', ['direct_commission', 'secondary_commission', 'donation_commission']),
       where('status', '==', 'pending'),
       orderBy('createdAt', 'desc')
     );
@@ -236,7 +426,7 @@ const [pendingApproveData, setPendingApproveData] = useState(null);
 
       transactionsSnap.forEach((doc) => {
         const data = doc.data();
-        if (data.type === 'direct_commission' || data.type === 'secondary_commission') {
+        if (data.type === 'direct_commission' || data.type === 'secondary_commission' || data.type === 'donation_commission') {
           if (data.status === 'completed' || data.status === 'paid') {
             totalPaid += data.amount || 0;
           } else if (data.status === 'pending') {
@@ -314,191 +504,189 @@ const [pendingApproveData, setPendingApproveData] = useState(null);
   };
 
   const fetchPendingPromotions = async () => {
-  try {
-    console.log('📊 Fetching pending promotions...');
-    
-    // Get the latest levels from Firestore
-    const settingsRef = doc(db, 'settings', 'commission');
-    const settingsSnap = await getDoc(settingsRef);
-    let dynamicLevels = null;
-    
-    if (settingsSnap.exists()) {
-      const settingsData = settingsSnap.data();
-      if (settingsData.levels) {
-        dynamicLevels = settingsData.levels;
-      }
-    }
-    
-    // If no dynamic levels, use formData.levels
-    const levelsToUse = dynamicLevels || formData.levels;
-    console.log('📊 Levels to use:', levelsToUse);
-    
-    // Get all working members
-    const usersQuery = query(
-      collection(db, 'users'),
-      where('role', 'in', ['working', 'workingMember'])
-    );
-    const usersSnap = await getDocs(usersQuery);
-    
-    const promotions = [];
-    
-    for (const userDoc of usersSnap.docs) {
-      const userData = userDoc.data();
-      const userId = userDoc.id;
+    try {
+      console.log('📊 Fetching pending promotions...');
       
-      // Get total donations from this working member's registered members
-      const donations = await CommissionService.getTotalDonationsByMember(userId);
+      const settingsRef = doc(db, 'settings', 'commission');
+      const settingsSnap = await getDoc(settingsRef);
+      let dynamicLevels = null;
       
-      // Get current level
-      const currentLevel = userData.level || 'I';
-      
-      // Find the current level in the dynamic levels
-      const currentLevelIndex = levelsToUse.findIndex(l => l.id === currentLevel);
-      const currentLevelData = currentLevelIndex !== -1 ? levelsToUse[currentLevelIndex] : null;
-      
-      if (!currentLevelData) {
-        console.log(`⚠️ Level ${currentLevel} not found in levels data`);
-        continue;
-      }
-      
-      // Get next level
-      const nextLevelIndex = currentLevelIndex + 1;
-      const nextLevel = nextLevelIndex < levelsToUse.length ? levelsToUse[nextLevelIndex] : null;
-      
-      if (!nextLevel) {
-        console.log(`⚠️ No next level for ${currentLevel}`);
-        continue;
-      }
-      
-      // ✅ Check if eligible based on donationsRequiredForPromotion from current level
-      const donationsRequired = currentLevelData.donationsRequiredForPromotion || 0;
-      const isEligible = donations >= donationsRequired;
-      
-      console.log(`📊 ${userData.fullName}: Level ${currentLevel}, Donations: ₹${donations}, Required: ₹${donationsRequired}, Eligible: ${isEligible}`);
-      
-      if (isEligible) {
-        promotions.push({
-          id: userId,
-          name: userData.fullName || userData.name || 'Unknown',
-          currentLevel: currentLevel,
-          nextLevel: nextLevel.id,
-          nextLevelName: nextLevel.name,
-          totalDonations: donations,
-          requiredDonations: donationsRequired,
-          progress: Math.min((donations / (donationsRequired || 1)) * 100, 100),
-          email: userData.email || '',
-          phone: userData.phone || '',
-          joinedDate: userData.createdAt || new Date().toISOString()
-        });
-      }
-    }
-    
-    // Sort by progress (highest first)
-    promotions.sort((a, b) => b.progress - a.progress);
-    
-    setPendingPromotions(promotions);
-    console.log(`✅ Found ${promotions.length} pending promotions`);
-    
-  } catch (error) {
-    console.error('Error fetching pending promotions:', error);
-  }
-};
-
-  const approvePromotion = (memberId, nextLevel) => {
-  console.log('🔍 approvePromotion called with:', { memberId, nextLevel });
-  
-  if (!memberId || !nextLevel) {
-    Alert.alert('Error', 'Missing member ID or level');
-    return;
-  }
-
-  // Show custom modal instead of Alert
-  setPendingApproveData({ memberId, nextLevel });
-  setPromotionConfirmVisible(true);
-};
-const confirmApprovePromotion = async () => {
-  if (!pendingApproveData) return;
-  
-  const { memberId, nextLevel } = pendingApproveData;
-  console.log('✅ Confirming promotion for:', memberId, 'to:', nextLevel);
-  
-  setSaving(true);
-  setPromotionConfirmVisible(false);
-  
-  try {
-    console.log('📝 Updating user level...');
-    const userRef = doc(db, 'users', memberId);
-    await updateDoc(userRef, {
-      level: nextLevel,
-      promotedAt: new Date().toISOString(),
-      promotionApprovedBy: auth.currentUser?.uid || 'admin',
-      updatedAt: new Date().toISOString()
-    });
-    console.log('✅ User level updated');
-
-    console.log('📝 Creating promotion log...');
-    const promotionLogRef = collection(db, 'promotionLogs');
-    await addDoc(promotionLogRef, {
-      userId: memberId,
-      newLevel: nextLevel,
-      approvedBy: auth.currentUser?.uid || 'admin',
-      approvedAt: new Date().toISOString(),
-      timestamp: new Date().toISOString(),
-      status: 'approved'
-    });
-    console.log('✅ Promotion log created');
-
-    Alert.alert('Success', `Member promoted to Level ${nextLevel} successfully`);
-    await fetchPendingPromotions();
-    await fetchStats();
-    
-  } catch (error) {
-    console.error('❌ Error approving promotion:', error);
-    Alert.alert('Error', error.message || 'Failed to approve promotion');
-  } finally {
-    setSaving(false);
-    setPendingApproveData(null);
-  }
-};
-
-  const rejectPromotion = async (memberId) => {
-  Alert.alert(
-    'Reject Promotion',
-    'Are you sure you want to reject this promotion?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reject',
-        style: 'destructive',
-        onPress: async () => {
-          setSaving(true);
-          try {
-            console.log('📝 Rejecting promotion for:', memberId);
-            
-            // Log rejection - using addDoc
-            const rejectionRef = collection(db, 'promotionLogs');
-            await addDoc(rejectionRef, {
-              userId: memberId,
-              status: 'rejected',
-              rejectedBy: auth.currentUser?.uid || 'admin',
-              rejectedAt: new Date().toISOString(),
-              timestamp: new Date().toISOString()
-            });
-            
-            Alert.alert('Success', 'Promotion rejected');
-            await fetchPendingPromotions();
-            
-          } catch (error) {
-            console.error('Error rejecting promotion:', error);
-            Alert.alert('Error', error.message || 'Failed to reject promotion');
-          } finally {
-            setSaving(false);
-          }
+      if (settingsSnap.exists()) {
+        const settingsData = settingsSnap.data();
+        if (settingsData.levels) {
+          dynamicLevels = settingsData.levels;
         }
       }
-    ]
-  );
-};
+      
+      const levelsToUse = dynamicLevels || formData.levels;
+      console.log('📊 Levels to use:', levelsToUse);
+      
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('role', 'in', ['working', 'workingMember'])
+      );
+      const usersSnap = await getDocs(usersQuery);
+      
+      const promotions = [];
+      
+      for (const userDoc of usersSnap.docs) {
+        const userData = userDoc.data();
+        const userId = userDoc.id;
+        
+        const donations = await CommissionService.getTotalDonationsByMember(userId);
+        
+        const currentLevel = userData.level || 'I';
+        const currentLevelIndex = levelsToUse.findIndex(l => l.id === currentLevel);
+        const currentLevelData = currentLevelIndex !== -1 ? levelsToUse[currentLevelIndex] : null;
+        
+        if (!currentLevelData) {
+          console.log(`⚠️ Level ${currentLevel} not found in levels data`);
+          continue;
+        }
+        
+        const nextLevelIndex = currentLevelIndex + 1;
+        const nextLevel = nextLevelIndex < levelsToUse.length ? levelsToUse[nextLevelIndex] : null;
+        
+        if (!nextLevel) {
+          console.log(`⚠️ No next level for ${currentLevel}`);
+          continue;
+        }
+        
+        const donationsRequired = currentLevelData.donationsRequiredForPromotion || 0;
+        const isEligible = donations >= donationsRequired;
+        
+        console.log(`📊 ${userData.fullName}: Level ${currentLevel}, Donations: ₹${donations}, Required: ₹${donationsRequired}, Eligible: ${isEligible}`);
+        
+        if (isEligible) {
+          promotions.push({
+            id: userId,
+            name: userData.fullName || userData.name || 'Unknown',
+            currentLevel: currentLevel,
+            nextLevel: nextLevel.id,
+            nextLevelName: nextLevel.name,
+            totalDonations: donations,
+            requiredDonations: donationsRequired,
+            progress: Math.min((donations / (donationsRequired || 1)) * 100, 100),
+            email: userData.email || '',
+            phone: userData.phone || '',
+            joinedDate: userData.createdAt || new Date().toISOString()
+          });
+        }
+      }
+      
+      promotions.sort((a, b) => b.progress - a.progress);
+      
+      setPendingPromotions(promotions);
+      console.log(`✅ Found ${promotions.length} pending promotions`);
+      
+    } catch (error) {
+      console.error('Error fetching pending promotions:', error);
+    }
+  };
+
+  const fetchPayoutLogs = async () => {
+    try {
+      const logs = await PayoutService.getAllPayoutLogs(20);
+      setPayoutLogs(logs);
+    } catch (error) {
+      console.error('Error fetching payout logs:', error);
+    }
+  };
+
+  const approvePromotion = (memberId, nextLevel) => {
+    console.log('🔍 approvePromotion called with:', { memberId, nextLevel });
+    
+    if (!memberId || !nextLevel) {
+      Alert.alert('Error', 'Missing member ID or level');
+      return;
+    }
+
+    setPendingApproveData({ memberId, nextLevel });
+    setPromotionConfirmVisible(true);
+  };
+
+  const confirmApprovePromotion = async () => {
+    if (!pendingApproveData) return;
+    
+    const { memberId, nextLevel } = pendingApproveData;
+    console.log('✅ Confirming promotion for:', memberId, 'to:', nextLevel);
+    
+    setSaving(true);
+    setPromotionConfirmVisible(false);
+    
+    try {
+      console.log('📝 Updating user level...');
+      const userRef = doc(db, 'users', memberId);
+      await updateDoc(userRef, {
+        level: nextLevel,
+        promotedAt: new Date().toISOString(),
+        promotionApprovedBy: auth.currentUser?.uid || 'admin',
+        updatedAt: new Date().toISOString()
+      });
+      console.log('✅ User level updated');
+
+      console.log('📝 Creating promotion log...');
+      const promotionLogRef = collection(db, 'promotionLogs');
+      await addDoc(promotionLogRef, {
+        userId: memberId,
+        newLevel: nextLevel,
+        approvedBy: auth.currentUser?.uid || 'admin',
+        approvedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        status: 'approved'
+      });
+      console.log('✅ Promotion log created');
+
+      Alert.alert('Success', `Member promoted to Level ${nextLevel} successfully`);
+      await fetchPendingPromotions();
+      await fetchStats();
+      
+    } catch (error) {
+      console.error('❌ Error approving promotion:', error);
+      Alert.alert('Error', error.message || 'Failed to approve promotion');
+    } finally {
+      setSaving(false);
+      setPendingApproveData(null);
+    }
+  };
+
+  const rejectPromotion = async (memberId) => {
+    Alert.alert(
+      'Reject Promotion',
+      'Are you sure you want to reject this promotion?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              console.log('📝 Rejecting promotion for:', memberId);
+              
+              const rejectionRef = collection(db, 'promotionLogs');
+              await addDoc(rejectionRef, {
+                userId: memberId,
+                status: 'rejected',
+                rejectedBy: auth.currentUser?.uid || 'admin',
+                rejectedAt: new Date().toISOString(),
+                timestamp: new Date().toISOString()
+              });
+              
+              Alert.alert('Success', 'Promotion rejected');
+              await fetchPendingPromotions();
+              
+            } catch (error) {
+              console.error('Error rejecting promotion:', error);
+              Alert.alert('Error', error.message || 'Failed to reject promotion');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -531,6 +719,8 @@ const confirmApprovePromotion = async () => {
     }
   };
 
+  // ============ PAYOUT FUNCTIONS USING PayoutService ============
+  
   const processPayout = async () => {
     if (!selectedPayout) return;
     
@@ -539,53 +729,49 @@ const confirmApprovePromotion = async () => {
       return;
     }
 
-    if (parseFloat(payoutAmount) > selectedPayout.amount) {
-      Alert.alert('Error', 'Amount exceeds pending commission');
+    const amount = parseFloat(payoutAmount);
+    const maxAmount = selectedPayout.amount || 0;
+
+    if (amount > maxAmount) {
+      Alert.alert('Error', `Amount cannot exceed pending commission of ₹${maxAmount.toLocaleString()}`);
       return;
     }
 
-    setSaving(true);
-    try {
-      const transactionRef = doc(db, 'walletTransactions', selectedPayout.id);
-      
-      await runTransaction(db, async (transaction) => {
-        const docSnap = await transaction.get(transactionRef);
-        if (!docSnap.exists()) {
-          throw new Error('Transaction not found');
+    Alert.alert(
+      'Confirm Payout',
+      `Are you sure you want to process ₹${amount.toLocaleString()} payout?\n\nThis will add the amount to the member's wallet balance.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Process Payout',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const result = await PayoutService.processCommissionPayout(
+                selectedPayout.id,
+                amount,
+                selectedPayout.userId
+              );
+              
+              if (result.success) {
+                Alert.alert('Success', `₹${amount.toLocaleString()} has been added to member's wallet`);
+                setPayoutModalVisible(false);
+                setSelectedPayout(null);
+                setPayoutAmount('');
+                setPayoutNote('');
+                await fetchStats();
+                await fetchDonationCommissionStats();
+                await fetchPayoutLogs();
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to process payout');
+            } finally {
+              setSaving(false);
+            }
+          }
         }
-
-        transaction.update(transactionRef, {
-          status: 'completed',
-          paidAt: Timestamp.now(),
-          paidAmount: parseFloat(payoutAmount),
-          note: payoutNote || 'Commission payout processed',
-          updatedAt: Timestamp.now()
-        });
-
-        const walletRef = doc(db, 'wallets', selectedPayout.userId);
-        const walletSnap = await transaction.get(walletRef);
-        if (walletSnap.exists()) {
-          transaction.update(walletRef, {
-            balance: increment(parseFloat(payoutAmount)),
-            totalEarned: increment(parseFloat(payoutAmount)),
-            pendingCommission: increment(-parseFloat(payoutAmount)),
-            updatedAt: Timestamp.now()
-          });
-        }
-      });
-
-      Alert.alert('Success', 'Commission payout processed successfully');
-      setPayoutModalVisible(false);
-      setSelectedPayout(null);
-      setPayoutAmount('');
-      setPayoutNote('');
-      fetchStats();
-    } catch (error) {
-      console.error('Error processing payout:', error);
-      Alert.alert('Error', error.message || 'Failed to process payout');
-    } finally {
-      setSaving(false);
-    }
+      ]
+    );
   };
 
   const processAllPayouts = async () => {
@@ -594,9 +780,11 @@ const confirmApprovePromotion = async () => {
       return;
     }
 
+    const totalAmount = pendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+
     Alert.alert(
       'Process All Payouts',
-      `Are you sure you want to process all ${pendingPayouts.length} pending payouts?`,
+      `Are you sure you want to process all ${pendingPayouts.length} pending payouts?\n\nTotal: ₹${totalAmount.toLocaleString()}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -604,50 +792,28 @@ const confirmApprovePromotion = async () => {
           onPress: async () => {
             setSaving(true);
             try {
-              let processed = 0;
-              let failed = 0;
-
-              for (const payout of pendingPayouts) {
-                try {
-                  const transactionRef = doc(db, 'walletTransactions', payout.id);
-                  
-                  await runTransaction(db, async (transaction) => {
-                    const docSnap = await transaction.get(transactionRef);
-                    if (!docSnap.exists()) return;
-
-                    transaction.update(transactionRef, {
-                      status: 'completed',
-                      paidAt: Timestamp.now(),
-                      paidAmount: payout.amount,
-                      note: 'Bulk payout processed',
-                      updatedAt: Timestamp.now()
-                    });
-
-                    const walletRef = doc(db, 'wallets', payout.userId);
-                    const walletSnap = await transaction.get(walletRef);
-                    if (walletSnap.exists()) {
-                      transaction.update(walletRef, {
-                        balance: increment(payout.amount),
-                        totalEarned: increment(payout.amount),
-                        pendingCommission: increment(-payout.amount),
-                        updatedAt: Timestamp.now()
-                      });
-                    }
-                  });
-                  processed++;
-                } catch (error) {
-                  console.error('Error processing payout:', error);
-                  failed++;
-                }
-              }
-
+              const payouts = pendingPayouts.map(p => ({
+                transactionId: p.id,
+                memberId: p.userId,
+                amount: p.amount || 0
+              }));
+              
+              const results = await PayoutService.processBulkPayouts(payouts);
+              
               Alert.alert(
                 'Bulk Payout Complete',
-                `Processed: ${processed}\nFailed: ${failed}`
+                `✅ Successful: ${results.success.length}\n❌ Failed: ${results.failed.length}`
               );
-              fetchStats();
+              
+              if (results.failed.length > 0) {
+                console.log('Failed payouts:', results.failed);
+              }
+              
+              await fetchStats();
+              await fetchDonationCommissionStats();
+              await fetchPayoutLogs();
             } catch (error) {
-              Alert.alert('Error', error.message);
+              Alert.alert('Error', error.message || 'Failed to process bulk payouts');
             } finally {
               setSaving(false);
             }
@@ -665,147 +831,61 @@ const confirmApprovePromotion = async () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const q = query(
-        collection(db, 'walletTransactions'),
-        where('userId', '==', selectedWorkingMember.id),
-        where('type', 'in', ['direct_commission', 'secondary_commission']),
-        where('status', '==', 'pending')
-      );
-      const snapshot = await getDocs(q);
-      
-      let totalPending = 0;
-      const transactions = [];
-      snapshot.forEach((doc) => {
-        totalPending += doc.data().amount || 0;
-        transactions.push({ id: doc.id, ...doc.data() });
-      });
+    const amount = parseFloat(memberPayoutAmount);
 
-      if (parseFloat(memberPayoutAmount) > totalPending) {
-        Alert.alert('Error', `Amount exceeds pending commission of ₹${totalPending}`);
-        setSaving(false);
-        return;
-      }
-
-      let processed = 0;
-      let remainingAmount = parseFloat(memberPayoutAmount);
-
-      for (const transaction of transactions) {
-        if (remainingAmount <= 0) break;
-        
-        const amountToPay = Math.min(transaction.amount, remainingAmount);
-        const transactionRef = doc(db, 'walletTransactions', transaction.id);
-        
-        await runTransaction(db, async (transaction) => {
-          const docSnap = await transaction.get(transactionRef);
-          if (!docSnap.exists()) return;
-
-          if (amountToPay >= transaction.amount) {
-            transaction.update(transactionRef, {
-              status: 'completed',
-              paidAt: Timestamp.now(),
-              paidAmount: amountToPay,
-              note: `Payout to ${selectedWorkingMember.name}`,
-              updatedAt: Timestamp.now()
-            });
-          } else {
-            transaction.update(transactionRef, {
-              amount: transaction.amount - amountToPay,
-              status: 'partially_paid',
-              updatedAt: Timestamp.now()
-            });
-            
-            const newTransactionRef = doc(collection(db, 'walletTransactions'));
-            transaction.set(newTransactionRef, {
-              ...transaction,
-              id: newTransactionRef.id,
-              amount: amountToPay,
-              status: 'completed',
-              paidAt: Timestamp.now(),
-              paidAmount: amountToPay,
-              note: `Partial payout to ${selectedWorkingMember.name}`,
-              updatedAt: Timestamp.now()
-            });
+    Alert.alert(
+      'Confirm Payout',
+      `Are you sure you want to pay ₹${amount.toLocaleString()} to ${selectedWorkingMember.name}?\n\nThis will add the amount to their wallet.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pay Now',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const result = await PayoutService.processPayout(
+                selectedWorkingMember.id,
+                amount,
+                'manual_payout',
+                `Manual payout by admin`
+              );
+              
+              if (result.success) {
+                Alert.alert('Success', `₹${amount.toLocaleString()} paid to ${selectedWorkingMember.name}`);
+                setMemberPayoutModalVisible(false);
+                setSelectedWorkingMember(null);
+                setMemberPayoutAmount('');
+                await fetchStats();
+                await fetchDonationCommissionStats();
+                await fetchPayoutLogs();
+              }
+            } catch (error) {
+              Alert.alert('Error', error.message || 'Failed to process payout');
+            } finally {
+              setSaving(false);
+            }
           }
-        });
-        
-        remainingAmount -= amountToPay;
-        processed++;
-      }
-
-      const walletRef = doc(db, 'wallets', selectedWorkingMember.id);
-      await updateDoc(walletRef, {
-        balance: increment(parseFloat(memberPayoutAmount)),
-        totalEarned: increment(parseFloat(memberPayoutAmount)),
-        pendingCommission: increment(-parseFloat(memberPayoutAmount)),
-        updatedAt: Timestamp.now()
-      });
-
-      Alert.alert(
-        'Success',
-        `₹${parseFloat(memberPayoutAmount).toLocaleString()} paid to ${selectedWorkingMember.name}`
-      );
-      
-      setMemberPayoutModalVisible(false);
-      setSelectedWorkingMember(null);
-      setMemberPayoutAmount('');
-      fetchStats();
-    } catch (error) {
-      console.error('Error processing member payout:', error);
-      Alert.alert('Error', error.message || 'Failed to process payout');
-    } finally {
-      setSaving(false);
-    }
+        }
+      ]
+    );
   };
 
-  const onRefresh = async () => {
-  setRefreshing(true);
-  await fetchCommissionData();
-  await fetchStats();
-  await fetchDonationCommissionStats();
-  await fetchPendingPromotions();
-  setRefreshing(false);
-};
+  // ============ END OF PAYOUT FUNCTIONS ============
 
-  // ============ Level Edit Functions ============
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchCommissionData();
+    await fetchStats();
+    await fetchDonationCommissionStats();
+    await fetchPendingPromotions();
+    await fetchPayoutLogs();
+    setRefreshing(false);
+  };
+
   const openLevelEditor = (index) => {
     setEditingLevelIndex(index);
     setSelectedLevel({ ...formData.levels[index] });
     setLevelModalVisible(true);
-  };
-
-  const updateLevelField = (field, value) => {
-    if (!selectedLevel) return;
-    
-    const updatedLevel = { ...selectedLevel };
-    
-    if (field === 'name') {
-      updatedLevel.name = value;
-      setSelectedLevel(updatedLevel);
-      return;
-    }
-    
-    if (value === '∞') {
-      updatedLevel[field] = Infinity;
-      setSelectedLevel(updatedLevel);
-      return;
-    }
-    
-    if (value === '' || value === null || value === undefined) {
-      updatedLevel[field] = '';
-      setSelectedLevel(updatedLevel);
-      return;
-    }
-    
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue)) {
-      updatedLevel[field] = numValue;
-    } else {
-      updatedLevel[field] = value;
-    }
-    
-    setSelectedLevel(updatedLevel);
   };
 
   const saveLevelChanges = async () => {
@@ -860,38 +940,60 @@ const confirmApprovePromotion = async () => {
     }
   };
 
-  // ============ Stats Components ============
+  const levelEditModal = useMemo(() => (
+    <LevelEditModal
+      visible={levelModalVisible}
+      selectedLevel={selectedLevel}
+      onClose={() => {
+        setLevelModalVisible(false);
+        setEditingLevelIndex(null);
+        setSelectedLevel(null);
+      }}
+      onUpdateField={updateLevelField}
+      onSave={saveLevelChanges}
+      saving={saving}
+      isSmallDevice={isSmallDevice}
+      formDataLevels={formData.levels}
+    />
+  ), [levelModalVisible, selectedLevel, updateLevelField, saveLevelChanges, saving, formData.levels]);
+
+  // ============ Components ============
   const StatCard = ({ label, value, icon, color }) => (
     <View style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={isSmallDevice ? 16 : 20} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { fontSize: isSmallDevice ? 11 : 13 }]}>{value}</Text>
+      <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 7 : 8 }]}>{label}</Text>
     </View>
   );
 
-  // Donation Stats Card
   const DonationStatsCard = () => (
     <View style={styles.donationStatsCard}>
       <View style={styles.donationStatsHeader}>
-        <MaterialIcons name="volunteer-activism" size={20} color="#f59e0b" />
-        <Text style={styles.donationStatsTitle}>Donation Commission Stats</Text>
+        <MaterialIcons name="volunteer-activism" size={isSmallDevice ? 16 : 20} color="#f59e0b" />
+        <Text style={[styles.donationStatsTitle, { fontSize: isSmallDevice ? 12 : 14 }]}>Donation Commission Stats</Text>
       </View>
       <View style={styles.donationStatsGrid}>
         <View style={styles.donationStatItem}>
-          <Text style={styles.donationStatValue}>₹{donationStats.totalDonationCommission.toLocaleString()}</Text>
-          <Text style={styles.donationStatLabel}>Total Commission</Text>
+          <Text style={[styles.donationStatValue, { fontSize: isSmallDevice ? 14 : 18 }]}>
+            ₹{donationStats.totalDonationCommission.toLocaleString()}
+          </Text>
+          <Text style={[styles.donationStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Total Commission</Text>
         </View>
         <View style={styles.donationStatDivider} />
         <View style={styles.donationStatItem}>
-          <Text style={styles.donationStatValue}>₹{donationStats.totalDonations.toLocaleString()}</Text>
-          <Text style={styles.donationStatLabel}>Total Donations</Text>
+          <Text style={[styles.donationStatValue, { fontSize: isSmallDevice ? 14 : 18 }]}>
+            ₹{donationStats.totalDonations.toLocaleString()}
+          </Text>
+          <Text style={[styles.donationStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Total Donations</Text>
         </View>
         <View style={styles.donationStatDivider} />
         <View style={styles.donationStatItem}>
-          <Text style={styles.donationStatValue}>{donationStats.totalTransactions}</Text>
-          <Text style={styles.donationStatLabel}>Transactions</Text>
+          <Text style={[styles.donationStatValue, { fontSize: isSmallDevice ? 14 : 18 }]}>
+            {donationStats.totalTransactions}
+          </Text>
+          <Text style={[styles.donationStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Transactions</Text>
         </View>
       </View>
     </View>
@@ -915,29 +1017,34 @@ const confirmApprovePromotion = async () => {
     }, [item.userId]);
 
     const isDirect = item.type === 'direct_commission';
-    const isDonation = item.description?.toLowerCase().includes('donation') || false;
+    const isDonation = item.type === 'donation_commission' || item.isDonation === true;
+    const isSecondary = item.type === 'secondary_commission';
 
     return (
       <View style={[styles.payoutCard, isDonation && styles.donationPayoutCard]}>
         <View style={styles.payoutHeader}>
           <View style={styles.payoutUser}>
-            <View style={[styles.payoutIcon, { backgroundColor: isDonation ? '#fef3c7' : (isDirect ? '#8b5cf615' : '#10b98115') }]}>
+            <View style={[styles.payoutIcon, { 
+              backgroundColor: isDonation ? '#fef3c7' : (isDirect ? '#8b5cf615' : '#10b98115') 
+            }]}>
               <MaterialIcons 
                 name={isDonation ? 'volunteer-activism' : (isDirect ? 'person-add' : 'share')} 
-                size={18} 
+                size={isSmallDevice ? 14 : 18} 
                 color={isDonation ? '#f59e0b' : (isDirect ? '#8b5cf6' : '#10b981')} 
               />
             </View>
             <View>
-              <Text style={styles.payoutUserName}>{userName}</Text>
-              <Text style={styles.payoutType}>
+              <Text style={[styles.payoutUserName, { fontSize: isSmallDevice ? 11 : 13 }]}>{userName}</Text>
+              <Text style={[styles.payoutType, { fontSize: isSmallDevice ? 9 : 10 }]}>
                 {isDonation ? 'Donation Commission' : (isDirect ? 'Direct Commission' : 'Secondary Commission')}
               </Text>
             </View>
           </View>
           <View style={styles.payoutAmountContainer}>
-            <Text style={[styles.payoutAmount, isDonation && styles.donationAmount]}>₹{item.amount?.toLocaleString() || 0}</Text>
-            <Text style={styles.payoutDate}>
+            <Text style={[styles.payoutAmount, isDonation && styles.donationAmount, { fontSize: isSmallDevice ? 12 : 14 }]}>
+              ₹{item.amount?.toLocaleString() || 0}
+            </Text>
+            <Text style={[styles.payoutDate, { fontSize: isSmallDevice ? 9 : 10 }]}>
               {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
             </Text>
           </View>
@@ -950,8 +1057,8 @@ const confirmApprovePromotion = async () => {
             setPayoutModalVisible(true);
           }}
         >
-          <MaterialIcons name="payment" size={16} color="#ffffff" />
-          <Text style={styles.payoutButtonText}>Process Payout</Text>
+          <MaterialIcons name="payment" size={isSmallDevice ? 12 : 16} color="#ffffff" />
+          <Text style={[styles.payoutButtonText, { fontSize: isSmallDevice ? 10 : 11 }]}>Process Payout</Text>
         </TouchableOpacity>
       </View>
     );
@@ -965,19 +1072,25 @@ const confirmApprovePromotion = async () => {
         setMemberPayoutModalVisible(true);
       }}
     >
-      <Text style={styles.topEarnerRank}>#{index + 1}</Text>
+      <Text style={[styles.topEarnerRank, { fontSize: isSmallDevice ? 11 : 13 }]}>#{index + 1}</Text>
       <View style={styles.topEarnerInfo}>
-        <Text style={styles.topEarnerName}>{item.name || 'Unknown'}</Text>
-        <Text style={styles.topEarnerLevel}>Level {item.level || 'I'}</Text>
+        <Text style={[styles.topEarnerName, { fontSize: isSmallDevice ? 11 : 13 }]}>{item.name || 'Unknown'}</Text>
+        <Text style={[styles.topEarnerLevel, { fontSize: isSmallDevice ? 9 : 10 }]}>Level {item.level || 'I'}</Text>
         {item.donationCommission > 0 && (
-          <Text style={styles.topEarnerDonation}>❤️ Donation Comm: ₹{item.donationCommission.toLocaleString()}</Text>
+          <Text style={[styles.topEarnerDonation, { fontSize: isSmallDevice ? 9 : 10 }]}>
+            ❤️ Donation Comm: ₹{item.donationCommission.toLocaleString()}
+          </Text>
         )}
         {item.totalDonationsFromMembers > 0 && (
-          <Text style={styles.topEarnerTotalDonations}>💰 Total Donations: ₹{item.totalDonationsFromMembers.toLocaleString()}</Text>
+          <Text style={[styles.topEarnerTotalDonations, { fontSize: isSmallDevice ? 9 : 10 }]}>
+            💰 Total Donations: ₹{item.totalDonationsFromMembers.toLocaleString()}
+          </Text>
         )}
       </View>
       <View style={styles.topEarnerRight}>
-        <Text style={styles.topEarnerAmount}>₹{item.totalEarned?.toLocaleString() || 0}</Text>
+        <Text style={[styles.topEarnerAmount, { fontSize: isSmallDevice ? 11 : 13 }]}>
+          ₹{item.totalEarned?.toLocaleString() || 0}
+        </Text>
         <TouchableOpacity
           style={styles.payNowButton}
           onPress={() => {
@@ -986,140 +1099,11 @@ const confirmApprovePromotion = async () => {
             setMemberPayoutModalVisible(true);
           }}
         >
-          <Text style={styles.payNowText}>Pay</Text>
+          <Text style={[styles.payNowText, { fontSize: isSmallDevice ? 9 : 10 }]}>Pay</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
-
-  const LevelEditModal = () => {
-    if (!selectedLevel) return null;
-
-    const nextLevelIndex = formData.levels.findIndex(l => l.id === selectedLevel.id) + 1;
-    const nextLevel = nextLevelIndex < formData.levels.length ? formData.levels[nextLevelIndex] : null;
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={levelModalVisible}
-        onRequestClose={() => {
-          setLevelModalVisible(false);
-          setEditingLevelIndex(null);
-          setSelectedLevel(null);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Level: {selectedLevel.id}</Text>
-              <TouchableOpacity onPress={() => {
-                setLevelModalVisible(false);
-                setEditingLevelIndex(null);
-                setSelectedLevel(null);
-              }}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.modalBody}>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Level Name</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.name || ''}
-                    onChangeText={(text) => updateLevelField('name', text)}
-                    placeholder="Enter level name"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Direct Commission (%)</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.directCommission !== undefined && selectedLevel.directCommission !== null ? String(selectedLevel.directCommission) : ''}
-                    onChangeText={(text) => updateLevelField('directCommission', text)}
-                    keyboardType="numeric"
-                    placeholder="Enter direct commission"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Secondary Commission (%)</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.secondaryCommission !== undefined && selectedLevel.secondaryCommission !== null ? String(selectedLevel.secondaryCommission) : ''}
-                    onChangeText={(text) => updateLevelField('secondaryCommission', text)}
-                    keyboardType="numeric"
-                    placeholder="Enter secondary commission"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.sectionDivider}>
-                  <Text style={styles.sectionDividerText}>💰 Donation Requirements</Text>
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Min Donations (₹)</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.minDonations !== undefined && selectedLevel.minDonations !== null ? String(selectedLevel.minDonations) : ''}
-                    onChangeText={(text) => updateLevelField('minDonations', text)}
-                    keyboardType="numeric"
-                    placeholder="Enter min donations"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Max Donations (₹)</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.maxDonations === Infinity ? '∞' : (selectedLevel.maxDonations !== undefined && selectedLevel.maxDonations !== null ? String(selectedLevel.maxDonations) : '')}
-                    onChangeText={(text) => updateLevelField('maxDonations', text)}
-                    placeholder="Enter max donations (∞ for unlimited)"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Donations Required for Promotion (₹)</Text>
-                  <TextInput
-                    style={styles.fieldInput}
-                    value={selectedLevel.donationsRequiredForPromotion === Infinity ? '∞' : (selectedLevel.donationsRequiredForPromotion !== undefined && selectedLevel.donationsRequiredForPromotion !== null ? String(selectedLevel.donationsRequiredForPromotion) : '')}
-                    onChangeText={(text) => updateLevelField('donationsRequiredForPromotion', text)}
-                    placeholder="Enter donations required (∞ for no promotion)"
-                    placeholderTextColor="#9ca3af"
-                  />
-                  {nextLevel && (
-                    <Text style={styles.helperText}>
-                      Next level ({nextLevel.name}) requires ₹{nextLevel.minDonations?.toLocaleString()} in donations
-                    </Text>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={styles.updateLevelButton}
-                  onPress={saveLevelChanges}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.updateLevelButtonText}>Update Level</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
 
   const SettingsEditModal = () => {
     return (
@@ -1132,7 +1116,7 @@ const confirmApprovePromotion = async () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '95%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Commission Settings</Text>
+              <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Edit Commission Settings</Text>
               <TouchableOpacity onPress={() => setSettingsModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
@@ -1141,9 +1125,9 @@ const confirmApprovePromotion = async () => {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalBody}>
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Registration Fee (₹)</Text>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Registration Fee (₹)</Text>
                   <TextInput
-                    style={styles.fieldInput}
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
                     value={String(formData.registrationFee)}
                     onChangeText={(text) => setFormData({ ...formData, registrationFee: parseFloat(text) || 0 })}
                     keyboardType="numeric"
@@ -1152,9 +1136,9 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Min Withdrawal (₹)</Text>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Min Withdrawal (₹)</Text>
                   <TextInput
-                    style={styles.fieldInput}
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
                     value={String(formData.minWithdrawal)}
                     onChangeText={(text) => setFormData({ ...formData, minWithdrawal: parseFloat(text) || 0 })}
                     keyboardType="numeric"
@@ -1163,9 +1147,9 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Max Withdrawal (₹)</Text>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Max Withdrawal (₹)</Text>
                   <TextInput
-                    style={styles.fieldInput}
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
                     value={String(formData.maxWithdrawal)}
                     onChangeText={(text) => setFormData({ ...formData, maxWithdrawal: parseFloat(text) || 0 })}
                     keyboardType="numeric"
@@ -1174,9 +1158,9 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Payout Threshold (₹)</Text>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Payout Threshold (₹)</Text>
                   <TextInput
-                    style={styles.fieldInput}
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
                     value={String(formData.payoutThreshold)}
                     onChangeText={(text) => setFormData({ ...formData, payoutThreshold: parseFloat(text) || 0 })}
                     keyboardType="numeric"
@@ -1185,23 +1169,25 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.sectionDivider}>
-                  <Text style={styles.sectionDividerText}>💝 Donation Commission</Text>
+                  <Text style={[styles.sectionDividerText, { fontSize: isSmallDevice ? 13 : 14 }]}>💝 Donation Commission</Text>
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Donation Commission Rate (%)</Text>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Donation Commission Rate (%)</Text>
                   <TextInput
-                    style={styles.fieldInput}
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
                     value={String(formData.donationCommissionRate)}
                     onChangeText={(text) => setFormData({ ...formData, donationCommissionRate: parseFloat(text) || 0 })}
                     keyboardType="numeric"
                     placeholderTextColor="#9ca3af"
                   />
-                  <Text style={styles.helperText}>Percentage of donation amount given as commission</Text>
+                  <Text style={[styles.helperText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                    Percentage of donation amount given as commission
+                  </Text>
                 </View>
 
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Auto Promotion</Text>
+                  <Text style={[styles.switchLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Auto Promotion</Text>
                   <TouchableOpacity
                     style={[styles.switch, formData.autoPromotionEnabled && styles.switchActive]}
                     onPress={() => setFormData({ ...formData, autoPromotionEnabled: !formData.autoPromotionEnabled })}
@@ -1211,7 +1197,7 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Auto Payout</Text>
+                  <Text style={[styles.switchLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Auto Payout</Text>
                   <TouchableOpacity
                     style={[styles.switch, formData.autoPayoutEnabled && styles.switchActive]}
                     onPress={() => setFormData({ ...formData, autoPayoutEnabled: !formData.autoPayoutEnabled })}
@@ -1221,7 +1207,7 @@ const confirmApprovePromotion = async () => {
                 </View>
 
                 <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Donation Commission</Text>
+                  <Text style={[styles.switchLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Donation Commission</Text>
                   <TouchableOpacity
                     style={[styles.switch, formData.donationCommissionEnabled && styles.switchActive]}
                     onPress={() => setFormData({ ...formData, donationCommissionEnabled: !formData.donationCommissionEnabled })}
@@ -1240,7 +1226,7 @@ const confirmApprovePromotion = async () => {
                   ) : (
                     <>
                       <MaterialIcons name="save" size={20} color="#ffffff" />
-                      <Text style={styles.saveButtonText}>Save All Settings</Text>
+                      <Text style={[styles.saveButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>Save All Settings</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1252,494 +1238,511 @@ const confirmApprovePromotion = async () => {
     );
   };
 
+  // ============ RENDER ============
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF7722" />
-        <Text style={styles.loadingText}>Loading Commission Settings...</Text>
+        <Text style={[styles.loadingText, { fontSize: isSmallDevice ? 13 : 14 }]}>Loading Commission Settings...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Saffron Header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Commission Management</Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity 
-              style={styles.editButton}
-              onPress={() => setSettingsModalVisible(true)}
-            >
-              <MaterialIcons name="settings" size={22} color="#ffffff" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Saffron Header */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
+            <Text style={[styles.headerTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>Commission Management</Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => setSettingsModalVisible(true)}
+              >
+                <MaterialIcons name="settings" size={isSmallDevice ? 18 : 22} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
-        }
-      >
-        {/* Stats Cards */}
-        <View style={styles.statsGrid}>
-          <StatCard
-            label="Working Members"
-            value={stats.totalWorkingMembers}
-            icon="people"
-            color="#8b5cf6"
-          />
-          <StatCard
-            label="Total Paid"
-            value={`₹${stats.totalCommissionPaid.toLocaleString()}`}
-            icon="attach-money"
-            color="#10b981"
-          />
-          <StatCard
-            label="Pending"
-            value={`₹${stats.pendingCommission.toLocaleString()}`}
-            icon="pending"
-            color="#f59e0b"
-          />
-          <StatCard
-            label="Payouts This Month"
-            value={`₹${stats.totalPayoutsThisMonth.toLocaleString()}`}
-            icon="payment"
-            color="#FF7722"
-          />
-        </View>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
+          }
+        >
+          {/* Stats Cards */}
+          <View style={styles.statsGrid}>
+            <StatCard
+              label="Working Members"
+              value={stats.totalWorkingMembers}
+              icon="people"
+              color="#8b5cf6"
+            />
+            <StatCard
+              label="Total Paid"
+              value={`₹${stats.totalCommissionPaid.toLocaleString()}`}
+              icon="attach-money"
+              color="#10b981"
+            />
+            <StatCard
+              label="Pending"
+              value={`₹${stats.pendingCommission.toLocaleString()}`}
+              icon="pending"
+              color="#f59e0b"
+            />
+            <StatCard
+              label="Payouts This Month"
+              value={`₹${stats.totalPayoutsThisMonth.toLocaleString()}`}
+              icon="payment"
+              color="#FF7722"
+            />
+          </View>
 
-        {/* Donation Stats Card */}
-        <DonationStatsCard />
+          {/* Donation Stats Card */}
+          <DonationStatsCard />
 
-        {/* Pending Payouts Section */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="payment" size={20} color="#FF7722" />
-            <Text style={styles.sectionTitle}>Pending Payouts ({pendingPayouts.length})</Text>
-            {pendingPayouts.length > 0 && (
-              <TouchableOpacity
-                style={styles.processAllButton}
-                onPress={processAllPayouts}
-                disabled={saving}
-              >
-                <Text style={styles.processAllText}>Process All</Text>
-              </TouchableOpacity>
+          {/* Pending Payouts Section */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="payment" size={isSmallDevice ? 16 : 20} color="#FF7722" />
+              <Text style={[styles.sectionTitle, { fontSize: isSmallDevice ? 13 : 15 }]}>
+                Pending Payouts ({pendingPayouts.length})
+              </Text>
+              {pendingPayouts.length > 0 && (
+                <TouchableOpacity
+                  style={styles.processAllButton}
+                  onPress={processAllPayouts}
+                  disabled={saving}
+                >
+                  <Text style={[styles.processAllText, { fontSize: isSmallDevice ? 10 : 11 }]}>Process All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {pendingPayouts.length > 0 ? (
+              pendingPayouts.map((item) => (
+                <PayoutCard key={item.id} item={item} />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <MaterialIcons name="check-circle" size={isSmallDevice ? 28 : 32} color="#10b981" />
+                <Text style={[styles.emptyStateText, { fontSize: isSmallDevice ? 13 : 14 }]}>No pending payouts</Text>
+                <Text style={[styles.emptyStateSubtext, { fontSize: isSmallDevice ? 10 : 11 }]}>All commissions have been paid</Text>
+              </View>
             )}
           </View>
 
-          {pendingPayouts.length > 0 ? (
-            pendingPayouts.map((item) => (
-              <PayoutCard key={item.id} item={item} />
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <MaterialIcons name="check-circle" size={32} color="#10b981" />
-              <Text style={styles.emptyStateText}>No pending payouts</Text>
-              <Text style={styles.emptyStateSubtext}>All commissions have been paid</Text>
-            </View>
-          )}
-        </View>
+          {/* Pending Promotions Section */}
+          {pendingPromotions.length > 0 && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="stars" size={isSmallDevice ? 16 : 20} color="#fbbf24" />
+                <Text style={[styles.sectionTitle, { fontSize: isSmallDevice ? 13 : 15 }]}>
+                  Pending Promotions ({pendingPromotions.length})
+                </Text>
+              </View>
 
-        {/* Pending Promotions Section */}
-        {pendingPromotions.length > 0 && (
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <MaterialIcons name="stars" size={20} color="#fbbf24" />
-              <Text style={styles.sectionTitle}>Pending Promotions ({pendingPromotions.length})</Text>
-            </View>
-
-            {pendingPromotions.map((item) => (
-              <View key={item.id} style={styles.promotionCard}>
-                <View style={styles.promotionHeader}>
-                  <View style={styles.promotionUser}>
-                    <View style={styles.promotionAvatar}>
-                      <Text style={styles.promotionAvatarText}>
-                        {item.name.charAt(0).toUpperCase()}
-                      </Text>
+              {pendingPromotions.map((item) => (
+                <View key={item.id} style={styles.promotionCard}>
+                  <View style={styles.promotionHeader}>
+                    <View style={styles.promotionUser}>
+                      <View style={styles.promotionAvatar}>
+                        <Text style={[styles.promotionAvatarText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                          {item.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text style={[styles.promotionName, { fontSize: isSmallDevice ? 11 : 13 }]}>{item.name}</Text>
+                        <Text style={[styles.promotionDetails, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                          Level {item.currentLevel} → Level {item.nextLevel} ({item.nextLevelName})
+                        </Text>
+                        <Text style={[styles.promotionDonations, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                          ₹{item.totalDonations.toLocaleString()} / ₹{item.requiredDonations.toLocaleString()} donations
+                        </Text>
+                      </View>
                     </View>
-                    <View>
-                      <Text style={styles.promotionName}>{item.name}</Text>
-                      <Text style={styles.promotionDetails}>
-                        Level {item.currentLevel} → Level {item.nextLevel} ({item.nextLevelName})
-                      </Text>
-                      <Text style={styles.promotionDonations}>
-                        ₹{item.totalDonations.toLocaleString()} / ₹{item.requiredDonations.toLocaleString()} donations
+                    <View style={styles.promotionProgressContainer}>
+                      <Text style={[styles.promotionProgressText, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                        {Math.round(item.progress)}%
                       </Text>
                     </View>
                   </View>
-                  <View style={styles.promotionProgressContainer}>
-                    <Text style={styles.promotionProgressText}>
-                      {Math.round(item.progress)}%
-                    </Text>
+
+                  <View style={styles.promotionProgressBar}>
+                    <View 
+                      style={[
+                        styles.promotionProgressFill, 
+                        { width: `${Math.min(item.progress, 100)}%` }
+                      ]} 
+                    />
+                  </View>
+
+                  <View style={styles.promotionActions}>
+                    <TouchableOpacity
+                      style={[styles.promotionActionButton, styles.promotionRejectButton]}
+                      onPress={() => rejectPromotion(item.id)}
+                      disabled={saving}
+                    >
+                      <MaterialIcons name="close" size={isSmallDevice ? 12 : 16} color="#ef4444" />
+                      <Text style={[styles.promotionRejectText, { fontSize: isSmallDevice ? 10 : 12 }]}>Reject</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.promotionActionButton, styles.promotionApproveButton]}
+                      onPress={() => approvePromotion(item.id, item.nextLevel)}
+                      disabled={saving}
+                    >
+                      <MaterialIcons name="check" size={isSmallDevice ? 12 : 16} color="#ffffff" />
+                      <Text style={[styles.promotionApproveText, { fontSize: isSmallDevice ? 10 : 12 }]}>Approve</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
+              ))}
+            </View>
+          )}
 
-                {/* Progress Bar */}
-                <View style={styles.promotionProgressBar}>
-                  <View 
-                    style={[
-                      styles.promotionProgressFill, 
-                      { width: `${Math.min(item.progress, 100)}%` }
-                    ]} 
+          {/* Top Earners */}
+          {stats.topEarners.length > 0 && (
+            <View style={styles.card}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="emoji-events" size={isSmallDevice ? 16 : 20} color="#fbbf24" />
+                <Text style={[styles.sectionTitle, { fontSize: isSmallDevice ? 13 : 15 }]}>Top Earners</Text>
+                <Text style={[styles.sectionSubtitle, { fontSize: isSmallDevice ? 9 : 10 }]}>Tap to pay</Text>
+              </View>
+              {stats.topEarners.map((item, index) => (
+                <TopEarnerItem key={item.id} item={item} index={index} />
+              ))}
+            </View>
+          )}
+
+          {/* Membership Levels Table */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="workspace-premium" size={isSmallDevice ? 16 : 20} color="#FF7722" />
+              <Text style={[styles.sectionTitle, { fontSize: isSmallDevice ? 13 : 15 }]}>Levels & Commission</Text>
+              <TouchableOpacity 
+                style={styles.editHintButton}
+                onPress={() => Alert.alert('Edit Levels', 'Tap on any level row to edit its details')}
+              >
+                <MaterialIcons name="info-outline" size={isSmallDevice ? 14 : 18} color="#FF7722" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { fontSize: isSmallDevice ? 9 : 10 }]}>Level</Text>
+              <Text style={[styles.tableHeaderText, { fontSize: isSmallDevice ? 9 : 10 }]}>Type</Text>
+              <Text style={[styles.tableHeaderText, { fontSize: isSmallDevice ? 9 : 10 }]}>Direct</Text>
+              <Text style={[styles.tableHeaderText, { fontSize: isSmallDevice ? 9 : 10 }]}>Secondary</Text>
+              <Text style={[styles.tableHeaderText, { fontSize: isSmallDevice ? 9 : 10 }]}>Donations Req</Text>
+            </View>
+
+            {formData.levels.map((level, index) => (
+              <TouchableOpacity 
+                key={level.id} 
+                style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, styles.tableRowTouchable]}
+                onPress={() => openLevelEditor(index)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.tableCell, styles.levelCol, styles.levelBadge, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                  {level.id}
+                </Text>
+                <Text style={[styles.tableCell, styles.nameCol, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                  {level.name}
+                </Text>
+                <Text style={[styles.tableCell, styles.percentageCol, styles.commissionText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                  {level.directCommission}%
+                </Text>
+                <Text style={[styles.tableCell, styles.percentageCol, styles.secondaryText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                  {level.secondaryCommission}%
+                </Text>
+                <Text style={[styles.tableCell, styles.donationsCol, styles.donationText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                  {level.donationsRequiredForPromotion === Infinity ? '∞' : `₹${(level.donationsRequiredForPromotion || 0).toLocaleString()}`}
+                </Text>
+                <View style={styles.editIconContainer}>
+                  <MaterialIcons name="edit" size={isSmallDevice ? 12 : 16} color="#FF7722" />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Quick Settings */}
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="settings" size={isSmallDevice ? 16 : 20} color="#6b7280" />
+              <Text style={[styles.sectionTitle, { fontSize: isSmallDevice ? 13 : 15 }]}>Quick Settings</Text>
+              <TouchableOpacity 
+                style={styles.editButtonSmall}
+                onPress={() => setSettingsModalVisible(true)}
+              >
+                <MaterialIcons name="edit" size={isSmallDevice ? 12 : 16} color="#FF7722" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.settingsGrid}>
+              <View style={styles.settingItem}>
+                <Text style={[styles.settingLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Registration Fee</Text>
+                <Text style={[styles.settingValue, { fontSize: isSmallDevice ? 11 : 13 }]}>₹{formData.registrationFee}</Text>
+              </View>
+              <View style={styles.settingItem}>
+                <Text style={[styles.settingLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Min Withdrawal</Text>
+                <Text style={[styles.settingValue, { fontSize: isSmallDevice ? 11 : 13 }]}>₹{formData.minWithdrawal}</Text>
+              </View>
+              <View style={styles.settingItem}>
+                <Text style={[styles.settingLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Auto Promotion</Text>
+                <Text style={[styles.settingValue, { fontSize: isSmallDevice ? 11 : 13, color: formData.autoPromotionEnabled ? '#10b981' : '#ef4444' }]}>
+                  {formData.autoPromotionEnabled ? 'Enabled' : 'Disabled'}
+                </Text>
+              </View>
+              <View style={styles.settingItem}>
+                <Text style={[styles.settingLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Donation Commission</Text>
+                <Text style={[styles.settingValue, { fontSize: isSmallDevice ? 11 : 13, color: formData.donationCommissionEnabled ? '#10b981' : '#ef4444' }]}>
+                  {formData.donationCommissionEnabled ? 'Enabled' : 'Disabled'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {commissionData?.lastUpdated && (
+            <View style={styles.updateInfo}>
+              <MaterialIcons name="update" size={isSmallDevice ? 12 : 14} color="#9ca3af" />
+              <Text style={[styles.updateText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                Last updated: {new Date(commissionData.lastUpdated).toLocaleString()}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.versionContainer}>
+            <Text style={[styles.versionText, { fontSize: isSmallDevice ? 9 : 10 }]}>NGO App v1.0.0</Text>
+          </View>
+        </ScrollView>
+
+        {/* Payout Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={payoutModalVisible}
+          onRequestClose={() => setPayoutModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Process Payout</Text>
+                <TouchableOpacity onPress={() => setPayoutModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <View style={styles.payoutSummary}>
+                  <Text style={[styles.payoutSummaryLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Pending Commission</Text>
+                  <Text style={[styles.payoutSummaryValue, { fontSize: isSmallDevice ? 18 : 22 }]}>
+                    ₹{selectedPayout?.amount?.toLocaleString() || 0}
+                  </Text>
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Amount to Pay (₹)</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={payoutAmount}
+                    onChangeText={setPayoutAmount}
+                    placeholder="Enter amount"
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
                   />
                 </View>
 
-                <View style={styles.promotionActions}>
-                  <TouchableOpacity
-                    style={[styles.promotionActionButton, styles.promotionRejectButton]}
-                    onPress={() => rejectPromotion(item.id)}
-                    disabled={saving}
-                  >
-                    <MaterialIcons name="close" size={16} color="#ef4444" />
-                    <Text style={styles.promotionRejectText}>Reject</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[styles.promotionActionButton, styles.promotionApproveButton]}
-                    onPress={() => approvePromotion(item.id, item.nextLevel)}
-                    disabled={saving}
-                  >
-                    <MaterialIcons name="check" size={16} color="#ffffff" />
-                    <Text style={styles.promotionApproveText}>Approve</Text>
-                  </TouchableOpacity>
+                <View style={styles.field}>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Note (Optional)</Text>
+                  <TextInput
+                    style={[styles.fieldInput, styles.textArea, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={payoutNote}
+                    onChangeText={setPayoutNote}
+                    placeholder="Add a note"
+                    multiline
+                    numberOfLines={3}
+                    placeholderTextColor="#9ca3af"
+                  />
                 </View>
+
+                <TouchableOpacity
+                  style={[styles.submitButton, saving && styles.submitButtonDisabled]}
+                  onPress={processPayout}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="check-circle" size={20} color="#ffffff" />
+                      <Text style={[styles.submitButtonText, { fontSize: isSmallDevice ? 14 : 15 }]}>Process Payout</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
-            ))}
-          </View>
-        )}
-
-        {/* Top Earners */}
-        {stats.topEarners.length > 0 && (
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <MaterialIcons name="emoji-events" size={20} color="#fbbf24" />
-              <Text style={styles.sectionTitle}>Top Earners</Text>
-              <Text style={styles.sectionSubtitle}>Tap to pay</Text>
-            </View>
-            {stats.topEarners.map((item, index) => (
-              <TopEarnerItem key={item.id} item={item} index={index} />
-            ))}
-          </View>
-        )}
-
-        {/* Membership Levels Table */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="workspace-premium" size={20} color="#FF7722" />
-            <Text style={styles.sectionTitle}>Levels & Commission</Text>
-            <TouchableOpacity 
-              style={styles.editHintButton}
-              onPress={() => Alert.alert('Edit Levels', 'Tap on any level row to edit its details')}
-            >
-              <MaterialIcons name="info-outline" size={18} color="#FF7722" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.levelCol]}>Level</Text>
-            <Text style={[styles.tableHeaderText, styles.nameCol]}>Type</Text>
-            <Text style={[styles.tableHeaderText, styles.percentageCol]}>Direct</Text>
-            <Text style={[styles.tableHeaderText, styles.percentageCol]}>Secondary</Text>
-            <Text style={[styles.tableHeaderText, styles.donationsCol]}>Donations Req</Text>
-          </View>
-
-          {formData.levels.map((level, index) => (
-            <TouchableOpacity 
-              key={level.id} 
-              style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven, styles.tableRowTouchable]}
-              onPress={() => openLevelEditor(index)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.tableCell, styles.levelCol, styles.levelBadge]}>
-                {level.id}
-              </Text>
-              <Text style={[styles.tableCell, styles.nameCol]}>
-                {level.name}
-              </Text>
-              <Text style={[styles.tableCell, styles.percentageCol, styles.commissionText]}>
-                {level.directCommission}%
-              </Text>
-              <Text style={[styles.tableCell, styles.percentageCol, styles.secondaryText]}>
-                {level.secondaryCommission}%
-              </Text>
-              <Text style={[styles.tableCell, styles.donationsCol, styles.donationText]}>
-                {level.donationsRequiredForPromotion === Infinity ? '∞' : `₹${(level.donationsRequiredForPromotion || 0).toLocaleString()}`}
-              </Text>
-              <View style={styles.editIconContainer}>
-                <MaterialIcons name="edit" size={16} color="#FF7722" />
-              </View>
-            </TouchableOpacity>
-          ))}
-
-        </View>
-
-        {/* Quick Settings */}
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <MaterialIcons name="settings" size={20} color="#6b7280" />
-            <Text style={styles.sectionTitle}>Quick Settings</Text>
-            <TouchableOpacity 
-              style={styles.editButtonSmall}
-              onPress={() => setSettingsModalVisible(true)}
-            >
-              <MaterialIcons name="edit" size={16} color="#FF7722" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.settingsGrid}>
-            <View style={styles.settingItem}>
-              <Text style={styles.settingLabel}>Registration Fee</Text>
-              <Text style={styles.settingValue}>₹{formData.registrationFee}</Text>
-            </View>
-            <View style={styles.settingItem}>
-              <Text style={styles.settingLabel}>Min Withdrawal</Text>
-              <Text style={styles.settingValue}>₹{formData.minWithdrawal}</Text>
-            </View>
-            <View style={styles.settingItem}>
-              <Text style={styles.settingLabel}>Auto Promotion</Text>
-              <Text style={[styles.settingValue, { color: formData.autoPromotionEnabled ? '#10b981' : '#ef4444' }]}>
-                {formData.autoPromotionEnabled ? 'Enabled' : 'Disabled'}
-              </Text>
-            </View>
-            <View style={styles.settingItem}>
-              <Text style={styles.settingLabel}>Donation Commission</Text>
-              <Text style={[styles.settingValue, { color: formData.donationCommissionEnabled ? '#10b981' : '#ef4444' }]}>
-                {formData.donationCommissionEnabled ? 'Enabled' : 'Disabled'}
-              </Text>
             </View>
           </View>
-        </View>
+        </Modal>
 
-        {commissionData?.lastUpdated && (
-          <View style={styles.updateInfo}>
-            <MaterialIcons name="update" size={14} color="#9ca3af" />
-            <Text style={styles.updateText}>
-              Last updated: {new Date(commissionData.lastUpdated).toLocaleString()}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>NGO App v1.0.0</Text>
-        </View>
-      </ScrollView>
-
-      {/* Payout Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={payoutModalVisible}
-        onRequestClose={() => setPayoutModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Process Payout</Text>
-              <TouchableOpacity onPress={() => setPayoutModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <View style={styles.payoutSummary}>
-                <Text style={styles.payoutSummaryLabel}>Pending Commission</Text>
-                <Text style={styles.payoutSummaryValue}>₹{selectedPayout?.amount?.toLocaleString() || 0}</Text>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Amount to Pay (₹)</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={payoutAmount}
-                  onChangeText={setPayoutAmount}
-                  placeholder="Enter amount"
-                  keyboardType="numeric"
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Note (Optional)</Text>
-                <TextInput
-                  style={[styles.fieldInput, styles.textArea]}
-                  value={payoutNote}
-                  onChangeText={setPayoutNote}
-                  placeholder="Add a note"
-                  multiline
-                  numberOfLines={3}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, saving && styles.submitButtonDisabled]}
-                onPress={processPayout}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <MaterialIcons name="check-circle" size={20} color="#ffffff" />
-                    <Text style={styles.submitButtonText}>Process Payout</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-{/* Promotion Confirmation Modal */}
-<Modal
-  animationType="fade"
-  transparent={true}
-  visible={promotionConfirmVisible}
-  onRequestClose={() => {
-    setPromotionConfirmVisible(false);
-    setPendingApproveData(null);
-  }}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.confirmModalContent}>
-      <View style={styles.confirmModalHeader}>
-        <MaterialIcons name="stars" size={28} color="#fbbf24" />
-        <Text style={styles.confirmModalTitle}>Approve Promotion</Text>
-      </View>
-      
-      <View style={styles.confirmModalBody}>
-        <Text style={styles.confirmModalText}>
-          Are you sure you want to promote this member to
-        </Text>
-        <Text style={styles.confirmModalLevel}>
-          Level {pendingApproveData?.nextLevel}
-        </Text>
-        <Text style={styles.confirmModalSubtext}>
-          This action will update the member's level and grant them new commission rates.
-        </Text>
-      </View>
-
-      <View style={styles.confirmModalActions}>
-        <TouchableOpacity
-          style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
-          onPress={() => {
+        {/* Promotion Confirmation Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={promotionConfirmVisible}
+          onRequestClose={() => {
             setPromotionConfirmVisible(false);
             setPendingApproveData(null);
           }}
         >
-          <Text style={styles.confirmModalCancelText}>Cancel</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.confirmModalButton, styles.confirmModalApproveButton]}
-          onPress={confirmApprovePromotion}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <>
-              <MaterialIcons name="check" size={18} color="#ffffff" />
-              <Text style={styles.confirmModalApproveText}>Approve</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
-      {/* Member Payout Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={memberPayoutModalVisible}
-        onRequestClose={() => setMemberPayoutModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Pay Working Member</Text>
-              <TouchableOpacity onPress={() => setMemberPayoutModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <View style={styles.memberInfo}>
-                <Text style={styles.memberInfoName}>{selectedWorkingMember?.name || 'Unknown'}</Text>
-                <Text style={styles.memberInfoLevel}>Level {selectedWorkingMember?.level || 'I'}</Text>
-                <Text style={styles.memberInfoEarned}>
-                  Total Earned: ₹{selectedWorkingMember?.totalEarned?.toLocaleString() || 0}
+          <View style={styles.modalOverlay}>
+            <View style={styles.confirmModalContent}>
+              <View style={styles.confirmModalHeader}>
+                <MaterialIcons name="stars" size={isSmallDevice ? 24 : 28} color="#fbbf24" />
+                <Text style={[styles.confirmModalTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>Approve Promotion</Text>
+              </View>
+              
+              <View style={styles.confirmModalBody}>
+                <Text style={[styles.confirmModalText, { fontSize: isSmallDevice ? 13 : 14 }]}>
+                  Are you sure you want to promote this member to
                 </Text>
-                {selectedWorkingMember?.donationCommission > 0 && (
-                  <Text style={styles.memberInfoDonation}>
-                    ❤️ Donation Commission: ₹{selectedWorkingMember.donationCommission.toLocaleString()}
-                  </Text>
-                )}
-                {selectedWorkingMember?.totalDonationsFromMembers > 0 && (
-                  <Text style={styles.memberInfoTotalDonations}>
-                    💰 Total Donations: ₹{selectedWorkingMember.totalDonationsFromMembers.toLocaleString()}
-                  </Text>
-                )}
+                <Text style={[styles.confirmModalLevel, { fontSize: isSmallDevice ? 24 : 28 }]}>
+                  Level {pendingApproveData?.nextLevel}
+                </Text>
+                <Text style={[styles.confirmModalSubtext, { fontSize: isSmallDevice ? 11 : 12 }]}>
+                  This action will update the member's level and grant them new commission rates.
+                </Text>
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Amount to Pay (₹)</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={memberPayoutAmount}
-                  onChangeText={setMemberPayoutAmount}
-                  placeholder="Enter amount"
-                  keyboardType="numeric"
-                  placeholderTextColor="#9ca3af"
-                />
+              <View style={styles.confirmModalActions}>
+                <TouchableOpacity
+                  style={[styles.confirmModalButton, styles.confirmModalCancelButton]}
+                  onPress={() => {
+                    setPromotionConfirmVisible(false);
+                    setPendingApproveData(null);
+                  }}
+                >
+                  <Text style={[styles.confirmModalCancelText, { fontSize: isSmallDevice ? 13 : 14 }]}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.confirmModalButton, styles.confirmModalApproveButton]}
+                  onPress={confirmApprovePromotion}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="check" size={isSmallDevice ? 14 : 18} color="#ffffff" />
+                      <Text style={[styles.confirmModalApproveText, { fontSize: isSmallDevice ? 13 : 14 }]}>Approve</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, saving && styles.submitButtonDisabled]}
-                onPress={processMemberPayout}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <MaterialIcons name="payment" size={20} color="#ffffff" />
-                    <Text style={styles.submitButtonText}>Pay Now</Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Level Edit Modal */}
-      <LevelEditModal />
+        {/* Member Payout Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={memberPayoutModalVisible}
+          onRequestClose={() => setMemberPayoutModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Pay Working Member</Text>
+                <TouchableOpacity onPress={() => setMemberPayoutModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
 
-      {/* Settings Edit Modal */}
-      <SettingsEditModal />
-    </View>
+              <View style={styles.modalBody}>
+                <View style={styles.memberInfo}>
+                  <Text style={[styles.memberInfoName, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                    {selectedWorkingMember?.name || 'Unknown'}
+                  </Text>
+                  <Text style={[styles.memberInfoLevel, { fontSize: isSmallDevice ? 11 : 12 }]}>
+                    Level {selectedWorkingMember?.level || 'I'}
+                  </Text>
+                  <Text style={[styles.memberInfoEarned, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                    Total Earned: ₹{selectedWorkingMember?.totalEarned?.toLocaleString() || 0}
+                  </Text>
+                  {selectedWorkingMember?.donationCommission > 0 && (
+                    <Text style={[styles.memberInfoDonation, { fontSize: isSmallDevice ? 11 : 12 }]}>
+                      ❤️ Donation Commission: ₹{selectedWorkingMember.donationCommission.toLocaleString()}
+                    </Text>
+                  )}
+                  {selectedWorkingMember?.totalDonationsFromMembers > 0 && (
+                    <Text style={[styles.memberInfoTotalDonations, { fontSize: isSmallDevice ? 11 : 12 }]}>
+                      💰 Total Donations: ₹{selectedWorkingMember.totalDonationsFromMembers.toLocaleString()}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={[styles.fieldLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Amount to Pay (₹)</Text>
+                  <TextInput
+                    style={[styles.fieldInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={memberPayoutAmount}
+                    onChangeText={setMemberPayoutAmount}
+                    placeholder="Enter amount"
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.submitButton, saving && styles.submitButtonDisabled]}
+                  onPress={processMemberPayout}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="payment" size={20} color="#ffffff" />
+                      <Text style={[styles.submitButtonText, { fontSize: isSmallDevice ? 14 : 15 }]}>Pay Now</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Level Edit Modal */}
+        {levelEditModal}
+
+        {/* Settings Edit Modal */}
+        <SettingsEditModal />
+      </View>
+    </SafeAreaView>
   );
 }
 
+// ============ Styles ============
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fdf8f3',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fdf8f3',
   },
-
   headerCard: {
     backgroundColor: '#FF7722',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 20 : 50,
     paddingBottom: 16,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -1754,7 +1757,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
@@ -1767,7 +1769,6 @@ const styles = StyleSheet.create({
   editButton: {
     padding: 4,
   },
-
   scrollView: {
     flex: 1,
   },
@@ -1775,7 +1776,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 40,
   },
-
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1786,9 +1786,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     marginTop: 10,
     color: '#6b7280',
-    fontSize: 14,
   },
-
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1816,16 +1814,13 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 13,
     color: '#1f2937',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 8,
     color: '#6b7280',
     textAlign: 'center',
   },
-
   donationStatsCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -1848,7 +1843,6 @@ const styles = StyleSheet.create({
   },
   donationStatsTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
   donationStatsGrid: {
@@ -1860,12 +1854,10 @@ const styles = StyleSheet.create({
   },
   donationStatValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#f59e0b',
   },
   donationStatLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
   },
@@ -1873,7 +1865,6 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: '#e5e7eb',
   },
-
   card: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -1896,13 +1887,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 15,
     color: '#1f2937',
     flex: 1,
   },
   sectionSubtitle: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#9ca3af',
   },
   processAllButton: {
@@ -1913,13 +1902,11 @@ const styles = StyleSheet.create({
   },
   processAllText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
     color: '#ffffff',
   },
   editHintButton: {
     padding: 2,
   },
-
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
@@ -1930,7 +1917,6 @@ const styles = StyleSheet.create({
   },
   tableHeaderText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
     color: '#4b5563',
   },
   tableRow: {
@@ -1950,7 +1936,6 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#1f2937',
   },
   levelCol: {
@@ -1999,14 +1984,11 @@ const styles = StyleSheet.create({
   },
   editHintText: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#92400e',
   },
   editButtonSmall: {
     padding: 2,
   },
-
-  // Promotion Cards
   promotionCard: {
     backgroundColor: '#f9fafb',
     borderRadius: 10,
@@ -2037,22 +2019,18 @@ const styles = StyleSheet.create({
   },
   promotionAvatarText: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
     color: '#f59e0b',
   },
   promotionName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#1f2937',
   },
   promotionDetails: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
   },
   promotionDonations: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#f59e0b',
     marginTop: 2,
   },
@@ -2061,7 +2039,6 @@ const styles = StyleSheet.create({
   },
   promotionProgressText: {
     fontFamily: Fonts.Bold,
-    fontSize: 14,
     color: '#f59e0b',
   },
   promotionProgressBar: {
@@ -2099,16 +2076,12 @@ const styles = StyleSheet.create({
   },
   promotionApproveText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#ffffff',
   },
   promotionRejectText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#ef4444',
   },
-
-  // Payout Cards
   payoutCard: {
     backgroundColor: '#f9fafb',
     borderRadius: 8,
@@ -2141,12 +2114,10 @@ const styles = StyleSheet.create({
   },
   payoutUserName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#1f2937',
   },
   payoutType: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
   },
   payoutAmountContainer: {
@@ -2154,7 +2125,6 @@ const styles = StyleSheet.create({
   },
   payoutAmount: {
     fontFamily: Fonts.Bold,
-    fontSize: 14,
     color: '#10b981',
   },
   donationAmount: {
@@ -2162,7 +2132,6 @@ const styles = StyleSheet.create({
   },
   payoutDate: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#9ca3af',
   },
   payoutButton: {
@@ -2179,10 +2148,8 @@ const styles = StyleSheet.create({
   },
   payoutButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
     color: '#ffffff',
   },
-
   topEarnerItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2192,7 +2159,6 @@ const styles = StyleSheet.create({
   },
   topEarnerRank: {
     fontFamily: Fonts.Bold,
-    fontSize: 13,
     color: '#FF7722',
     width: 30,
   },
@@ -2201,23 +2167,19 @@ const styles = StyleSheet.create({
   },
   topEarnerName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#1f2937',
   },
   topEarnerLevel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
   },
   topEarnerDonation: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#f59e0b',
     marginTop: 2,
   },
   topEarnerTotalDonations: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#10b981',
     marginTop: 2,
   },
@@ -2228,7 +2190,6 @@ const styles = StyleSheet.create({
   },
   topEarnerAmount: {
     fontFamily: Fonts.Bold,
-    fontSize: 13,
     color: '#10b981',
   },
   payNowButton: {
@@ -2239,10 +2200,8 @@ const styles = StyleSheet.create({
   },
   payNowText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
     color: '#ffffff',
   },
-
   settingsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2257,18 +2216,15 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
   },
   settingValue: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#1f2937',
     marginTop: 2,
   },
   helperText: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
     marginTop: 4,
   },
@@ -2281,10 +2237,8 @@ const styles = StyleSheet.create({
   },
   sectionDividerText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
-
   emptyState: {
     alignItems: 'center',
     paddingVertical: 20,
@@ -2292,15 +2246,12 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
   },
-
   updateInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2310,95 +2261,85 @@ const styles = StyleSheet.create({
   },
   updateText: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#9ca3af',
   },
-// Add to styles object
-confirmModalContent: {
-  backgroundColor: '#ffffff',
-  borderRadius: 20,
-  padding: 24,
-  width: '90%',
-  maxWidth: 400,
-  alignSelf: 'center',
-},
-confirmModalHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: 10,
-  marginBottom: 16,
-},
-confirmModalTitle: {
-  fontFamily: Fonts.Bold,
-  fontSize: 20,
-  color: '#1f2937',
-},
-confirmModalBody: {
-  alignItems: 'center',
-  marginBottom: 24,
-},
-confirmModalText: {
-  fontFamily: Fonts.Regular,
-  fontSize: 14,
-  color: '#6b7280',
-  textAlign: 'center',
-  marginBottom: 8,
-},
-confirmModalLevel: {
-  fontFamily: Fonts.Bold,
-  fontSize: 28,
-  color: '#f59e0b',
-  marginVertical: 8,
-},
-confirmModalSubtext: {
-  fontFamily: Fonts.Regular,
-  fontSize: 12,
-  color: '#9ca3af',
-  textAlign: 'center',
-  marginTop: 4,
-},
-confirmModalActions: {
-  flexDirection: 'row',
-  gap: 10,
-},
-confirmModalButton: {
-  flex: 1,
-  paddingVertical: 12,
-  borderRadius: 10,
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexDirection: 'row',
-  gap: 6,
-},
-confirmModalCancelButton: {
-  backgroundColor: '#f3f4f6',
-  borderWidth: 1,
-  borderColor: '#e5e7eb',
-},
-confirmModalApproveButton: {
-  backgroundColor: '#10b981',
-},
-confirmModalCancelText: {
-  fontFamily: Fonts.SemiBold,
-  fontSize: 14,
-  color: '#6b7280',
-},
-confirmModalApproveText: {
-  fontFamily: Fonts.SemiBold,
-  fontSize: 14,
-  color: '#ffffff',
-},
+  confirmModalContent: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  confirmModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  confirmModalTitle: {
+    fontFamily: Fonts.Bold,
+    color: '#1f2937',
+  },
+  confirmModalBody: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  confirmModalText: {
+    fontFamily: Fonts.Regular,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  confirmModalLevel: {
+    fontFamily: Fonts.Bold,
+    color: '#f59e0b',
+    marginVertical: 8,
+  },
+  confirmModalSubtext: {
+    fontFamily: Fonts.Regular,
+    color: '#9ca3af',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  confirmModalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmModalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  confirmModalCancelButton: {
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  confirmModalApproveButton: {
+    backgroundColor: '#10b981',
+  },
+  confirmModalCancelText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#6b7280',
+  },
+  confirmModalApproveText: {
+    fontFamily: Fonts.SemiBold,
+    color: '#ffffff',
+  },
   versionContainer: {
     alignItems: 'center',
     marginBottom: 10,
   },
   versionText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#9ca3af',
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -2419,7 +2360,6 @@ confirmModalApproveText: {
   },
   modalTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#1f2937',
   },
   modalBody: {
@@ -2430,7 +2370,6 @@ confirmModalApproveText: {
   },
   fieldLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#1f2937',
     marginBottom: 4,
   },
@@ -2439,7 +2378,6 @@ confirmModalApproveText: {
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 10,
-    fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
@@ -2464,9 +2402,7 @@ confirmModalApproveText: {
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 15,
   },
-
   payoutSummary: {
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
@@ -2476,16 +2412,13 @@ confirmModalApproveText: {
   },
   payoutSummaryLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
   },
   payoutSummaryValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 22,
     color: '#10b981',
     marginTop: 2,
   },
-
   memberInfo: {
     backgroundColor: '#f3f4f6',
     borderRadius: 8,
@@ -2495,34 +2428,28 @@ confirmModalApproveText: {
   },
   memberInfoName: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
     color: '#1f2937',
   },
   memberInfoLevel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
   },
   memberInfoEarned: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 13,
     color: '#10b981',
     marginTop: 4,
   },
   memberInfoDonation: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#f59e0b',
     marginTop: 2,
   },
   memberInfoTotalDonations: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#10b981',
     marginTop: 2,
   },
-
   updateLevelButton: {
     backgroundColor: '#FF7722',
     paddingVertical: 14,
@@ -2533,9 +2460,7 @@ confirmModalApproveText: {
   updateLevelButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 16,
   },
-
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2546,7 +2471,6 @@ confirmModalApproveText: {
   },
   switchLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
   switch: {
@@ -2573,7 +2497,6 @@ confirmModalApproveText: {
   switchThumbActive: {
     transform: [{ translateX: 20 }],
   },
-
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2590,6 +2513,5 @@ confirmModalApproveText: {
   saveButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 16,
   },
 });

@@ -126,8 +126,9 @@ export default function MemberQuotes({ navigation }) {
           <TouchableOpacity 
             style={styles.shareButton}
             onPress={() => handleShare(quote)}
+            activeOpacity={0.7}
           >
-            <MaterialIcons name="share" size={20} color="#ffffff" />
+            <MaterialIcons name="share" size={18} color="#ffffff" />
           </TouchableOpacity>
         </View>
         <View style={styles.quoteContent}>
@@ -138,7 +139,7 @@ export default function MemberQuotes({ navigation }) {
             "{quote.text}"
           </Text>
           {quote.text.length > 100 && (
-            <TouchableOpacity onPress={() => setExpanded(!expanded)}>
+            <TouchableOpacity onPress={() => setExpanded(!expanded)} activeOpacity={0.7}>
               <Text style={styles.expandText}>
                 {expanded ? 'Show less' : 'Read more'}
               </Text>
@@ -157,8 +158,9 @@ export default function MemberQuotes({ navigation }) {
             <TouchableOpacity 
               style={styles.shareIconButton}
               onPress={() => handleShare(quote)}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="share" size={20} color="#8b5cf6" />
+              <MaterialIcons name="share" size={18} color="#8b5cf6" />
             </TouchableOpacity>
           </View>
         </View>
@@ -177,11 +179,11 @@ export default function MemberQuotes({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header Card */}
+      {/* Purple Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Daily Quotes</Text>
@@ -189,11 +191,12 @@ export default function MemberQuotes({ navigation }) {
           <TouchableOpacity 
             style={styles.profileIcon}
             onPress={() => navigation.navigate('MemberProfile')}
+            activeOpacity={0.7}
           >
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#8b5cf6" />
+              <MaterialIcons name="person" size={26} color="#8b5cf6" />
             )}
           </TouchableOpacity>
         </View>
@@ -246,6 +249,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Header
@@ -274,10 +279,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -290,8 +297,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
   },
 
@@ -304,17 +311,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerInfoSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // List
   listContent: {
     paddingBottom: 20,
+    paddingTop: 4,
   },
 
   // Quote Card
@@ -323,6 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginHorizontal: 16,
     marginBottom: 16,
+    marginTop: 6,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -343,9 +356,9 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   shareButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -359,12 +372,16 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     fontStyle: 'italic',
     lineHeight: 26,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   expandText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#8b5cf6',
     marginTop: 6,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   quoteAuthor: {
     fontFamily: Fonts.Regular,
@@ -372,6 +389,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 10,
     textAlign: 'right',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   quoteFooter: {
     flexDirection: 'row',
@@ -386,11 +405,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   dateText: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   shareIconButton: {
     padding: 6,
@@ -407,11 +429,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

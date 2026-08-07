@@ -13,7 +13,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   FlatList,
-  Switch
+  Switch,
+  Dimensions,
+  Platform
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
@@ -40,6 +42,10 @@ import { getLevelDetails, getLevelByMemberCount, LEVELS } from '../../config/com
 import { WalletService } from '../../services/WalletService';
 import { CommissionService } from '../../services/CommissionService';
 import { LevelUpdateService } from '../../services/LevelUpdateService';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width, height } = Dimensions.get('window');
+const isSmallDevice = width < 375;
 
 const FILTERS = ['All', 'Bronze', 'Silver', 'Gold', 'Platinum'];
 
@@ -98,7 +104,6 @@ export default function WorkingMemberManagement() {
   };
 
   const setupRealtimeListener = () => {
-    // ✅ Query BOTH 'working' AND 'workingMember' roles
     const q = query(
       collection(db, 'users'), 
       where('role', 'in', ['working', 'workingMember'])
@@ -110,7 +115,6 @@ export default function WorkingMemberManagement() {
         const data = doc.data();
         const member = { id: doc.id, ...data };
         
-        // Get level details
         const level = data.level || 'I';
         const levelDetails = getLevelDetails(level);
         member.levelTitle = levelDetails.title;
@@ -119,12 +123,10 @@ export default function WorkingMemberManagement() {
         member.directCommission = levelDetails.directCommission;
         member.secondaryCommission = levelDetails.secondaryCommission;
         
-        // Count direct referrals
         const directReferrals = data.directReferrals || [];
         member.directReferralCount = directReferrals.length;
         member.directReferrals = directReferrals;
         
-        // Get registered members count
         const registeredQuery = query(
           collection(db, 'users'), 
           where('registeredBy', '==', doc.id)
@@ -136,7 +138,6 @@ export default function WorkingMemberManagement() {
           member.registeredMembersList.push({ id: regDoc.id, ...regDoc.data() });
         });
 
-        // Get wallet data
         try {
           const wallet = await WalletService.getOrCreateWallet(doc.id);
           member.walletBalance = wallet.balance || 0;
@@ -149,7 +150,6 @@ export default function WorkingMemberManagement() {
           member.pendingCommission = 0;
         }
 
-        // ✅ Get total donations from members (for promotion eligibility)
         try {
           const totalDonations = await CommissionService.getTotalDonationsByMember(doc.id);
           member.totalDonations = totalDonations;
@@ -157,7 +157,6 @@ export default function WorkingMemberManagement() {
           member.totalDonations = 0;
         }
 
-        // ✅ Check promotion eligibility based on DONATIONS (new system)
         const levelsToUse = dynamicLevels || getDefaultLevels();
         const currentLevelIndex = levelsToUse.findIndex(l => l.id === level);
         const currentLevelData = currentLevelIndex !== -1 ? levelsToUse[currentLevelIndex] : null;
@@ -174,7 +173,6 @@ export default function WorkingMemberManagement() {
           member.donationsRequired = 0;
         }
 
-        // Get next level
         const nextLevelId = getNextLevelId(level);
         member.nextLevel = nextLevelId;
         if (nextLevelId) {
@@ -184,7 +182,6 @@ export default function WorkingMemberManagement() {
 
         member.promotionPending = data.promotionPending || false;
         
-        // Get commission history
         const commissionQuery = query(
           collection(db, 'walletTransactions'),
           where('userId', '==', doc.id),
@@ -201,7 +198,6 @@ export default function WorkingMemberManagement() {
         membersList.push(member);
       }
       
-      // Sort by total earned (highest first)
       membersList.sort((a, b) => (b.totalEarned || 0) - (a.totalEarned || 0));
       
       setWorkingMembers(membersList);
@@ -297,7 +293,6 @@ export default function WorkingMemberManagement() {
           throw new Error('Member not found');
         }
 
-        // Update member level
         transaction.update(memberRef, {
           level: promotionData.newLevel,
           promotionPending: false,
@@ -305,7 +300,6 @@ export default function WorkingMemberManagement() {
           updatedAt: Timestamp.now()
         });
 
-        // Log promotion
         const promotionRef = doc(collection(db, 'promotions'));
         transaction.set(promotionRef, {
           memberId: promotionData.memberId,
@@ -338,7 +332,6 @@ export default function WorkingMemberManagement() {
       const memberDoc = await getDoc(memberRef);
       const memberData = memberDoc.data();
 
-      // Add commission using WalletService
       await WalletService.addCommission(
         commissionData.memberId,
         amount,
@@ -452,10 +445,10 @@ export default function WorkingMemberManagement() {
       onPress={onPress}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={isSmallDevice ? 16 : 20} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
-      <Text style={[styles.statCount, { color }]}>{count}</Text>
+      <Text style={[styles.statType, { fontSize: isSmallDevice ? 7 : 8 }]}>{label}</Text>
+      <Text style={[styles.statCount, { fontSize: isSmallDevice ? 10 : 12, color }]}>{count}</Text>
     </TouchableOpacity>
   );
 
@@ -464,7 +457,11 @@ export default function WorkingMemberManagement() {
       style={[styles.statusChip, active && styles.activeStatusChip]}
       onPress={onPress}
     >
-      <Text style={[styles.statusChipText, active && styles.activeStatusChipText]}>
+      <Text style={[
+        styles.statusChipText, 
+        active && styles.activeStatusChipText,
+        { fontSize: isSmallDevice ? 9 : 11 }
+      ]}>
         {label} ({count})
       </Text>
     </TouchableOpacity>
@@ -483,6 +480,7 @@ export default function WorkingMemberManagement() {
           setSelectedMember(member);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
           <View style={styles.memberInfo}>
@@ -491,20 +489,24 @@ export default function WorkingMemberManagement() {
                 <Image source={{ uri: member.profilePhoto }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>
+                  <Text style={[styles.avatarText, { fontSize: isSmallDevice ? 16 : 18 }]}>
                     {member.fullName?.charAt(0) || '?'}
                   </Text>
                 </View>
               )}
             </View>
-            <View>
-              <Text style={styles.memberName}>{member.fullName || 'Unknown'}</Text>
-              <Text style={styles.memberEmail}>{member.email}</Text>
+            <View style={styles.memberTextInfo}>
+              <Text style={[styles.memberName, { fontSize: isSmallDevice ? 13 : 14 }]} numberOfLines={1}>
+                {member.fullName || 'Unknown'}
+              </Text>
+              <Text style={[styles.memberEmail, { fontSize: isSmallDevice ? 10 : 12 }]} numberOfLines={1}>
+                {member.email}
+              </Text>
             </View>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusColor + '15' }]}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusText, { color: statusColor }]}>
+            <Text style={[styles.statusText, { color: statusColor, fontSize: isSmallDevice ? 9 : 10 }]}>
               {member.status || 'pending'}
             </Text>
           </View>
@@ -512,44 +514,54 @@ export default function WorkingMemberManagement() {
 
         <View style={styles.cardStats}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{member.directReferralCount || 0}</Text>
-            <Text style={styles.statLabel}>Direct Members</Text>
+            <Text style={[styles.statValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+              {member.directReferralCount || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Direct</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹{member.totalEarned?.toLocaleString() || 0}</Text>
-            <Text style={styles.statLabel}>Total Earned</Text>
+            <Text style={[styles.statValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+              ₹{member.totalEarned?.toLocaleString() || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Earned</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>₹{member.pendingCommission?.toLocaleString() || 0}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={[styles.statValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+              ₹{member.pendingCommission?.toLocaleString() || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Pending</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: '#f59e0b' }]}>₹{member.totalDonations?.toLocaleString() || 0}</Text>
-            <Text style={styles.statLabel}>Donations</Text>
+            <Text style={[styles.statValue, { fontSize: isSmallDevice ? 14 : 16, color: '#f59e0b' }]}>
+              ₹{member.totalDonations?.toLocaleString() || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 9 : 10 }]}>Donations</Text>
           </View>
         </View>
 
         <View style={styles.cardFooter}>
           <View style={[styles.levelBadge, { backgroundColor: levelColor + '15' }]}>
-            <MaterialIcons name={levelIcon} size={14} color={levelColor} />
-            <Text style={[styles.levelBadgeText, { color: levelColor }]}>
-              {levelDetails?.title?.toUpperCase() || 'N/A'}
+            <MaterialIcons name={levelIcon} size={isSmallDevice ? 10 : 14} color={levelColor} />
+            <Text style={[styles.levelBadgeText, { color: levelColor, fontSize: isSmallDevice ? 9 : 11 }]}>
+              {levelDetails?.title?.substring(0, isSmallDevice ? 4 : 6) || 'N/A'}
             </Text>
           </View>
           <View style={styles.commissionInfo}>
-            <Text style={styles.commissionRateText}>
-              {member.directCommission || 0}% / {member.secondaryCommission || 0}%
+            <Text style={[styles.commissionRateText, { fontSize: isSmallDevice ? 9 : 10 }]}>
+              {member.directCommission || 0}%/{member.secondaryCommission || 0}%
             </Text>
           </View>
           {member.promotionEligible && (
             <View style={styles.promotionBadge}>
-              <MaterialIcons name="stars" size={12} color="#10b981" />
-              <Text style={styles.promotionText}>Eligible</Text>
+              <MaterialIcons name="stars" size={isSmallDevice ? 8 : 12} color="#10b981" />
+              <Text style={[styles.promotionText, { fontSize: isSmallDevice ? 8 : 10 }]}>Eligible</Text>
             </View>
           )}
           {member.nextLevel && (
             <View style={styles.nextLevelBadge}>
-              <Text style={styles.nextLevelText}>→ {member.nextLevelTitle}</Text>
+              <Text style={[styles.nextLevelText, { fontSize: isSmallDevice ? 8 : 10 }]}>
+                → {member.nextLevelTitle?.substring(0, isSmallDevice ? 3 : 4)}
+              </Text>
             </View>
           )}
         </View>
@@ -569,22 +581,22 @@ export default function WorkingMemberManagement() {
               setCommissionModalVisible(true);
             }}
           >
-            <MaterialIcons name="attach-money" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Add Commission</Text>
+            <MaterialIcons name="attach-money" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>Add</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.actionButton, styles.historyButton]}
             onPress={() => viewCommissionHistory(member)}
           >
-            <MaterialIcons name="history" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>History</Text>
+            <MaterialIcons name="history" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>History</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.actionButton, styles.walletButton]}
             onPress={() => viewWallet(member)}
           >
-            <MaterialIcons name="account-balance-wallet" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Wallet</Text>
+            <MaterialIcons name="account-balance-wallet" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>Wallet</Text>
           </TouchableOpacity>
           {member.promotionEligible && (
             <TouchableOpacity 
@@ -601,8 +613,8 @@ export default function WorkingMemberManagement() {
                 setPromotionModalVisible(true);
               }}
             >
-              <MaterialIcons name="stars" size={14} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Promote</Text>
+              <MaterialIcons name="stars" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>Promote</Text>
             </TouchableOpacity>
           )}
           {member.status !== 'active' && (
@@ -610,8 +622,8 @@ export default function WorkingMemberManagement() {
               style={[styles.actionButton, styles.approveButton]}
               onPress={() => handleStatusUpdate(member.id, 'active')}
             >
-              <MaterialIcons name="check-circle" size={14} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Approve</Text>
+              <MaterialIcons name="check-circle" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>Approve</Text>
             </TouchableOpacity>
           )}
           {member.status === 'active' && (
@@ -619,8 +631,8 @@ export default function WorkingMemberManagement() {
               style={[styles.actionButton, styles.suspendButton]}
               onPress={() => handleStatusUpdate(member.id, 'suspended')}
             >
-              <MaterialIcons name="block" size={14} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Suspend</Text>
+              <MaterialIcons name="block" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>Suspend</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
@@ -630,15 +642,14 @@ export default function WorkingMemberManagement() {
               setDetailModalVisible(true);
             }}
           >
-            <MaterialIcons name="visibility" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>View</Text>
+            <MaterialIcons name="visibility" size={isSmallDevice ? 10 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 7 : 9 }]}>View</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
 
-  // Wallet Modal
   const WalletModal = () => {
     if (!selectedWallet) return null;
 
@@ -652,30 +663,42 @@ export default function WorkingMemberManagement() {
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Wallet Details</Text>
+              <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Wallet Details</Text>
               <TouchableOpacity onPress={() => setWalletModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.walletSummary}>
-              <Text style={styles.walletMemberName}>{selectedWallet.memberName}</Text>
+              <Text style={[styles.walletMemberName, { fontSize: isSmallDevice ? 16 : 18 }]}>
+                {selectedWallet.memberName}
+              </Text>
               <View style={styles.walletBalanceContainer}>
-                <Text style={styles.walletBalanceLabel}>Available Balance</Text>
-                <Text style={styles.walletBalance}>₹{selectedWallet.balance?.toLocaleString() || 0}</Text>
+                <Text style={[styles.walletBalanceLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                  Available Balance
+                </Text>
+                <Text style={[styles.walletBalance, { fontSize: isSmallDevice ? 28 : 32 }]}>
+                  ₹{selectedWallet.balance?.toLocaleString() || 0}
+                </Text>
               </View>
               <View style={styles.walletStats}>
                 <View style={styles.walletStat}>
-                  <Text style={styles.walletStatValue}>₹{selectedWallet.totalEarned?.toLocaleString() || 0}</Text>
-                  <Text style={styles.walletStatLabel}>Total Earned</Text>
+                  <Text style={[styles.walletStatValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                    ₹{selectedWallet.totalEarned?.toLocaleString() || 0}
+                  </Text>
+                  <Text style={[styles.walletStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Earned</Text>
                 </View>
                 <View style={styles.walletStat}>
-                  <Text style={styles.walletStatValue}>₹{selectedWallet.pendingCommission?.toLocaleString() || 0}</Text>
-                  <Text style={styles.walletStatLabel}>Pending</Text>
+                  <Text style={[styles.walletStatValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                    ₹{selectedWallet.pendingCommission?.toLocaleString() || 0}
+                  </Text>
+                  <Text style={[styles.walletStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Pending</Text>
                 </View>
                 <View style={styles.walletStat}>
-                  <Text style={styles.walletStatValue}>₹{selectedWallet.totalWithdrawn?.toLocaleString() || 0}</Text>
-                  <Text style={styles.walletStatLabel}>Withdrawn</Text>
+                  <Text style={[styles.walletStatValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                    ₹{selectedWallet.totalWithdrawn?.toLocaleString() || 0}
+                  </Text>
+                  <Text style={[styles.walletStatLabel, { fontSize: isSmallDevice ? 9 : 11 }]}>Withdrawn</Text>
                 </View>
               </View>
             </View>
@@ -684,7 +707,7 @@ export default function WorkingMemberManagement() {
               style={styles.closeButton}
               onPress={() => setWalletModalVisible(false)}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={[styles.closeButtonText, { fontSize: isSmallDevice ? 13 : 14 }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -696,516 +719,559 @@ export default function WorkingMemberManagement() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF7722" />
-        <Text style={styles.loadingText}>Loading Working Members...</Text>
+        <Text style={[styles.loadingText, { fontSize: isSmallDevice ? 13 : 14 }]}>Loading Working Members...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Saffron Header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Working Members</Text>
-          <TouchableOpacity 
-            style={styles.refreshButton}
-            onPress={onRefresh}
-          >
-            <MaterialIcons name="refresh" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Bar inside header */}
-        <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search working members..."
-            placeholderTextColor="#9ca3af"
-            value={search}
-            onChangeText={handleSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Saffron Header */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Status Filter Chips inside header */}
-        <View style={styles.statusFilterRow}>
-          <StatusFilterChip
-            label="All"
-            count={getStatusCount('all')}
-            active={filterStatus === 'all'}
-            onPress={() => handleFilterStatus('all')}
-          />
-          <StatusFilterChip
-            label="Active"
-            count={getStatusCount('active')}
-            active={filterStatus === 'active'}
-            onPress={() => handleFilterStatus('active')}
-          />
-          <StatusFilterChip
-            label="Pending"
-            count={getStatusCount('pending')}
-            active={filterStatus === 'pending'}
-            onPress={() => handleFilterStatus('pending')}
-          />
-          <StatusFilterChip
-            label="Suspended"
-            count={getStatusCount('suspended')}
-            active={filterStatus === 'suspended'}
-            onPress={() => handleFilterStatus('suspended')}
-          />
-        </View>
-
-        {/* Level Stat Cards inside header */}
-        <View style={styles.statsWrapper}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.statsScrollContent}
-            style={{ flexGrow: 0 }}
-          >
-            <StatCard 
-              label="All" 
-              count={workingMembers.length} 
-              icon="people" 
-              color="#ffffff" 
-              active={filterLevel === 'All'}
-              onPress={() => handleFilterLevel('All')}
-            />
-            {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((key) => {
-              const level = getLevelDetails(key);
-              return (
-                <StatCard 
-                  key={key}
-                  label={level.title} 
-                  count={workingMembers.filter(m => m.level === key).length} 
-                  icon="star" 
-                  color="#ffffff"
-                  active={filterLevel === level.title}
-                  onPress={() => handleFilterLevel(level.title)}
-                />
-              );
-            })}
-          </ScrollView>
-        </View>
-      </View>
-
-      {/* Members List */}
-      <FlatList
-        data={filteredMembers}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <WorkingMemberCard member={item} />}
-        showsVerticalScrollIndicator={true}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialIcons name="work" size={44} color="#D1D5DB" />
-            <Text style={styles.emptyStateText}>No working members found</Text>
-            <Text style={styles.emptyStateSubtext}>Working members will appear here</Text>
+            <Text style={[styles.headerTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>Working Members</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={onRefresh}
+            >
+              <MaterialIcons name="refresh" size={24} color="#ffffff" />
+            </TouchableOpacity>
           </View>
-        }
-        contentContainerStyle={styles.listContent}
-        style={styles.flatList}
-        nestedScrollEnabled={true}
-        keyboardShouldPersistTaps="handled"
-      />
 
-      {/* Detail Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={detailModalVisible}
-        onRequestClose={() => setDetailModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Working Member Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6B7280" />
+          <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={20} color="#9ca3af" />
+            <TextInput
+              style={[styles.searchInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+              placeholder="Search working members..."
+              placeholderTextColor="#9ca3af"
+              value={search}
+              onChangeText={handleSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <MaterialIcons name="close" size={20} color="#9ca3af" />
               </TouchableOpacity>
-            </View>
-
-            {selectedMember && (
-              <>
-                <View style={styles.detailProfile}>
-                  {selectedMember.profilePhoto ? (
-                    <Image source={{ uri: selectedMember.profilePhoto }} style={styles.detailAvatar} />
-                  ) : (
-                    <View style={styles.detailAvatarPlaceholder}>
-                      <Text style={styles.detailAvatarText}>
-                        {selectedMember.fullName?.charAt(0) || '?'}
-                      </Text>
-                    </View>
-                  )}
-                  <Text style={styles.detailName}>{selectedMember.fullName}</Text>
-                  <Text style={styles.detailEmail}>{selectedMember.email}</Text>
-                  <View style={[styles.detailLevelBadge, { backgroundColor: getLevelColor(selectedMember.level) + '15' }]}>
-                    <MaterialIcons name={getLevelIcon(selectedMember.level)} size={16} color={getLevelColor(selectedMember.level)} />
-                    <Text style={[styles.detailLevelText, { color: getLevelColor(selectedMember.level) }]}>
-                      {getLevelDetails(selectedMember.level)?.title?.toUpperCase() || 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>Performance</Text>
-                  <View style={styles.detailStats}>
-                    <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>{selectedMember.directReferralCount || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Direct Members</Text>
-                    </View>
-                    <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>₹{selectedMember.totalEarned?.toLocaleString() || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Total Earned</Text>
-                    </View>
-                    <View style={styles.detailStat}>
-                      <Text style={styles.detailStatValue}>₹{selectedMember.pendingCommission?.toLocaleString() || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Pending Commission</Text>
-                    </View>
-                    <View style={styles.detailStat}>
-                      <Text style={[styles.detailStatValue, { color: '#f59e0b' }]}>₹{selectedMember.totalDonations?.toLocaleString() || 0}</Text>
-                      <Text style={styles.detailStatLabel}>Total Donations</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>Commission Rates</Text>
-                  <View style={styles.detailCommissionRow}>
-                    <Text style={styles.detailLabel}>Direct Commission:</Text>
-                    <Text style={styles.detailValue}>{selectedMember.directCommission || 0}%</Text>
-                  </View>
-                  <View style={styles.detailCommissionRow}>
-                    <Text style={styles.detailLabel}>Secondary Commission:</Text>
-                    <Text style={styles.detailValue}>{selectedMember.secondaryCommission || 0}%</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>Direct Members</Text>
-                  {selectedMember.directReferrals?.length === 0 ? (
-                    <Text style={styles.detailEmptyText}>No direct members yet</Text>
-                  ) : (
-                    selectedMember.directReferrals?.map((memberId, index) => (
-                      <View key={index} style={styles.registeredMemberItem}>
-                        <Text style={styles.registeredMemberName}>
-                          Member ID: {memberId.slice(0, 12)}...
-                        </Text>
-                      </View>
-                    ))
-                  )}
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>Status</Text>
-                  <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Status:</Text>
-                    <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedMember.status) + '15' }]}>
-                      <Text style={[styles.detailStatusText, { color: getStatusColor(selectedMember.status) }]}>
-                        {selectedMember.status}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Level:</Text>
-                    <Text style={styles.detailValue}>
-                      {getLevelDetails(selectedMember.level)?.title || selectedMember.level}
-                    </Text>
-                  </View>
-                  <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Next Level:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedMember.nextLevel ? getLevelDetails(selectedMember.nextLevel)?.title || 'N/A' : 'Max Level'}
-                    </Text>
-                  </View>
-                  <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Donations Required:</Text>
-                    <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
-                      ₹{selectedMember.donationsRequired?.toLocaleString() || 0}
-                    </Text>
-                  </View>
-                  <View style={styles.detailStatusRow}>
-                    <Text style={styles.detailLabel}>Wallet Balance:</Text>
-                    <Text style={[styles.detailValue, { color: '#10b981' }]}>
-                      ₹{selectedMember.walletBalance?.toLocaleString() || 0}
-                    </Text>
-                  </View>
-                  {selectedMember.promotionEligible && (
-                    <View style={styles.detailStatusRow}>
-                      <Text style={styles.detailLabel}>Promotion:</Text>
-                      <Text style={[styles.detailValue, { color: '#10b981' }]}>
-                        ✅ Eligible for promotion
-                      </Text>
-                    </View>
-                  )}
-                  {!selectedMember.promotionEligible && selectedMember.donationsRequired > 0 && (
-                    <View style={styles.detailStatusRow}>
-                      <Text style={styles.detailLabel}>Promotion:</Text>
-                      <Text style={[styles.detailValue, { color: '#f59e0b' }]}>
-                        ₹{selectedMember.membersNeededForPromotion?.toLocaleString() || 0} more donations needed
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setDetailModalVisible(false)}
-                >
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-              </>
             )}
-          </ScrollView>
+          </View>
+
+          <View style={styles.statusFilterRow}>
+            <StatusFilterChip
+              label="All"
+              count={getStatusCount('all')}
+              active={filterStatus === 'all'}
+              onPress={() => handleFilterStatus('all')}
+            />
+            <StatusFilterChip
+              label="Active"
+              count={getStatusCount('active')}
+              active={filterStatus === 'active'}
+              onPress={() => handleFilterStatus('active')}
+            />
+            <StatusFilterChip
+              label="Pending"
+              count={getStatusCount('pending')}
+              active={filterStatus === 'pending'}
+              onPress={() => handleFilterStatus('pending')}
+            />
+            <StatusFilterChip
+              label="Suspended"
+              count={getStatusCount('suspended')}
+              active={filterStatus === 'suspended'}
+              onPress={() => handleFilterStatus('suspended')}
+            />
+          </View>
+
+          <View style={styles.statsWrapper}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.statsScrollContent}
+              style={{ flexGrow: 0 }}
+            >
+              <StatCard 
+                label="All" 
+                count={workingMembers.length} 
+                icon="people" 
+                color="#ffffff" 
+                active={filterLevel === 'All'}
+                onPress={() => handleFilterLevel('All')}
+              />
+              {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((key) => {
+                const level = getLevelDetails(key);
+                return (
+                  <StatCard 
+                    key={key}
+                    label={level.title} 
+                    count={workingMembers.filter(m => m.level === key).length} 
+                    icon="star" 
+                    color="#ffffff"
+                    active={filterLevel === level.title}
+                    onPress={() => handleFilterLevel(level.title)}
+                  />
+                );
+              })}
+            </ScrollView>
+          </View>
         </View>
-      </Modal>
 
-      {/* Promotion Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={promotionModalVisible}
-        onRequestClose={() => setPromotionModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Promote Working Member</Text>
-              <TouchableOpacity onPress={() => setPromotionModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.promotionInfo}>
-              <Text style={styles.promotionLabel}>Member</Text>
-              <Text style={styles.promotionValue}>{promotionData.memberName}</Text>
-            </View>
-
-            <View style={styles.promotionInfo}>
-              <Text style={styles.promotionLabel}>Current Level</Text>
-              <Text style={styles.promotionValue}>
-                {getLevelDetails(promotionData.currentLevel)?.title || promotionData.currentLevel}
+        <FlatList
+          data={filteredMembers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <WorkingMemberCard member={item} />}
+          showsVerticalScrollIndicator={true}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialIcons name="work" size={44} color="#D1D5DB" />
+              <Text style={[styles.emptyStateText, { fontSize: isSmallDevice ? 15 : 16 }]}>
+                No working members found
+              </Text>
+              <Text style={[styles.emptyStateSubtext, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                Working members will appear here
               </Text>
             </View>
+          }
+          contentContainerStyle={styles.listContent}
+          style={styles.flatList}
+          nestedScrollEnabled={true}
+          keyboardShouldPersistTaps="handled"
+        />
 
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>New Level</Text>
-              <View style={styles.levelOptions}>
-                {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((level) => {
-                  const levelDetails = getLevelDetails(level);
-                  const isActive = promotionData.newLevel === level;
-                  return (
-                    <TouchableOpacity
-                      key={level}
-                      style={[styles.levelOption, isActive && styles.levelOptionActive]}
-                      onPress={() => setPromotionData({...promotionData, newLevel: level})}
-                    >
-                      <MaterialIcons 
-                        name={getLevelIcon(level)} 
-                        size={16} 
-                        color={isActive ? '#ffffff' : getLevelColor(level)} 
-                      />
-                      <Text style={[styles.levelOptionText, isActive && styles.levelOptionTextActive]}>
-                        {levelDetails.title}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.promoteConfirmButton} onPress={handlePromotion}>
-              <MaterialIcons name="stars" size={20} color="#ffffff" />
-              <Text style={styles.promoteConfirmText}>Confirm Promotion</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Commission Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={commissionModalVisible}
-        onRequestClose={() => setCommissionModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add Commission</Text>
-              <TouchableOpacity onPress={() => setCommissionModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.commissionInfo}>
-              <Text style={styles.commissionLabel}>Member</Text>
-              <Text style={styles.commissionValue}>{commissionData.memberName}</Text>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Amount *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={commissionData.amount}
-                onChangeText={(text) => setCommissionData({...commissionData, amount: text})}
-                placeholder="Enter commission amount"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Type</Text>
-              <View style={styles.typeToggle}>
-                <TouchableOpacity
-                  style={[styles.typeButton, commissionData.type === 'direct' && styles.typeButtonActive]}
-                  onPress={() => setCommissionData({...commissionData, type: 'direct'})}
-                >
-                  <Text style={[styles.typeButtonText, commissionData.type === 'direct' && styles.typeButtonTextActive]}>
-                    Direct
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.typeButton, commissionData.type === 'secondary' && styles.typeButtonActive]}
-                  onPress={() => setCommissionData({...commissionData, type: 'secondary'})}
-                >
-                  <Text style={[styles.typeButtonText, commissionData.type === 'secondary' && styles.typeButtonTextActive]}>
-                    Secondary
-                  </Text>
+        {/* Detail Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={detailModalVisible}
+          onRequestClose={() => setDetailModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>
+                  Working Member Details
+                </Text>
+                <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6B7280" />
                 </TouchableOpacity>
               </View>
-            </View>
 
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Description</Text>
-              <TextInput
-                style={[styles.formInput, styles.formTextArea]}
-                value={commissionData.description}
-                onChangeText={(text) => setCommissionData({...commissionData, description: text})}
-                placeholder="Enter description"
-                multiline
-                numberOfLines={2}
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Status</Text>
-              <View style={styles.statusToggle}>
-                <TouchableOpacity
-                  style={[styles.statusButton, commissionData.status === 'pending' && styles.statusButtonActive]}
-                  onPress={() => setCommissionData({...commissionData, status: 'pending'})}
-                >
-                  <Text style={[styles.statusButtonText, commissionData.status === 'pending' && styles.statusButtonTextActive]}>
-                    Pending
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.statusButton, commissionData.status === 'paid' && styles.statusButtonActive]}
-                  onPress={() => setCommissionData({...commissionData, status: 'paid'})}
-                >
-                  <Text style={[styles.statusButtonText, commissionData.status === 'paid' && styles.statusButtonTextActive]}>
-                    Paid
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.submitButton} onPress={handleAddCommission}>
-              <MaterialIcons name="add" size={20} color="#ffffff" />
-              <Text style={styles.submitButtonText}>Add Commission</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Commission History Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={commissionHistoryModalVisible}
-        onRequestClose={() => setCommissionHistoryModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Commission History</Text>
-              <TouchableOpacity onPress={() => setCommissionHistoryModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.historyMemberName}>{selectedMember?.fullName}</Text>
-
-            {commissionHistory.length === 0 ? (
-              <View style={styles.emptyState}>
-                <MaterialIcons name="attach-money" size={44} color="#D1D5DB" />
-                <Text style={styles.emptyText}>No commission history</Text>
-              </View>
-            ) : (
-              commissionHistory.map((item, index) => {
-                const isDirect = item.type === 'direct_commission';
-                return (
-                  <View key={index} style={styles.historyItem}>
-                    <View style={styles.historyHeader}>
-                      <View>
-                        <Text style={styles.historyAmount}>₹{item.amount?.toLocaleString() || 0}</Text>
-                        <Text style={styles.historyType}>
-                          {isDirect ? 'Direct' : 'Secondary'} Commission
+              {selectedMember && (
+                <>
+                  <View style={styles.detailProfile}>
+                    {selectedMember.profilePhoto ? (
+                      <Image source={{ uri: selectedMember.profilePhoto }} style={styles.detailAvatar} />
+                    ) : (
+                      <View style={styles.detailAvatarPlaceholder}>
+                        <Text style={[styles.detailAvatarText, { fontSize: isSmallDevice ? 28 : 32 }]}>
+                          {selectedMember.fullName?.charAt(0) || '?'}
                         </Text>
                       </View>
-                      <View style={[styles.historyStatus, { 
-                        backgroundColor: item.status === 'paid' || item.status === 'completed' ? '#10b981' : 
-                                       item.status === 'pending' ? '#f59e0b' : '#ef4444' 
-                      }]}>
-                        <Text style={styles.historyStatusText}>
-                          {item.status === 'paid' || item.status === 'completed' ? 'Paid' : 
-                           item.status === 'pending' ? 'Pending' : 'Failed'}
+                    )}
+                    <Text style={[styles.detailName, { fontSize: isSmallDevice ? 18 : 20 }]}>
+                      {selectedMember.fullName}
+                    </Text>
+                    <Text style={[styles.detailEmail, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                      {selectedMember.email}
+                    </Text>
+                    <View style={[styles.detailLevelBadge, { backgroundColor: getLevelColor(selectedMember.level) + '15' }]}>
+                      <MaterialIcons name={getLevelIcon(selectedMember.level)} size={14} color={getLevelColor(selectedMember.level)} />
+                      <Text style={[styles.detailLevelText, { color: getLevelColor(selectedMember.level), fontSize: isSmallDevice ? 12 : 14 }]}>
+                        {getLevelDetails(selectedMember.level)?.title?.toUpperCase() || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailSectionTitle, { fontSize: isSmallDevice ? 13 : 14 }]}>Performance</Text>
+                    <View style={styles.detailStats}>
+                      <View style={styles.detailStat}>
+                        <Text style={[styles.detailStatValue, { fontSize: isSmallDevice ? 16 : 18 }]}>
+                          {selectedMember.directReferralCount || 0}
+                        </Text>
+                        <Text style={[styles.detailStatLabel, { fontSize: isSmallDevice ? 10 : 11 }]}>Direct</Text>
+                      </View>
+                      <View style={styles.detailStat}>
+                        <Text style={[styles.detailStatValue, { fontSize: isSmallDevice ? 16 : 18 }]}>
+                          ₹{selectedMember.totalEarned?.toLocaleString() || 0}
+                        </Text>
+                        <Text style={[styles.detailStatLabel, { fontSize: isSmallDevice ? 10 : 11 }]}>Earned</Text>
+                      </View>
+                      <View style={styles.detailStat}>
+                        <Text style={[styles.detailStatValue, { fontSize: isSmallDevice ? 16 : 18 }]}>
+                          ₹{selectedMember.pendingCommission?.toLocaleString() || 0}
+                        </Text>
+                        <Text style={[styles.detailStatLabel, { fontSize: isSmallDevice ? 10 : 11 }]}>Pending</Text>
+                      </View>
+                      <View style={styles.detailStat}>
+                        <Text style={[styles.detailStatValue, { fontSize: isSmallDevice ? 16 : 18, color: '#f59e0b' }]}>
+                          ₹{selectedMember.totalDonations?.toLocaleString() || 0}
+                        </Text>
+                        <Text style={[styles.detailStatLabel, { fontSize: isSmallDevice ? 10 : 11 }]}>Donations</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailSectionTitle, { fontSize: isSmallDevice ? 13 : 14 }]}>Commission Rates</Text>
+                    <View style={styles.detailCommissionRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Direct:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        {selectedMember.directCommission || 0}%
+                      </Text>
+                    </View>
+                    <View style={styles.detailCommissionRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Secondary:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        {selectedMember.secondaryCommission || 0}%
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailSectionTitle, { fontSize: isSmallDevice ? 13 : 14 }]}>Direct Members</Text>
+                    {selectedMember.directReferrals?.length === 0 ? (
+                      <Text style={[styles.detailEmptyText, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        No direct members yet
+                      </Text>
+                    ) : (
+                      selectedMember.directReferrals?.map((memberId, index) => (
+                        <View key={index} style={styles.registeredMemberItem}>
+                          <Text style={[styles.registeredMemberName, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                            ID: {memberId.slice(0, 12)}...
+                          </Text>
+                        </View>
+                      ))
+                    )}
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailSectionTitle, { fontSize: isSmallDevice ? 13 : 14 }]}>Status</Text>
+                    <View style={styles.detailStatusRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Status:</Text>
+                      <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedMember.status) + '15' }]}>
+                        <Text style={[styles.detailStatusText, { color: getStatusColor(selectedMember.status), fontSize: isSmallDevice ? 10 : 11 }]}>
+                          {selectedMember.status}
                         </Text>
                       </View>
                     </View>
-                    {item.description && (
-                      <Text style={styles.historyDescription}>{item.description}</Text>
+                    <View style={styles.detailStatusRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Level:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        {getLevelDetails(selectedMember.level)?.title || selectedMember.level}
+                      </Text>
+                    </View>
+                    <View style={styles.detailStatusRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Next Level:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        {selectedMember.nextLevel ? getLevelDetails(selectedMember.nextLevel)?.title || 'N/A' : 'Max'}
+                      </Text>
+                    </View>
+                    <View style={styles.detailStatusRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Donations Req:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13, color: '#f59e0b' }]}>
+                        ₹{selectedMember.donationsRequired?.toLocaleString() || 0}
+                      </Text>
+                    </View>
+                    <View style={styles.detailStatusRow}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Wallet:</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13, color: '#10b981' }]}>
+                        ₹{selectedMember.walletBalance?.toLocaleString() || 0}
+                      </Text>
+                    </View>
+                    {selectedMember.promotionEligible && (
+                      <View style={styles.detailStatusRow}>
+                        <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Promotion:</Text>
+                        <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13, color: '#10b981' }]}>
+                          ✅ Eligible
+                        </Text>
+                      </View>
                     )}
-                    <Text style={styles.historyDate}>
-                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
-                    </Text>
+                    {!selectedMember.promotionEligible && selectedMember.donationsRequired > 0 && (
+                      <View style={styles.detailStatusRow}>
+                        <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Promotion:</Text>
+                        <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 12 : 13, color: '#f59e0b' }]}>
+                          ₹{selectedMember.membersNeededForPromotion?.toLocaleString() || 0} more
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                );
-              })
-            )}
 
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => setCommissionHistoryModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setDetailModalVisible(false)}
+                  >
+                    <Text style={[styles.closeButtonText, { fontSize: isSmallDevice ? 13 : 14 }]}>Close</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Wallet Modal */}
-      <WalletModal />
-    </View>
+        {/* Promotion Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={promotionModalVisible}
+          onRequestClose={() => setPromotionModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Promote Working Member</Text>
+                <TouchableOpacity onPress={() => setPromotionModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.promotionInfo}>
+                <Text style={[styles.promotionLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Member</Text>
+                <Text style={[styles.promotionValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  {promotionData.memberName}
+                </Text>
+              </View>
+
+              <View style={styles.promotionInfo}>
+                <Text style={[styles.promotionLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Current Level</Text>
+                <Text style={[styles.promotionValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  {getLevelDetails(promotionData.currentLevel)?.title || promotionData.currentLevel}
+                </Text>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>New Level</Text>
+                <View style={styles.levelOptions}>
+                  {['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'].map((level) => {
+                    const levelDetails = getLevelDetails(level);
+                    const isActive = promotionData.newLevel === level;
+                    return (
+                      <TouchableOpacity
+                        key={level}
+                        style={[styles.levelOption, isActive && styles.levelOptionActive]}
+                        onPress={() => setPromotionData({...promotionData, newLevel: level})}
+                      >
+                        <MaterialIcons 
+                          name={getLevelIcon(level)} 
+                          size={isSmallDevice ? 12 : 16} 
+                          color={isActive ? '#ffffff' : getLevelColor(level)} 
+                        />
+                        <Text style={[
+                          styles.levelOptionText, 
+                          isActive && styles.levelOptionTextActive,
+                          { fontSize: isSmallDevice ? 10 : 12 }
+                        ]}>
+                          {levelDetails.title}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.promoteConfirmButton} onPress={handlePromotion}>
+                <MaterialIcons name="stars" size={20} color="#ffffff" />
+                <Text style={[styles.promoteConfirmText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  Confirm Promotion
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Commission Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={commissionModalVisible}
+          onRequestClose={() => setCommissionModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Add Commission</Text>
+                <TouchableOpacity onPress={() => setCommissionModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.commissionInfo}>
+                <Text style={[styles.commissionLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Member</Text>
+                <Text style={[styles.commissionValue, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  {commissionData.memberName}
+                </Text>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Amount *</Text>
+                <TextInput
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={commissionData.amount}
+                  onChangeText={(text) => setCommissionData({...commissionData, amount: text})}
+                  placeholder="Enter amount"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Type</Text>
+                <View style={styles.typeToggle}>
+                  <TouchableOpacity
+                    style={[styles.typeButton, commissionData.type === 'direct' && styles.typeButtonActive]}
+                    onPress={() => setCommissionData({...commissionData, type: 'direct'})}
+                  >
+                    <Text style={[styles.typeButtonText, commissionData.type === 'direct' && styles.typeButtonTextActive, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                      Direct
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeButton, commissionData.type === 'secondary' && styles.typeButtonActive]}
+                    onPress={() => setCommissionData({...commissionData, type: 'secondary'})}
+                  >
+                    <Text style={[styles.typeButtonText, commissionData.type === 'secondary' && styles.typeButtonTextActive, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                      Secondary
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Description</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={commissionData.description}
+                  onChangeText={(text) => setCommissionData({...commissionData, description: text})}
+                  placeholder="Enter description"
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 13 }]}>Status</Text>
+                <View style={styles.statusToggle}>
+                  <TouchableOpacity
+                    style={[styles.statusButton, commissionData.status === 'pending' && styles.statusButtonActive]}
+                    onPress={() => setCommissionData({...commissionData, status: 'pending'})}
+                  >
+                    <Text style={[styles.statusButtonText, commissionData.status === 'pending' && styles.statusButtonTextActive, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                      Pending
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.statusButton, commissionData.status === 'paid' && styles.statusButtonActive]}
+                    onPress={() => setCommissionData({...commissionData, status: 'paid'})}
+                  >
+                    <Text style={[styles.statusButtonText, commissionData.status === 'paid' && styles.statusButtonTextActive, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                      Paid
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleAddCommission}>
+                <MaterialIcons name="add" size={20} color="#ffffff" />
+                <Text style={[styles.submitButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>Add Commission</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Commission History Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={commissionHistoryModalVisible}
+          onRequestClose={() => setCommissionHistoryModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 16 : 18 }]}>Commission History</Text>
+                <TouchableOpacity onPress={() => setCommissionHistoryModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.historyMemberName, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                {selectedMember?.fullName}
+              </Text>
+
+              {commissionHistory.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <MaterialIcons name="attach-money" size={44} color="#D1D5DB" />
+                  <Text style={[styles.emptyText, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                    No commission history
+                  </Text>
+                </View>
+              ) : (
+                commissionHistory.map((item, index) => {
+                  const isDirect = item.type === 'direct_commission';
+                  return (
+                    <View key={index} style={styles.historyItem}>
+                      <View style={styles.historyHeader}>
+                        <View>
+                          <Text style={[styles.historyAmount, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                            ₹{item.amount?.toLocaleString() || 0}
+                          </Text>
+                          <Text style={[styles.historyType, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                            {isDirect ? 'Direct' : 'Secondary'}
+                          </Text>
+                        </View>
+                        <View style={[styles.historyStatus, { 
+                          backgroundColor: item.status === 'paid' || item.status === 'completed' ? '#10b981' : 
+                                         item.status === 'pending' ? '#f59e0b' : '#ef4444' 
+                        }]}>
+                          <Text style={[styles.historyStatusText, { fontSize: isSmallDevice ? 8 : 10 }]}>
+                            {item.status === 'paid' || item.status === 'completed' ? 'Paid' : 
+                             item.status === 'pending' ? 'Pending' : 'Failed'}
+                          </Text>
+                        </View>
+                      </View>
+                      {item.description && (
+                        <Text style={[styles.historyDescription, { fontSize: isSmallDevice ? 11 : 13 }]}>
+                          {item.description}
+                        </Text>
+                      )}
+                      <Text style={[styles.historyDate, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
+                      </Text>
+                    </View>
+                  );
+                })
+              )}
+
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setCommissionHistoryModalVisible(false)}
+              >
+                <Text style={[styles.closeButtonText, { fontSize: isSmallDevice ? 13 : 14 }]}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Wallet Modal */}
+        <WalletModal />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fdf8f3',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fdf8f3',
   },
-
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1214,16 +1280,13 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
     marginTop: 10,
   },
-
-  // Saffron Header
   headerCard: {
     backgroundColor: '#FF7722',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 20 : 50,
     paddingBottom: 16,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -1239,7 +1302,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
@@ -1247,8 +1309,6 @@ const styles = StyleSheet.create({
   refreshButton: {
     padding: 4,
   },
-
-  // Search inside header
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1262,15 +1322,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
   },
-
-  // Status Filter Chips inside header
   statusFilterRow: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 12,
+    flexWrap: 'wrap',
   },
   statusChip: {
     paddingVertical: 5,
@@ -1286,14 +1344,11 @@ const styles = StyleSheet.create({
   },
   statusChipText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
   },
   activeStatusChipText: {
     color: '#FF7722',
   },
-
-  // Stats inside header
   statsWrapper: {
     marginBottom: 4,
   },
@@ -1327,18 +1382,14 @@ const styles = StyleSheet.create({
   },
   statType: {
     fontFamily: Fonts.Regular,
-    fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 12,
     color: '#ffffff',
     textAlign: 'center',
   },
-
-  // List
   flatList: {
     flex: 1,
   },
@@ -1346,8 +1397,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-
-  // Member Card
   memberCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -1367,6 +1416,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  memberTextInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
   avatarContainer: {
     marginRight: 10,
   },
@@ -1385,17 +1438,14 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#FF7722',
   },
   memberName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
   memberEmail: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
   },
   statusBadge: {
@@ -1413,7 +1463,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
   },
   cardStats: {
     flexDirection: 'row',
@@ -1425,15 +1474,14 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
   },
   statValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
     color: '#1f2937',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
   },
@@ -1445,6 +1493,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
+    flexWrap: 'wrap',
   },
   levelBadge: {
     flexDirection: 'row',
@@ -1456,7 +1505,6 @@ const styles = StyleSheet.create({
   },
   levelBadgeText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
   },
   commissionInfo: {
     flexDirection: 'row',
@@ -1465,7 +1513,6 @@ const styles = StyleSheet.create({
   },
   commissionRateText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
   },
   promotionBadge: {
@@ -1479,7 +1526,6 @@ const styles = StyleSheet.create({
   },
   promotionText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
     color: '#10b981',
   },
   nextLevelBadge: {
@@ -1490,7 +1536,6 @@ const styles = StyleSheet.create({
   },
   nextLevelText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#8b5cf6',
   },
   cardActions: {
@@ -1532,10 +1577,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 9,
   },
-
-  // Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1545,16 +1587,12 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
     color: '#6b7280',
   },
-
-  // Modal
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1575,7 +1613,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#1f2937',
   },
   detailProfile: {
@@ -1597,18 +1634,15 @@ const styles = StyleSheet.create({
   },
   detailAvatarText: {
     fontFamily: Fonts.Bold,
-    fontSize: 32,
     color: '#FF7722',
   },
   detailName: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#1f2937',
     marginTop: 8,
   },
   detailEmail: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
   },
   detailLevelBadge: {
@@ -1622,14 +1656,12 @@ const styles = StyleSheet.create({
   },
   detailLevelText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
   },
   detailSection: {
     marginBottom: 16,
   },
   detailSectionTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 15,
     color: '#1f2937',
     marginBottom: 8,
   },
@@ -1639,12 +1671,10 @@ const styles = StyleSheet.create({
   },
   detailStatValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#1f2937',
   },
   detailStatLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
   },
   detailCommissionRow: {
@@ -1659,17 +1689,10 @@ const styles = StyleSheet.create({
   },
   registeredMemberName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
-  },
-  registeredMemberDetail: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
   },
   detailEmptyText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
     paddingVertical: 10,
@@ -1681,14 +1704,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
-    width: 120,
+    width: 100,
   },
   detailValue: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
+    flex: 1,
+    textAlign: 'right',
   },
   detailStatusBadge: {
     paddingHorizontal: 10,
@@ -1697,12 +1720,6 @@ const styles = StyleSheet.create({
   },
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
-  },
-  detailPendingText: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 14,
-    color: '#f59e0b',
   },
   closeButton: {
     backgroundColor: '#6b7280',
@@ -1714,32 +1731,16 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 14,
   },
   promotionInfo: {
     marginBottom: 12,
   },
   promotionLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
   },
   promotionValue: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  commissionInfo: {
-    marginBottom: 12,
-  },
-  commissionLabel: {
-    fontFamily: Fonts.Regular,
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  commissionValue: {
-    fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
   },
   formField: {
@@ -1747,7 +1748,6 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
   },
@@ -1756,7 +1756,6 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 10,
-    fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
   },
@@ -1785,7 +1784,6 @@ const styles = StyleSheet.create({
   },
   levelOptionText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#6b7280',
   },
   levelOptionTextActive: {
@@ -1809,7 +1807,6 @@ const styles = StyleSheet.create({
   },
   typeButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#6b7280',
   },
   typeButtonTextActive: {
@@ -1833,7 +1830,6 @@ const styles = StyleSheet.create({
   },
   statusButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#6b7280',
   },
   statusButtonTextActive: {
@@ -1852,7 +1848,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 16,
   },
   promoteConfirmButton: {
     flexDirection: 'row',
@@ -1867,11 +1862,9 @@ const styles = StyleSheet.create({
   promoteConfirmText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 16,
   },
   historyMemberName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
     textAlign: 'center',
     marginBottom: 12,
@@ -1889,12 +1882,10 @@ const styles = StyleSheet.create({
   },
   historyAmount: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
     color: '#1f2937',
   },
   historyType: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
   },
@@ -1906,34 +1897,27 @@ const styles = StyleSheet.create({
   historyStatusText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 10,
   },
   historyDescription: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
     color: '#6b7280',
     marginTop: 4,
   },
   historyDate: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#9ca3af',
     marginTop: 2,
   },
   emptyText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
   },
-
-  // Wallet Modal
   walletSummary: {
     padding: 16,
   },
   walletMemberName: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#1f2937',
     textAlign: 'center',
     marginBottom: 12,
@@ -1947,12 +1931,10 @@ const styles = StyleSheet.create({
   },
   walletBalanceLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
   },
   walletBalance: {
     fontFamily: Fonts.Bold,
-    fontSize: 32,
     color: '#10b981',
     marginTop: 4,
   },
@@ -1965,12 +1947,10 @@ const styles = StyleSheet.create({
   },
   walletStatValue: {
     fontFamily: Fonts.Bold,
-    fontSize: 16,
     color: '#1f2937',
   },
   walletStatLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
   },

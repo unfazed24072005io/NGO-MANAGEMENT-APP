@@ -15,6 +15,7 @@ import {
 } from '../../services/paymentService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommissionService } from '../../services/CommissionService';
+
 export default function DonationScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -36,7 +37,6 @@ export default function DonationScreen({ navigation }) {
 
   const quickAmounts = [100, 500, 1000, 2000, 5000];
 
-  // Load saved user data
   useEffect(() => {
     loadUserData();
   }, []);
@@ -90,146 +90,134 @@ export default function DonationScreen({ navigation }) {
     return true;
   };
 
-  // screens/member/DonationScreen.js - Fix handleDonate function
+  const handleDonate = async () => {
+    if (!validateForm()) return;
 
-const handleDonate = async () => {
-  if (!validateForm()) return;
+    setLoading(true);
+    try {
+      const userId = auth.currentUser?.uid;
+      const userEmail = auth.currentUser?.email || formData.email;
 
-  setLoading(true);
-  try {
-    const userId = auth.currentUser?.uid;
-    const userEmail = auth.currentUser?.email || formData.email;
+      const donationAmount = parseFloat(formData.amount);
+      const donorName = formData.anonymous ? 'Anonymous Donor' : formData.fullName;
+      const donorEmail = formData.anonymous ? 'anonymous@donor.com' : formData.email;
 
-    const donationAmount = parseFloat(formData.amount);
-    const donorName = formData.anonymous ? 'Anonymous Donor' : formData.fullName;
-    const donorEmail = formData.anonymous ? 'anonymous@donor.com' : formData.email;
+      const paymentResult = await initiateRazorpayPayment({
+        amount: donationAmount,
+        name: donorName,
+        email: donorEmail,
+        phone: formData.phone,
+        description: formData.purpose || 'General Donation',
+      });
 
-    // ✅ Step 1: Initiate Razorpay payment
-    const paymentResult = await initiateRazorpayPayment({
-      amount: donationAmount,
-      name: donorName,
-      email: donorEmail,
-      phone: formData.phone,
-      description: formData.purpose || 'General Donation',
-    });
+      if (paymentResult && paymentResult.success) {
+        
+        let verificationResult = { success: true };
+        if (paymentResult.paymentId) {
+          verificationResult = await verifyRazorpayPayment({
+            paymentId: paymentResult.paymentId,
+            orderId: paymentResult.orderId,
+            signature: paymentResult.signature,
+          });
+        }
 
-    // ✅ Step 2: Check if payment was successful
-    if (paymentResult && paymentResult.success) {
-      
-      // ✅ Step 3: Verify payment
-      let verificationResult = { success: true };
-      if (paymentResult.paymentId) {
-        verificationResult = await verifyRazorpayPayment({
-          paymentId: paymentResult.paymentId,
-          orderId: paymentResult.orderId,
-          signature: paymentResult.signature,
-        });
-      }
+        if (verificationResult.success) {
+          const donationRef = await addDoc(collection(db, 'donations'), {
+            donorName: donorName,
+            donorEmail: donorEmail,
+            phone: formData.phone,
+            amount: donationAmount,
+            purpose: formData.purpose || 'General',
+            message: formData.message || '',
+            paymentMethod: 'razorpay',
+            paymentId: paymentResult.paymentId || 'pending_verification',
+            status: 'completed',
+            anonymous: formData.anonymous,
+            memberId: userId || 'guest',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
 
-      if (verificationResult.success) {
-        // ✅ Step 4: Save donation to Firebase
-        const donationRef = await addDoc(collection(db, 'donations'), {
-          donorName: donorName,
-          donorEmail: donorEmail,
-          phone: formData.phone,
-          amount: donationAmount,
-          purpose: formData.purpose || 'General',
-          message: formData.message || '',
-          paymentMethod: 'razorpay',
-          paymentId: paymentResult.paymentId || 'pending_verification',
-          status: 'completed',
-          anonymous: formData.anonymous,
-          memberId: userId || 'guest',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+          const certificateRef = await addDoc(collection(db, 'certificates'), {
+            memberId: userId || 'guest',
+            donorName: donorName,
+            amount: donationAmount,
+            purpose: formData.purpose || 'General',
+            donationId: donationRef.id,
+            certificateNumber: `CERT-${Date.now().toString().slice(-8)}`,
+            issuedDate: new Date().toISOString(),
+            status: 'issued',
+            type: 'donation',
+            title: 'Donation Certificate',
+            description: `For donating ₹${donationAmount} to ${formData.purpose || 'General'} cause`,
+            paymentId: paymentResult.paymentId || 'pending_verification',
+            createdAt: new Date().toISOString()
+          });
 
-        // ✅ Step 5: Create certificate
-        const certificateRef = await addDoc(collection(db, 'certificates'), {
-          memberId: userId || 'guest',
-          donorName: donorName,
-          amount: donationAmount,
-          purpose: formData.purpose || 'General',
-          donationId: donationRef.id,
-          certificateNumber: `CERT-${Date.now().toString().slice(-8)}`,
-          issuedDate: new Date().toISOString(),
-          status: 'issued',
-          type: 'donation',
-          title: 'Donation Certificate',
-          description: `For donating ₹${donationAmount} to ${formData.purpose || 'General'} cause`,
-          paymentId: paymentResult.paymentId || 'pending_verification',
-          createdAt: new Date().toISOString()
-        });
-
-        // ✅ Step 6: Update donor stats if logged in
-        if (userId && userId !== 'guest') {
-          const donorRef = doc(db, 'donors', userId);
-          const donorDoc = await getDoc(donorRef);
-          if (donorDoc.exists()) {
-            await updateDoc(donorRef, {
-              totalDonations: increment(donationAmount),
-              donationCount: increment(1),
-              lastDonation: new Date().toISOString(),
-              livesImpacted: increment(Math.floor(donationAmount / 100) + 1),
-            });
-          } else {
-            await setDoc(donorRef, {
-              userId: userId,
-              name: donorName,
-              email: donorEmail,
-              phone: formData.phone,
-              totalDonations: donationAmount,
-              donationCount: 1,
-              lastDonation: new Date().toISOString(),
-              livesImpacted: Math.floor(donationAmount / 100) + 1,
-              createdAt: new Date().toISOString(),
-            });
-          }
-          
-          // ✅ Step 7: Process commission for the working member who registered this donor
-          try {
-            console.log('🔄 Processing commission for donation...');
-            const commissionResult = await CommissionService.processDonationCommission(userId, donationAmount);
-            console.log('✅ Commission processed:', commissionResult);
-            
-            // Optionally show commission info in the success popup
-            if (commissionResult && commissionResult.success) {
-              console.log(`💰 Commission: ₹${commissionResult.commissionAmount} at ${commissionResult.commissionRate}%`);
+          if (userId && userId !== 'guest') {
+            const donorRef = doc(db, 'donors', userId);
+            const donorDoc = await getDoc(donorRef);
+            if (donorDoc.exists()) {
+              await updateDoc(donorRef, {
+                totalDonations: increment(donationAmount),
+                donationCount: increment(1),
+                lastDonation: new Date().toISOString(),
+                livesImpacted: increment(Math.floor(donationAmount / 100) + 1),
+              });
+            } else {
+              await setDoc(donorRef, {
+                userId: userId,
+                name: donorName,
+                email: donorEmail,
+                phone: formData.phone,
+                totalDonations: donationAmount,
+                donationCount: 1,
+                lastDonation: new Date().toISOString(),
+                livesImpacted: Math.floor(donationAmount / 100) + 1,
+                createdAt: new Date().toISOString(),
+              });
             }
-          } catch (commissionError) {
-            console.error('❌ Commission processing error:', commissionError);
-            // Don't block the donation flow if commission fails
+            
+            try {
+              console.log('🔄 Processing commission for donation...');
+              const commissionResult = await CommissionService.processDonationCommission(userId, donationAmount);
+              console.log('✅ Commission processed:', commissionResult);
+              
+              if (commissionResult && commissionResult.success) {
+                console.log(`💰 Commission: ₹${commissionResult.commissionAmount} at ${commissionResult.commissionRate}%`);
+              }
+            } catch (commissionError) {
+              console.error('❌ Commission processing error:', commissionError);
+            }
           }
+
+          if (!formData.anonymous) {
+            await saveUserData();
+          }
+
+          setDonationData({
+            amount: donationAmount,
+            name: donorName,
+            purpose: formData.purpose,
+            paymentId: paymentResult.paymentId || 'pending_verification',
+            certificateId: certificateRef.id,
+          });
+          setShowSuccessPopup(true);
+
+        } else {
+          Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
         }
-
-        // Save user data
-        if (!formData.anonymous) {
-          await saveUserData();
-        }
-
-        // Show success popup
-        setDonationData({
-          amount: donationAmount,
-          name: donorName,
-          purpose: formData.purpose,
-          paymentId: paymentResult.paymentId || 'pending_verification',
-          certificateId: certificateRef.id,
-        });
-        setShowSuccessPopup(true);
-
       } else {
-        Alert.alert('Payment Failed', 'Payment verification failed. Please try again.');
+        Alert.alert('Payment Failed', paymentResult?.error || 'Something went wrong');
       }
-    } else {
-      Alert.alert('Payment Failed', paymentResult?.error || 'Something went wrong');
+    } catch (error) {
+      console.error('Donation error:', error);
+      Alert.alert('Error', 'Failed to process donation. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Donation error:', error);
-    Alert.alert('Error', 'Failed to process donation. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   const handleBackHome = () => {
     setShowSuccessPopup(false);
     navigation.goBack();
@@ -250,6 +238,7 @@ const handleDonate = async () => {
     <TouchableOpacity
       style={[styles.purposeCard, selected && styles.purposeCardSelected]}
       onPress={() => onSelect(purpose)}
+      activeOpacity={0.7}
     >
       <Text style={[styles.purposeText, selected && styles.purposeTextSelected]}>
         {purpose}
@@ -257,7 +246,6 @@ const handleDonate = async () => {
     </TouchableOpacity>
   );
 
-  // Success Popup Modal
   const SuccessPopup = () => (
     <Modal
       animationType="fade"
@@ -291,12 +279,14 @@ const handleDonate = async () => {
             <TouchableOpacity 
               style={[styles.popupButton, styles.popupButtonSecondary]} 
               onPress={handleBackHome}
+              activeOpacity={0.7}
             >
               <Text style={styles.popupButtonTextSecondary}>Back Home</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.popupButton, styles.popupButtonPrimary]} 
               onPress={handleViewCertificate}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="card-membership" size={18} color="#ffffff" />
               <Text style={styles.popupButtonTextPrimary}>Certificate</Text>
@@ -315,7 +305,7 @@ const handleDonate = async () => {
       {/* Blue Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Donate for a Cause</Text>
@@ -334,6 +324,7 @@ const handleDonate = async () => {
               value={formData.amount}
               onChangeText={(text) => setFormData({...formData, amount: text})}
               keyboardType="numeric"
+              textAlignVertical="center"
             />
           </View>
           <View style={styles.quickAmountsRow}>
@@ -342,6 +333,7 @@ const handleDonate = async () => {
                 key={amount}
                 style={styles.quickAmountChip}
                 onPress={() => setFormData({...formData, amount: amount.toString()})}
+                activeOpacity={0.7}
               >
                 <Text style={styles.quickAmountText}>₹{amount.toLocaleString()}</Text>
               </TouchableOpacity>
@@ -367,6 +359,7 @@ const handleDonate = async () => {
               onChangeText={(text) => setFormData({...formData, fullName: text})}
               placeholder="Enter your full name"
               placeholderTextColor="#9ca3af"
+              textAlignVertical="center"
             />
           </View>
 
@@ -380,6 +373,7 @@ const handleDonate = async () => {
               placeholderTextColor="#9ca3af"
               keyboardType="email-address"
               autoCapitalize="none"
+              textAlignVertical="center"
             />
           </View>
 
@@ -393,12 +387,14 @@ const handleDonate = async () => {
               placeholderTextColor="#9ca3af"
               keyboardType="phone-pad"
               maxLength={10}
+              textAlignVertical="center"
             />
           </View>
 
           <TouchableOpacity 
             style={styles.anonymousToggle}
             onPress={() => setFormData({...formData, anonymous: !formData.anonymous})}
+            activeOpacity={0.7}
           >
             <View style={[styles.checkbox, formData.anonymous && styles.checkboxChecked]}>
               {formData.anonymous && <MaterialIcons name="check" size={16} color="#ffffff" />}
@@ -414,10 +410,11 @@ const handleDonate = async () => {
             <TouchableOpacity
               style={[styles.paymentOption, formData.paymentMethod === 'razorpay' && styles.paymentOptionSelected]}
               onPress={() => setFormData({...formData, paymentMethod: 'razorpay'})}
+              activeOpacity={0.7}
             >
               <MaterialIcons 
                 name="security" 
-                size={24} 
+                size={22} 
                 color={formData.paymentMethod === 'razorpay' ? '#3b82f6' : '#6b7280'} 
               />
               <Text style={[styles.paymentOptionText, formData.paymentMethod === 'razorpay' && styles.paymentOptionTextSelected]}>
@@ -454,6 +451,7 @@ const handleDonate = async () => {
             placeholderTextColor="#9ca3af"
             multiline
             numberOfLines={3}
+            textAlignVertical="top"
           />
         </View>
 
@@ -484,6 +482,7 @@ const handleDonate = async () => {
           style={[styles.donateButton, loading && styles.disabledButton]}
           onPress={handleDonate}
           disabled={loading}
+          activeOpacity={0.7}
         >
           {loading ? (
             <ActivityIndicator color="#ffffff" size="small" />
@@ -539,6 +538,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   headerRight: {
     width: 32,
@@ -553,6 +554,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   amountInputContainer: {
     flexDirection: 'row',
@@ -569,6 +572,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#ffffff',
     marginRight: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   amountInput: {
     flex: 1,
@@ -576,12 +581,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: '#ffffff',
     paddingVertical: 8,
+    includeFontPadding: false,
   },
   quickAmountsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
     width: '100%',
   },
   quickAmountChip: {
@@ -589,13 +595,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 25,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
   },
   quickAmountText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Scroll View
@@ -626,6 +634,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Fields
@@ -637,6 +647,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   input: {
     borderWidth: 1,
@@ -647,6 +659,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     color: '#1f2937',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   textArea: {
     height: 80,
@@ -677,6 +690,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Payment Methods
@@ -705,6 +720,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentOptionTextSelected: {
     color: '#3b82f6',
@@ -715,6 +732,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Purpose
@@ -739,6 +758,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   purposeTextSelected: {
     color: '#ffffff',
@@ -754,11 +775,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryValue: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryDivider: {
     height: 1,
@@ -769,11 +794,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryTotalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Donate Button
@@ -800,6 +829,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   noteText: {
     fontFamily: Fonts.Regular,
@@ -807,6 +838,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Success Popup
@@ -847,6 +880,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     textAlign: 'center',
     lineHeight: 30,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   popupSubtext: {
     fontFamily: Fonts.Regular,
@@ -856,6 +891,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
     lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   popupPaymentId: {
     fontFamily: 'monospace',
@@ -889,10 +926,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   popupButtonTextSecondary: {
     fontFamily: Fonts.SemiBold,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

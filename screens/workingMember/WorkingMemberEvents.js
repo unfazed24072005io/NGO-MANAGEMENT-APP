@@ -1,3 +1,4 @@
+// screens/workingMember/WorkingMemberEvents.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, Modal, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -281,12 +282,13 @@ export default function WorkingMemberEvents({ navigation }) {
           setSelectedEvent(event);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         {event.image ? (
           <Image source={{ uri: event.image }} style={styles.eventImage} />
         ) : (
           <View style={styles.eventImagePlaceholder}>
-            <MaterialIcons name="event" size={40} color="#9ca3af" />
+            <MaterialIcons name="event" size={36} color="#9ca3af" />
           </View>
         )}
         
@@ -307,7 +309,7 @@ export default function WorkingMemberEvents({ navigation }) {
 
         <View style={styles.eventContent}>
           <View style={styles.eventHeader}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
+            <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
             {event.featured && (
               <View style={styles.featuredBadge}>
                 <MaterialIcons name="star" size={14} color="#f59e0b" />
@@ -355,7 +357,7 @@ export default function WorkingMemberEvents({ navigation }) {
   const StatCard = ({ label, count, icon, color }) => (
     <View style={[styles.statCard, { borderLeftColor: color }]}>
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={18} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
       <View style={styles.statContent}>
         <Text style={styles.statLabel}>{label}</Text>
@@ -366,11 +368,11 @@ export default function WorkingMemberEvents({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Blue Header Card */}
+      {/* Purple Header Card */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Events</Text>
@@ -378,28 +380,30 @@ export default function WorkingMemberEvents({ navigation }) {
           <TouchableOpacity 
             style={styles.profileIcon}
             onPress={() => navigation.navigate('WorkingMemberProfile')}
+            activeOpacity={0.7}
           >
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#8b5cf6" />
+              <MaterialIcons name="person" size={26} color="#8b5cf6" />
             )}
           </TouchableOpacity>
         </View>
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search events..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -441,7 +445,7 @@ export default function WorkingMemberEvents({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Event Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -524,6 +528,7 @@ export default function WorkingMemberEvents({ navigation }) {
                   <TouchableOpacity 
                     style={styles.viewDutyButton}
                     onPress={() => handleViewDuty(selectedEvent)}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="assignment" size={20} color="#ffffff" />
                     <Text style={styles.viewDutyButtonText}>View My Duty</Text>
@@ -532,7 +537,7 @@ export default function WorkingMemberEvents({ navigation }) {
 
                 <View style={styles.detailActions}>
                   {registeredEventIds.includes(selectedEvent.id) ? (
-                    <TouchableOpacity style={[styles.detailActionButton, styles.unregisterButton]} onPress={() => handleUnregister(selectedEvent)}>
+                    <TouchableOpacity style={[styles.detailActionButton, styles.unregisterButton]} onPress={() => handleUnregister(selectedEvent)} activeOpacity={0.7}>
                       <MaterialIcons name="cancel" size={20} color="#ffffff" />
                       <Text style={styles.detailActionText}>Cancel Registration</Text>
                     </TouchableOpacity>
@@ -545,6 +550,7 @@ export default function WorkingMemberEvents({ navigation }) {
                       ]}
                       onPress={() => handleRegister(selectedEvent)}
                       disabled={registering || (selectedEvent.capacity && selectedEvent.registeredCount >= selectedEvent.capacity)}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="event" size={20} color="#ffffff" />
                       <Text style={styles.detailActionText}>
@@ -572,7 +578,7 @@ export default function WorkingMemberEvents({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>My Duty Details</Text>
-              <TouchableOpacity onPress={() => setDutyModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDutyModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -581,7 +587,7 @@ export default function WorkingMemberEvents({ navigation }) {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.dutySection}>
                   <View style={styles.dutyIconContainer}>
-                    <MaterialIcons name="assignment" size={40} color="#8b5cf6" />
+                    <MaterialIcons name="assignment" size={36} color="#8b5cf6" />
                   </View>
                   <Text style={styles.dutyTitle}>{dutyDetails.role || 'Event Duty'}</Text>
                 </View>
@@ -628,6 +634,7 @@ export default function WorkingMemberEvents({ navigation }) {
                 <TouchableOpacity 
                   style={styles.closeDutyButton}
                   onPress={() => setDutyModalVisible(false)}
+                  activeOpacity={0.7}
                 >
                   <Text style={styles.closeDutyButtonText}>Close</Text>
                 </TouchableOpacity>
@@ -641,9 +648,12 @@ export default function WorkingMemberEvents({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
   
-  // Blue Header Card
+  // Purple Header Card
   headerCard: {
     backgroundColor: '#8b5cf6',
     paddingHorizontal: 20,
@@ -670,10 +680,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -686,8 +698,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
   },
 
@@ -698,7 +710,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginBottom: 12,
     gap: 8,
   },
@@ -706,60 +718,72 @@ const styles = StyleSheet.create({
     flex: 1, 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
   statsContainer: { 
-    maxHeight: 80,
+    maxHeight: 72,
   },
   statsContent: { 
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
     paddingHorizontal: 4,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 70,
-    width: 75,
+    borderRadius: 10,
+    padding: 6,
+    minWidth: 62,
+    width: 68,
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 70,
+    height: 62,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+    borderLeftWidth: 3,
   },
   statContent: { 
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statLabel: { 
     fontFamily: Fonts.Regular,
-    fontSize: 8, 
+    fontSize: 7, 
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statValue: { 
     fontFamily: Fonts.Bold,
-    fontSize: 14, 
+    fontSize: 13, 
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statIcon: { 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
     justifyContent: 'center', 
     alignItems: 'center', 
     backgroundColor: 'rgba(255,255,255,0.2)',
-    marginTop: 2,
+    marginTop: 1,
   },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  listContent: { 
+    paddingHorizontal: 16, 
+    paddingBottom: 20,
+    paddingTop: 4,
+  },
   eventCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -768,10 +792,20 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     overflow: 'hidden',
     position: 'relative',
-    marginTop: 12,
+    marginTop: 6,
   },
-  eventImage: { width: '100%', height: 150, resizeMode: 'cover' },
-  eventImagePlaceholder: { width: '100%', height: 150, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  eventImage: { 
+    width: '100%', 
+    height: 150, 
+    resizeMode: 'cover' 
+  },
+  eventImagePlaceholder: { 
+    width: '100%', 
+    height: 150, 
+    backgroundColor: '#f3f4f6', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   badgesContainer: {
     position: 'absolute',
     top: 10,
@@ -800,29 +834,53 @@ const styles = StyleSheet.create({
   badgeText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 10 
+    fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  eventContent: { padding: 14 },
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eventContent: { 
+    padding: 14 
+  },
+  eventHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
   eventTitle: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
     color: '#1f2937', 
-    flex: 1 
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  featuredBadge: { paddingHorizontal: 4 },
+  featuredBadge: { 
+    paddingHorizontal: 4 
+  },
   eventDescription: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
     color: '#6b7280', 
-    marginTop: 4 
+    marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  eventDetails: { flexDirection: 'row', marginTop: 8, gap: 16 },
-  eventDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventDetails: { 
+    flexDirection: 'row', 
+    marginTop: 8, 
+    gap: 16 
+  },
+  eventDetailItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   eventDetailText: { 
     fontFamily: Fonts.Regular,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventFooter: { 
     flexDirection: 'row', 
@@ -843,84 +901,184 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 11 
+    fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  capacityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  capacityBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   capacityText: { 
     fontFamily: Fonts.Regular,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fullText: { 
     color: '#ef4444', 
     fontFamily: Fonts.SemiBold 
   },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
+  emptyState: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingTop: 60, 
+    gap: 12 
+  },
   emptyStateText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 },
-  modalContent: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 16 
+  },
+  modalContent: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 16, 
+    padding: 20, 
+    maxHeight: '85%' 
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
   modalTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailImage: { width: '100%', height: 200, borderRadius: 8, marginBottom: 16, resizeMode: 'cover' },
-  detailSection: { marginBottom: 12 },
+  detailImage: { 
+    width: '100%', 
+    height: 200, 
+    borderRadius: 8, 
+    marginBottom: 16, 
+    resizeMode: 'cover' 
+  },
+  detailSection: { 
+    marginBottom: 12 
+  },
   detailTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 18, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' },
-  detailStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  detailStatusRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 8, 
+    flexWrap: 'wrap' 
+  },
+  detailStatusBadge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12 
+  },
   detailStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailFeaturedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, gap: 4 },
+  detailFeaturedBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fef3c7', 
+    paddingHorizontal: 8, 
+    paddingVertical: 3, 
+    borderRadius: 12, 
+    gap: 4 
+  },
   detailFeaturedText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 11, 
-    color: '#f59e0b' 
+    color: '#f59e0b',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailAssignedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ede9fe', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, gap: 4 },
+  detailAssignedBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#ede9fe', 
+    paddingHorizontal: 8, 
+    paddingVertical: 3, 
+    borderRadius: 12, 
+    gap: 4 
+  },
   detailAssignedText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 11, 
-    color: '#8b5cf6' 
+    color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
     color: '#6b7280', 
-    marginBottom: 2 
+    marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: { 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailActions: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  detailActionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 8 },
-  registerButton: { backgroundColor: '#8b5cf6' },
-  unregisterButton: { backgroundColor: '#ef4444' },
-  disabledButton: { backgroundColor: '#9ca3af' },
+  detailActions: { 
+    marginTop: 16, 
+    paddingTop: 16, 
+    borderTopWidth: 1, 
+    borderTopColor: '#f3f4f6' 
+  },
+  detailActionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 12, 
+    borderRadius: 8, 
+    gap: 8 
+  },
+  registerButton: { 
+    backgroundColor: '#8b5cf6' 
+  },
+  unregisterButton: { 
+    backgroundColor: '#ef4444' 
+  },
+  disabledButton: { 
+    backgroundColor: '#9ca3af' 
+  },
   detailActionText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 16 
+    fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewDutyButton: {
     flexDirection: 'row',
@@ -936,6 +1094,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Duty Modal
@@ -944,9 +1104,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dutyIconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#ede9fe',
     justifyContent: 'center',
     alignItems: 'center',
@@ -956,17 +1116,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   closeDutyButton: {
     backgroundColor: '#f3f4f6',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
   },
   closeDutyButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -58,14 +58,12 @@ export default function MyDonations({ navigation }) {
         }
       });
 
-      // Also get from local Razorpay history
       const localHistory = getDonationHistory();
       const user = auth.currentUser;
       const localDonations = localHistory.filter(
         donation => donation.email === user?.email || donation.phone === user?.phoneNumber
       );
 
-      // Merge and deduplicate
       const allDonations = [...donationList];
       localDonations.forEach(localDonation => {
         if (!allDonations.some(d => d.paymentId === localDonation.paymentId)) {
@@ -151,7 +149,7 @@ export default function MyDonations({ navigation }) {
           <MaterialIcons name="favorite" size={20} color="#10b981" />
         </View>
         <View style={styles.donationInfo}>
-          <Text style={styles.donationPurpose}>
+          <Text style={styles.donationPurpose} numberOfLines={1}>
             {item.purpose || item.campaign || 'General Donation'}
           </Text>
           <Text style={styles.donationDate}>
@@ -195,16 +193,17 @@ export default function MyDonations({ navigation }) {
             <TouchableOpacity 
               onPress={() => setShowDetailModal(false)}
               style={styles.modalCloseBtn}
+              activeOpacity={0.7}
             >
               <MaterialIcons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
           </View>
 
           {selectedDonation && (
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalDetailSection}>
                 <View style={styles.modalIconContainer}>
-                  <MaterialIcons name="favorite" size={40} color="#10b981" />
+                  <MaterialIcons name="favorite" size={36} color="#10b981" />
                 </View>
                 <Text style={styles.modalAmount}>₹{selectedDonation.amount?.toLocaleString()}</Text>
                 <Text style={styles.modalPurpose}>{selectedDonation.purpose || 'General Donation'}</Text>
@@ -268,6 +267,7 @@ export default function MyDonations({ navigation }) {
                       date: selectedDonation.createdAt || selectedDonation.timestamp,
                     });
                   }}
+                  activeOpacity={0.7}
                 >
                   <MaterialIcons name="card-membership" size={20} color="#ffffff" />
                   <Text style={styles.certificateButtonText}>View Certificate</Text>
@@ -294,7 +294,7 @@ export default function MyDonations({ navigation }) {
       {/* Green Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Donations</Text>
@@ -339,6 +339,7 @@ export default function MyDonations({ navigation }) {
             <TouchableOpacity 
               style={styles.donateButton}
               onPress={() => navigation.navigate('DonateScreen')}
+              activeOpacity={0.7}
             >
               <Text style={styles.donateButtonText}>Make a Donation</Text>
             </TouchableOpacity>
@@ -372,6 +373,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerCard: {
     backgroundColor: '#10b981',
@@ -395,6 +398,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -416,12 +421,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpaySummary: {
     flexDirection: 'row',
@@ -439,6 +448,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#065f46',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   listContent: {
     paddingHorizontal: 16,
@@ -472,11 +483,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     paddingHorizontal: 10,
@@ -486,6 +501,8 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donationFooter: {
     flexDirection: 'row',
@@ -504,6 +521,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   razorpayBadge: {
     flexDirection: 'row',
@@ -518,11 +537,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 9,
     color: '#065f46',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionId: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     alignItems: 'center',
@@ -534,15 +557,20 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#10b981',
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -553,6 +581,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   // Modal Styles
   modalOverlay: {
@@ -577,6 +607,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseBtn: {
     padding: 4,
@@ -586,9 +618,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#d1fae5',
     justifyContent: 'center',
     alignItems: 'center',
@@ -598,12 +630,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 28,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPurpose: {
     fontFamily: Fonts.Regular,
     fontSize: 16,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalStatus: {
     marginTop: 8,
@@ -616,6 +652,8 @@ const styles = StyleSheet.create({
   modalStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoGrid: {
     backgroundColor: '#f9fafb',
@@ -639,11 +677,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoCode: {
     fontFamily: Fonts.Regular,
@@ -663,5 +705,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

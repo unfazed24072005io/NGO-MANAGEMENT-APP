@@ -231,12 +231,13 @@ export default function MemberEvents({ navigation }) {
           setSelectedEvent(event);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         {event.image ? (
           <Image source={{ uri: event.image }} style={styles.eventImage} />
         ) : (
           <View style={styles.eventImagePlaceholder}>
-            <MaterialIcons name="event" size={40} color="#9ca3af" />
+            <MaterialIcons name="event" size={36} color="#9ca3af" />
           </View>
         )}
         
@@ -249,7 +250,7 @@ export default function MemberEvents({ navigation }) {
 
         <View style={styles.eventContent}>
           <View style={styles.eventHeader}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
+            <Text style={styles.eventTitle} numberOfLines={1}>{event.title}</Text>
             {event.featured && (
               <View style={styles.featuredBadge}>
                 <MaterialIcons name="star" size={14} color="#f59e0b" />
@@ -295,17 +296,16 @@ export default function MemberEvents({ navigation }) {
   };
 
   const StatCard = ({ label, count, icon, color }) => (
-  <View style={[styles.statCard, { borderLeftColor: color }]}>
-
-    <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-      <MaterialIcons name={icon} size={18} color={color} />
+    <View style={[styles.statCard, { borderLeftColor: color }]}>
+      <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
+        <MaterialIcons name={icon} size={16} color={color} />
+      </View>
+      <View style={styles.statContent}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statValue, { color }]}>{count}</Text>
+      </View>
     </View>
-    <View style={styles.statContent}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, { color }]}>{count}</Text>
-    </View>
-  </View>
-);
+  );
 
   return (
     <View style={styles.container}>
@@ -313,7 +313,7 @@ export default function MemberEvents({ navigation }) {
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Events</Text>
@@ -321,28 +321,30 @@ export default function MemberEvents({ navigation }) {
           <TouchableOpacity 
             style={styles.profileIcon}
             onPress={() => navigation.navigate('MemberProfile')}
+            activeOpacity={0.7}
           >
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#3b82f6" />
+              <MaterialIcons name="person" size={26} color="#3b82f6" />
             )}
           </TouchableOpacity>
         </View>
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search events..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -360,8 +362,6 @@ export default function MemberEvents({ navigation }) {
           <StatCard label="Ongoing" count={events.filter(e => e.status === 'ongoing').length} icon="play-circle" color="#ffffff" />
         </ScrollView>
       </View>
-
-      
 
       {/* Events List */}
       <FlatList
@@ -386,7 +386,7 @@ export default function MemberEvents({ navigation }) {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Event Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <TouchableOpacity onPress={() => setDetailModalVisible(false)} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -461,7 +461,7 @@ export default function MemberEvents({ navigation }) {
 
                 <View style={styles.detailActions}>
                   {registeredEventIds.includes(selectedEvent.id) ? (
-                    <TouchableOpacity style={[styles.detailActionButton, styles.unregisterButton]} onPress={() => handleUnregister(selectedEvent)}>
+                    <TouchableOpacity style={[styles.detailActionButton, styles.unregisterButton]} onPress={() => handleUnregister(selectedEvent)} activeOpacity={0.7}>
                       <MaterialIcons name="cancel" size={20} color="#ffffff" />
                       <Text style={styles.detailActionText}>Cancel Registration</Text>
                     </TouchableOpacity>
@@ -474,6 +474,7 @@ export default function MemberEvents({ navigation }) {
                       ]}
                       onPress={() => handleRegister(selectedEvent)}
                       disabled={registering || (selectedEvent.capacity && selectedEvent.registeredCount >= selectedEvent.capacity)}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="event" size={20} color="#ffffff" />
                       <Text style={styles.detailActionText}>
@@ -494,7 +495,10 @@ export default function MemberEvents({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
   
   // Blue Header Card
   headerCard: {
@@ -523,10 +527,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -539,8 +545,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
   },
 
@@ -551,7 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginBottom: 12,
     gap: 8,
   },
@@ -559,78 +565,72 @@ const styles = StyleSheet.create({
     flex: 1, 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
-statsContainer: { 
-  maxHeight: 80,
-},
-statsContent: { 
-  gap: 10,
-  alignItems: 'center',
-  paddingHorizontal: 4,
-},
-statCard: {
-  backgroundColor: 'rgba(255,255,255,0.15)',
-  borderRadius: 12,
-  padding: 8,
-  minWidth: 70,
-  width: 75,
-  flexDirection: 'column', // Changed from 'row' to 'column'
-  justifyContent: 'center',
-  alignItems: 'center',
-  height: 70,
-  borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.2)',
-},
-statContent: { 
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginBottom: 2,
-},
-statLabel: { 
-  fontFamily: Fonts.Regular,
-  fontSize: 8, 
-  color: 'rgba(255,255,255,0.8)',
-  textAlign: 'center',
-},
-statValue: { 
-  fontFamily: Fonts.Bold,
-  fontSize: 14, 
-  color: '#ffffff',
-  textAlign: 'center',
-},
-statIcon: { 
-  width: 24, 
-  height: 24, 
-  borderRadius: 12, 
-  justifyContent: 'center', 
-  alignItems: 'center', 
-  backgroundColor: 'rgba(255,255,255,0.2)',
-  marginTop: 2,
-},
-  // Filters
-  filterWrapper: { marginVertical: 12 },
-  filterContent: { paddingHorizontal: 16, gap: 8 },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#ffffff',
+  statsContainer: { 
+    maxHeight: 72,
+  },
+  statsContent: { 
+    gap: 8,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  statCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 10,
+    padding: 6,
+    minWidth: 65,
+    width: 70,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 62,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderLeftWidth: 3,
   },
-  filterChipActive: { backgroundColor: '#3b82f6', borderColor: '#3b82f6' },
-  filterChipText: { 
-    fontFamily: Fonts.SemiBold,
+  statContent: { 
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 1,
+  },
+  statLabel: { 
+    fontFamily: Fonts.Regular,
+    fontSize: 7, 
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  statValue: { 
+    fontFamily: Fonts.Bold,
     fontSize: 13, 
-    color: '#1f2937' 
+    color: '#ffffff',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  filterChipTextActive: { color: '#ffffff' },
+  statIcon: { 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 1,
+  },
 
   // List
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  listContent: { 
+    paddingHorizontal: 16, 
+    paddingBottom: 20,
+    paddingTop: 4,
+  },
   eventCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
@@ -639,10 +639,20 @@ statIcon: {
     borderColor: '#e5e7eb',
     overflow: 'hidden',
     position: 'relative',
-    marginTop: 12,
+    marginTop: 6,
   },
-  eventImage: { width: '100%', height: 150, resizeMode: 'cover' },
-  eventImagePlaceholder: { width: '100%', height: 150, backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
+  eventImage: { 
+    width: '100%', 
+    height: 150, 
+    resizeMode: 'cover' 
+  },
+  eventImagePlaceholder: { 
+    width: '100%', 
+    height: 150, 
+    backgroundColor: '#f3f4f6', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   registeredBadge: {
     position: 'absolute',
     top: 10,
@@ -658,29 +668,53 @@ statIcon: {
   registeredBadgeText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 10 
+    fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  eventContent: { padding: 14 },
-  eventHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eventContent: { 
+    padding: 14 
+  },
+  eventHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
   eventTitle: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
     color: '#1f2937', 
-    flex: 1 
+    flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  featuredBadge: { paddingHorizontal: 4 },
+  featuredBadge: { 
+    paddingHorizontal: 4 
+  },
   eventDescription: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
     color: '#6b7280', 
-    marginTop: 4 
+    marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  eventDetails: { flexDirection: 'row', marginTop: 8, gap: 16 },
-  eventDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventDetails: { 
+    flexDirection: 'row', 
+    marginTop: 8, 
+    gap: 16 
+  },
+  eventDetailItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   eventDetailText: { 
     fontFamily: Fonts.Regular,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventFooter: { 
     flexDirection: 'row', 
@@ -701,77 +735,166 @@ statIcon: {
   },
   statusBadgeText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 11 
+    fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  capacityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  capacityBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4 
+  },
   capacityText: { 
     fontFamily: Fonts.Regular,
     fontSize: 12, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   fullText: { 
     color: '#ef4444', 
     fontFamily: Fonts.SemiBold 
   },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 12 },
+  emptyState: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingTop: 60, 
+    gap: 12 
+  },
   emptyStateText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 16, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: { 
     fontFamily: Fonts.Regular,
     fontSize: 13, 
-    color: '#6b7280' 
+    color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 },
-  modalContent: { backgroundColor: '#ffffff', borderRadius: 16, padding: 20, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 16 
+  },
+  modalContent: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 16, 
+    padding: 20, 
+    maxHeight: '85%' 
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 16 
+  },
   modalTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 20, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailImage: { width: '100%', height: 200, borderRadius: 8, marginBottom: 16, resizeMode: 'cover' },
-  detailSection: { marginBottom: 12 },
+  detailImage: { 
+    width: '100%', 
+    height: 200, 
+    borderRadius: 8, 
+    marginBottom: 16, 
+    resizeMode: 'cover' 
+  },
+  detailSection: { 
+    marginBottom: 12 
+  },
   detailTitle: { 
     fontFamily: Fonts.Bold,
     fontSize: 18, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  detailStatusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  detailStatusRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8, 
+    marginTop: 8 
+  },
+  detailStatusBadge: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12 
+  },
   detailStatusText: { 
     fontFamily: Fonts.SemiBold,
-    fontSize: 12 
+    fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailFeaturedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fef3c7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, gap: 4 },
+  detailFeaturedBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fef3c7', 
+    paddingHorizontal: 8, 
+    paddingVertical: 3, 
+    borderRadius: 12, 
+    gap: 4 
+  },
   detailFeaturedText: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 11, 
-    color: '#f59e0b' 
+    color: '#f59e0b',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailLabel: { 
     fontFamily: Fonts.SemiBold,
     fontSize: 12, 
     color: '#6b7280', 
-    marginBottom: 2 
+    marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   detailValue: { 
     fontFamily: Fonts.Regular,
     fontSize: 14, 
-    color: '#1f2937' 
+    color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
-  detailActions: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  detailActionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 8, gap: 8 },
-  registerButton: { backgroundColor: '#3b82f6' },
-  unregisterButton: { backgroundColor: '#ef4444' },
-  disabledButton: { backgroundColor: '#9ca3af' },
+  detailActions: { 
+    marginTop: 16, 
+    paddingTop: 16, 
+    borderTopWidth: 1, 
+    borderTopColor: '#f3f4f6' 
+  },
+  detailActionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 12, 
+    borderRadius: 8, 
+    gap: 8 
+  },
+  registerButton: { 
+    backgroundColor: '#3b82f6' 
+  },
+  unregisterButton: { 
+    backgroundColor: '#ef4444' 
+  },
+  disabledButton: { 
+    backgroundColor: '#9ca3af' 
+  },
   detailActionText: { 
     fontFamily: Fonts.SemiBold,
     color: '#ffffff', 
-    fontSize: 16 
+    fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -136,9 +136,9 @@ export default function AdminDashboard({ navigation }) {
   };
 
   const QuickActionButton = ({ title, icon, onPress }) => (
-    <TouchableOpacity style={styles.quickActionButton} onPress={onPress}>
+    <TouchableOpacity style={styles.quickActionButton} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.quickActionIconBg}>
-        <MaterialIcons name={icon} size={28} color="#ffffff" />
+        <MaterialIcons name={icon} size={24} color="#ffffff" />
       </View>
       <Text style={styles.quickActionText}>{title}</Text>
     </TouchableOpacity>
@@ -151,7 +151,7 @@ export default function AdminDashboard({ navigation }) {
         <Text style={styles.statValue}>{value}</Text>
       </View>
       <View style={[styles.statIconContainer, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={22} color={color} />
+        <MaterialIcons name={icon} size={20} color={color} />
       </View>
     </View>
   );
@@ -160,6 +160,7 @@ export default function AdminDashboard({ navigation }) {
     <TouchableOpacity 
       style={styles.recentItem}
       onPress={() => navigation.navigate('Members')}
+      activeOpacity={0.7}
     >
       <View style={styles.recentItemLeft}>
         <View style={[styles.recentItemIcon, { backgroundColor: '#FF772215' }]}>
@@ -180,6 +181,7 @@ export default function AdminDashboard({ navigation }) {
     <TouchableOpacity 
       style={styles.recentItem}
       onPress={() => navigation.navigate('Finance')}
+      activeOpacity={0.7}
     >
       <View style={styles.recentItemLeft}>
         <View style={[styles.recentItemIcon, { backgroundColor: '#ef444415' }]}>
@@ -217,6 +219,7 @@ export default function AdminDashboard({ navigation }) {
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('Profile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
@@ -289,7 +292,7 @@ export default function AdminDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Members</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Members')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Members')} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -309,7 +312,7 @@ export default function AdminDashboard({ navigation }) {
         <View style={styles.recentSection}>
           <View style={styles.recentHeader}>
             <Text style={styles.recentTitle}>Recent Donations</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Finance')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Finance')} activeOpacity={0.7}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -350,9 +353,10 @@ export default function AdminDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('NoticeComplaint');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#FF7722' }]}>
-                  <MaterialIcons name="announcement" size={24} color="#ffffff" />
+                  <MaterialIcons name="announcement" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Notices</Text>
@@ -366,9 +370,10 @@ export default function AdminDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('NoticeComplaint');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#ef4444' }]}>
-                  <MaterialIcons name="report-problem" size={24} color="#ffffff" />
+                  <MaterialIcons name="report-problem" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Complaints</Text>
@@ -382,9 +387,10 @@ export default function AdminDashboard({ navigation }) {
                   setFabModalVisible(false);
                   navigation.navigate('NoticeComplaint');
                 }}
+                activeOpacity={0.7}
               >
                 <View style={[styles.modalItemIcon, { backgroundColor: '#f59e0b' }]}>
-                  <MaterialIcons name="lightbulb" size={24} color="#ffffff" />
+                  <MaterialIcons name="lightbulb" size={22} color="#ffffff" />
                 </View>
                 <View style={styles.modalItemTextContainer}>
                   <Text style={styles.modalItemTitle}>View Suggestions</Text>
@@ -395,6 +401,7 @@ export default function AdminDashboard({ navigation }) {
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => setFabModalVisible(false)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.modalCloseButtonText}>Close</Text>
               </TouchableOpacity>
@@ -421,6 +428,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Saffron Header Card
@@ -444,11 +453,15 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#ffffff',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   subGreeting: {
     fontFamily: Fonts.Italic,
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
     width: 70,
@@ -474,7 +487,7 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
   },
   quickActionButton: {
     flex: 1,
@@ -483,8 +496,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   quickActionIconBg: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 12,
     backgroundColor: '#e0661a',
     justifyContent: 'center',
@@ -498,9 +511,11 @@ const styles = StyleSheet.create({
   quickActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 6,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats Grid
@@ -525,6 +540,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    borderLeftWidth: 4,
   },
   statContent: {
     flex: 1,
@@ -534,15 +550,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     marginBottom: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statIconContainer: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -564,11 +584,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     letterSpacing: 0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   viewAllText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItem: {
     flexDirection: 'row',
@@ -588,6 +612,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   recentItemIcon: {
     width: 32,
@@ -601,16 +626,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   recentItemDate: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyState: {
     paddingVertical: 20,
@@ -622,6 +653,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#9ca3af',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   bottomSpacing: {
     height: 20,
@@ -650,6 +683,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItem: {
     flexDirection: 'row',
@@ -661,9 +696,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   modalItemIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -675,21 +710,28 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#f3f4f6',
   },
   modalCloseButtonText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

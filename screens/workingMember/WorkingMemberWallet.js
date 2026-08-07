@@ -459,9 +459,9 @@ export default function WorkingMemberWallet({ navigation }) {
         <MaterialIcons name={icon} size={20} color={color} />
       </View>
       <View style={styles.statContent}>
-        <Text style={[styles.statValue, { color }]}>₹{value.toLocaleString()}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-        {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+        <Text style={[styles.statValue, { color }]} numberOfLines={1}>₹{value.toLocaleString()}</Text>
+        <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
+        {subtitle && <Text style={styles.statSubtitle} numberOfLines={1}>{subtitle}</Text>}
       </View>
     </View>
   );
@@ -495,7 +495,7 @@ export default function WorkingMemberWallet({ navigation }) {
             <MaterialIcons name={icon} size={18} color={color} />
           </View>
           <View style={styles.transactionInfo}>
-            <Text style={styles.transactionTitle}>
+            <Text style={styles.transactionTitle} numberOfLines={1}>
               {title}
               {levelName && !isDonation && ` (${levelName})`}
               {isDonation && ' ❤️'}
@@ -503,7 +503,7 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.transactionDescription} numberOfLines={1}>
               {item.description || (isCredit ? 'Commission earned' : 'Withdrawal')}
             </Text>
-            <Text style={styles.transactionDate}>
+            <Text style={styles.transactionDate} numberOfLines={1}>
               {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'N/A'}
             </Text>
           </View>
@@ -516,7 +516,7 @@ export default function WorkingMemberWallet({ navigation }) {
             {isCredit ? '+' : '-'}₹{item.amount?.toLocaleString() || 0}
           </Text>
           <View style={[styles.transactionStatus, { backgroundColor: statusColor }]}>
-            <Text style={styles.transactionStatusText}>{statusText}</Text>
+            <Text style={styles.transactionStatusText} numberOfLines={1}>{statusText}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -540,8 +540,8 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.breakdownLabel}>Direct Commission</Text>
           </View>
           <View style={styles.breakdownRight}>
-            <Text style={styles.breakdownValue}>₹{commissionSummary.direct.toLocaleString()}</Text>
-            <Text style={styles.breakdownCount}>({commissionSummary.directCount} txns)</Text>
+            <Text style={styles.breakdownValue} numberOfLines={1}>₹{commissionSummary.direct.toLocaleString()}</Text>
+            <Text style={styles.breakdownCount} numberOfLines={1}>({commissionSummary.directCount} txns)</Text>
           </View>
         </View>
         <View style={styles.breakdownItem}>
@@ -550,8 +550,8 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.breakdownLabel}>Secondary Commission</Text>
           </View>
           <View style={styles.breakdownRight}>
-            <Text style={styles.breakdownValue}>₹{commissionSummary.secondary.toLocaleString()}</Text>
-            <Text style={styles.breakdownCount}>({commissionSummary.secondaryCount} txns)</Text>
+            <Text style={styles.breakdownValue} numberOfLines={1}>₹{commissionSummary.secondary.toLocaleString()}</Text>
+            <Text style={styles.breakdownCount} numberOfLines={1}>({commissionSummary.secondaryCount} txns)</Text>
           </View>
         </View>
         <View style={styles.breakdownItem}>
@@ -560,13 +560,13 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.breakdownLabel}>Donation Commission</Text>
           </View>
           <View style={styles.breakdownRight}>
-            <Text style={styles.breakdownValue}>₹{commissionSummary.donation.toLocaleString()}</Text>
-            <Text style={styles.breakdownCount}>({commissionSummary.donationCount} txns)</Text>
+            <Text style={styles.breakdownValue} numberOfLines={1}>₹{commissionSummary.donation.toLocaleString()}</Text>
+            <Text style={styles.breakdownCount} numberOfLines={1}>({commissionSummary.donationCount} txns)</Text>
           </View>
         </View>
         <View style={styles.breakdownTotal}>
           <Text style={styles.breakdownTotalLabel}>Total Commission</Text>
-          <Text style={styles.breakdownTotalValue}>
+          <Text style={styles.breakdownTotalValue} numberOfLines={1}>
             ₹{(commissionSummary.direct + commissionSummary.secondary + commissionSummary.donation).toLocaleString()}
           </Text>
         </View>
@@ -581,13 +581,13 @@ export default function WorkingMemberWallet({ navigation }) {
         <View style={styles.donationCardIcon}>
           <MaterialIcons name="volunteer-activism" size={22} color="#f59e0b" />
         </View>
-        <Text style={styles.donationCardTitle}>Donation Commission</Text>
+        <Text style={styles.donationCardTitle} numberOfLines={1}>Donation Commission</Text>
       </View>
       <View style={styles.donationCardContent}>
-        <Text style={styles.donationCardAmount}>
+        <Text style={styles.donationCardAmount} numberOfLines={1}>
           ₹{walletData.donationCommissionTotal.toLocaleString()}
         </Text>
-        <Text style={styles.donationCardSubtext}>
+        <Text style={styles.donationCardSubtext} numberOfLines={1}>
           Earned from members' donations
         </Text>
       </View>
@@ -628,12 +628,12 @@ export default function WorkingMemberWallet({ navigation }) {
             <Text style={styles.levelProgressTitle}>Current Level</Text>
             <View style={styles.levelBadgeContainer}>
               <Text style={styles.levelBadgeEmoji}>{levelDetails.badge || '⭐'}</Text>
-              <Text style={styles.levelProgressLevel}>{levelDetails.title}</Text>
+              <Text style={styles.levelProgressLevel} numberOfLines={1}>{levelDetails.title}</Text>
             </View>
           </View>
           <View style={styles.levelCommissionRates}>
-            <Text style={styles.levelRateText}>Direct: {levelDetails.directCommission}%</Text>
-            <Text style={styles.levelRateText}>Secondary: {levelDetails.secondaryCommission}%</Text>
+            <Text style={styles.levelRateText} numberOfLines={1}>Direct: {levelDetails.directCommission}%</Text>
+            <Text style={styles.levelRateText} numberOfLines={1}>Secondary: {levelDetails.secondaryCommission}%</Text>
           </View>
         </View>
 
@@ -643,10 +643,10 @@ export default function WorkingMemberWallet({ navigation }) {
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${Math.min(progress, 100)}%`, backgroundColor: levelDetails.color }]} />
               </View>
-              <Text style={styles.progressText}>{Math.round(Math.min(progress, 100))}%</Text>
+              <Text style={styles.progressText} numberOfLines={1}>{Math.round(Math.min(progress, 100))}%</Text>
             </View>
             <View style={styles.nextLevelInfo}>
-              <Text style={styles.nextLevelText}>
+              <Text style={styles.nextLevelText} numberOfLines={2}>
                 {directCount} / {nextLevelDetails.minMembers} members needed for 
                 <Text style={[styles.nextLevelHighlight, { color: nextLevelDetails.color }]}>
                   {nextLevelDetails.title}
@@ -666,25 +666,25 @@ export default function WorkingMemberWallet({ navigation }) {
   const MonthlyComparison = () => (
     <View style={styles.monthlyComparisonCard}>
       <View style={styles.monthlyComparisonItem}>
-        <Text style={styles.monthlyComparisonLabel}>This Month</Text>
-        <Text style={[styles.monthlyComparisonValue, { color: '#10b981' }]}>
+        <Text style={styles.monthlyComparisonLabel} numberOfLines={1}>This Month</Text>
+        <Text style={[styles.monthlyComparisonValue, { color: '#10b981' }]} numberOfLines={1}>
           ₹{walletData.thisMonthEarnings.toLocaleString()}
         </Text>
       </View>
       <View style={styles.monthlyComparisonDivider} />
       <View style={styles.monthlyComparisonItem}>
-        <Text style={styles.monthlyComparisonLabel}>Last Month</Text>
-        <Text style={[styles.monthlyComparisonValue, { color: '#8b5cf6' }]}>
+        <Text style={styles.monthlyComparisonLabel} numberOfLines={1}>Last Month</Text>
+        <Text style={[styles.monthlyComparisonValue, { color: '#8b5cf6' }]} numberOfLines={1}>
           ₹{walletData.lastMonthEarnings.toLocaleString()}
         </Text>
       </View>
       <View style={styles.monthlyComparisonDivider} />
       <View style={styles.monthlyComparisonItem}>
-        <Text style={styles.monthlyComparisonLabel}>Difference</Text>
+        <Text style={styles.monthlyComparisonLabel} numberOfLines={1}>Difference</Text>
         <Text style={[
           styles.monthlyComparisonValue,
           { color: walletData.thisMonthEarnings >= walletData.lastMonthEarnings ? '#10b981' : '#ef4444' }
-        ]}>
+        ]} numberOfLines={1}>
           {walletData.thisMonthEarnings >= walletData.lastMonthEarnings ? '▲' : '▼'} 
           ₹{(walletData.thisMonthEarnings - walletData.lastMonthEarnings).toLocaleString()}
         </Text>
@@ -711,7 +711,7 @@ export default function WorkingMemberWallet({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Wallet</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>My Wallet</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
               <MaterialIcons name="share" size={22} color="#ffffff" />
@@ -724,8 +724,8 @@ export default function WorkingMemberWallet({ navigation }) {
 
         {/* Balance Card inside header */}
         <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>₹{walletData.balance.toLocaleString()}</Text>
+          <Text style={styles.balanceLabel} numberOfLines={1}>Available Balance</Text>
+          <Text style={styles.balanceAmount} numberOfLines={1}>₹{walletData.balance.toLocaleString()}</Text>
           <View style={styles.balanceActions}>
             <TouchableOpacity
               style={[styles.withdrawButton, walletData.balance <= 0 && styles.withdrawButtonDisabled]}
@@ -733,7 +733,7 @@ export default function WorkingMemberWallet({ navigation }) {
               disabled={walletData.balance <= 0}
             >
               <MaterialIcons name="payment" size={18} color="#ffffff" />
-              <Text style={styles.withdrawButtonText}>Withdraw</Text>
+              <Text style={styles.withdrawButtonText} numberOfLines={1}>Withdraw</Text>
             </TouchableOpacity>
             {walletData.balance > 0 && (
               <TouchableOpacity
@@ -743,14 +743,14 @@ export default function WorkingMemberWallet({ navigation }) {
                   setWithdrawModalVisible(true);
                 }}
               >
-                <Text style={styles.withdrawAllText}>Withdraw All</Text>
+                <Text style={styles.withdrawAllText} numberOfLines={1}>Withdraw All</Text>
               </TouchableOpacity>
             )}
           </View>
           {walletData.pendingWithdrawals > 0 && (
             <View style={styles.pendingWithdrawalBadge}>
               <MaterialIcons name="pending" size={14} color="#f59e0b" />
-              <Text style={styles.pendingWithdrawalText}>
+              <Text style={styles.pendingWithdrawalText} numberOfLines={1}>
                 {walletData.pendingWithdrawals} pending withdrawal{walletData.pendingWithdrawals > 1 ? 's' : ''}
               </Text>
             </View>
@@ -803,10 +803,10 @@ export default function WorkingMemberWallet({ navigation }) {
         >
           <View style={styles.commissionSummaryLeft}>
             <MaterialIcons name="receipt" size={20} color="#8b5cf6" />
-            <Text style={styles.commissionSummaryTitle}>Commission Summary</Text>
+            <Text style={styles.commissionSummaryTitle} numberOfLines={1}>Commission Summary</Text>
           </View>
           <View style={styles.commissionSummaryRight}>
-            <Text style={styles.commissionSummaryTotal}>
+            <Text style={styles.commissionSummaryTotal} numberOfLines={1}>
               ₹{(commissionSummary.direct + commissionSummary.secondary + commissionSummary.donation).toLocaleString()}
             </Text>
             <MaterialIcons 
@@ -822,25 +822,25 @@ export default function WorkingMemberWallet({ navigation }) {
       {/* Transaction History - FIXED SCROLLING */}
       <View style={styles.historySection}>
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>Transaction History</Text>
+          <Text style={styles.historyTitle} numberOfLines={1}>Transaction History</Text>
           <View style={styles.historyControls}>
             <TouchableOpacity
               style={[styles.filterButton, filterType === 'all' && styles.filterButtonActive]}
               onPress={() => setFilterType('all')}
             >
-              <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]}>All</Text>
+              <Text style={[styles.filterText, filterType === 'all' && styles.filterTextActive]} numberOfLines={1}>All</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.filterButton, filterType === 'completed' && styles.filterButtonActive]}
               onPress={() => setFilterType('completed')}
             >
-              <Text style={[styles.filterText, filterType === 'completed' && styles.filterTextActive]}>Completed</Text>
+              <Text style={[styles.filterText, filterType === 'completed' && styles.filterTextActive]} numberOfLines={1}>Completed</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.filterButton, filterType === 'pending' && styles.filterButtonActive]}
               onPress={() => setFilterType('pending')}
             >
-              <Text style={[styles.filterText, filterType === 'pending' && styles.filterTextActive]}>Pending</Text>
+              <Text style={[styles.filterText, filterType === 'pending' && styles.filterTextActive]} numberOfLines={1}>Pending</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -850,21 +850,21 @@ export default function WorkingMemberWallet({ navigation }) {
             style={[styles.tabButton, selectedTab === 'all' && styles.tabButtonActive]}
             onPress={() => setSelectedTab('all')}
           >
-            <Text style={[styles.tabText, selectedTab === 'all' && styles.tabTextActive]}>All</Text>
+            <Text style={[styles.tabText, selectedTab === 'all' && styles.tabTextActive]} numberOfLines={1}>All</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, selectedTab === 'credit' && styles.tabButtonActive]}
             onPress={() => setSelectedTab('credit')}
           >
             <MaterialIcons name="arrow-downward" size={14} color={selectedTab === 'credit' ? '#8b5cf6' : '#6b7280'} />
-            <Text style={[styles.tabText, selectedTab === 'credit' && styles.tabTextActive]}>Credits</Text>
+            <Text style={[styles.tabText, selectedTab === 'credit' && styles.tabTextActive]} numberOfLines={1}>Credits</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, selectedTab === 'debit' && styles.tabButtonActive]}
             onPress={() => setSelectedTab('debit')}
           >
             <MaterialIcons name="arrow-upward" size={14} color={selectedTab === 'debit' ? '#ef4444' : '#6b7280'} />
-            <Text style={[styles.tabText, selectedTab === 'debit' && styles.tabTextActive]}>Debits</Text>
+            <Text style={[styles.tabText, selectedTab === 'debit' && styles.tabTextActive]} numberOfLines={1}>Debits</Text>
           </TouchableOpacity>
         </View>
 
@@ -899,7 +899,7 @@ export default function WorkingMemberWallet({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Withdraw Funds</Text>
+              <Text style={styles.modalTitle} numberOfLines={1}>Withdraw Funds</Text>
               <TouchableOpacity onPress={() => setWithdrawModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
@@ -908,13 +908,13 @@ export default function WorkingMemberWallet({ navigation }) {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalBody}>
                 <View style={styles.modalBalanceContainer}>
-                  <Text style={styles.modalBalanceLabel}>Available Balance</Text>
-                  <Text style={styles.modalBalance}>₹{walletData.balance.toLocaleString()}</Text>
-                  <Text style={styles.modalBalanceSub}>Minimum withdrawal: ₹100</Text>
+                  <Text style={styles.modalBalanceLabel} numberOfLines={1}>Available Balance</Text>
+                  <Text style={styles.modalBalance} numberOfLines={1}>₹{walletData.balance.toLocaleString()}</Text>
+                  <Text style={styles.modalBalanceSub} numberOfLines={1}>Minimum withdrawal: ₹100</Text>
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Amount (₹) *</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>Amount (₹) *</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={withdrawAmount}
@@ -926,7 +926,7 @@ export default function WorkingMemberWallet({ navigation }) {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Account Holder Name *</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>Account Holder Name *</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={bankDetails.accountHolderName}
@@ -937,7 +937,7 @@ export default function WorkingMemberWallet({ navigation }) {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Bank Name *</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>Bank Name *</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={bankDetails.bankName}
@@ -948,7 +948,7 @@ export default function WorkingMemberWallet({ navigation }) {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Account Number *</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>Account Number *</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={bankDetails.accountNumber}
@@ -960,7 +960,7 @@ export default function WorkingMemberWallet({ navigation }) {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>IFSC Code *</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>IFSC Code *</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={bankDetails.ifscCode}
@@ -972,7 +972,7 @@ export default function WorkingMemberWallet({ navigation }) {
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>UPI ID (Optional)</Text>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>UPI ID (Optional)</Text>
                   <TextInput
                     style={styles.fieldInput}
                     value={upiId}
@@ -992,14 +992,14 @@ export default function WorkingMemberWallet({ navigation }) {
                   ) : (
                     <>
                       <MaterialIcons name="check-circle" size={20} color="#ffffff" />
-                      <Text style={styles.submitButtonText}>Request Withdrawal</Text>
+                      <Text style={styles.submitButtonText} numberOfLines={1}>Request Withdrawal</Text>
                     </>
                   )}
                 </TouchableOpacity>
 
                 <View style={styles.termsContainer}>
                   <MaterialIcons name="info" size={16} color="#6b7280" />
-                  <Text style={styles.termsText}>
+                  <Text style={styles.termsText} numberOfLines={2}>
                     Minimum withdrawal: ₹100. Processing time: 24-48 hours.
                   </Text>
                 </View>
@@ -1040,6 +1040,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1073,6 +1074,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginTop: 4,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   withdrawButton: {
     flexDirection: 'row',
@@ -1149,6 +1152,7 @@ const styles = StyleSheet.create({
   },
   statContent: {
     alignItems: 'center',
+    width: '100%',
   },
   statValue: {
     fontFamily: Fonts.Bold,
@@ -1353,16 +1357,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   commissionSummaryTitle: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    flexShrink: 1,
   },
   commissionSummaryRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 0,
   },
   commissionSummaryTotal: {
     fontFamily: Fonts.Bold,
@@ -1396,6 +1403,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 1,
   },
   breakdownDot: {
     width: 8,
@@ -1406,6 +1414,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#1f2937',
+    flexShrink: 1,
   },
   breakdownRight: {
     alignItems: 'flex-end',
@@ -1449,6 +1458,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+    flexWrap: 'wrap',
   },
   historyTitle: {
     fontFamily: Fonts.SemiBold,
@@ -1547,6 +1557,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    flexShrink: 0,
   },
   transactionInfo: {
     flex: 1,
@@ -1569,6 +1580,7 @@ const styles = StyleSheet.create({
   },
   transactionRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   transactionAmount: {
     fontFamily: Fonts.Bold,
@@ -1591,16 +1603,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     gap: 8,
+    paddingHorizontal: 20,
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    textAlign: 'center',
   },
 
   loadingContainer: {
@@ -1638,6 +1653,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    flex: 1,
   },
   modalBody: {
     gap: 12,
@@ -1709,11 +1725,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     marginTop: 8,
+    paddingHorizontal: 4,
   },
   termsText: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     textAlign: 'center',
+    flexShrink: 1,
   },
 });

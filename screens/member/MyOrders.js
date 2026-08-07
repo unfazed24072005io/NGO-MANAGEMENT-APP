@@ -199,9 +199,10 @@ Thank you for your order! 🙏`;
         };
         handleFilterPress(statusMap[label] || label);
       }}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIcon, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={18} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
       <View style={styles.statContent}>
         <Text style={styles.statLabel}>{label}</Text>
@@ -223,6 +224,7 @@ Thank you for your order! 🙏`;
           setSelectedOrder(order);
           setDetailModalVisible(true);
         }}
+        activeOpacity={0.7}
       >
         <View style={styles.orderHeader}>
           <View style={styles.orderIdContainer}>
@@ -316,7 +318,7 @@ Thank you for your order! 🙏`;
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>My Orders</Text>
@@ -324,11 +326,12 @@ Thank you for your order! 🙏`;
           <TouchableOpacity 
             style={styles.profileIcon}
             onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
           >
             {profilePhoto ? (
               <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
             ) : (
-              <MaterialIcons name="person" size={28} color="#3b82f6" />
+              <MaterialIcons name="person" size={26} color="#3b82f6" />
             )}
           </TouchableOpacity>
         </View>
@@ -354,7 +357,7 @@ Thank you for your order! 🙏`;
           <Text style={styles.filterIndicatorText}>
             Showing: <Text style={styles.filterIndicatorHighlight}>{filterStatus}</Text> orders
           </Text>
-          <TouchableOpacity onPress={() => handleFilterPress('All')}>
+          <TouchableOpacity onPress={() => handleFilterPress('All')} activeOpacity={0.7}>
             <Text style={styles.filterClear}>Clear</Text>
           </TouchableOpacity>
         </View>
@@ -374,6 +377,7 @@ Thank you for your order! 🙏`;
             <TouchableOpacity 
               style={styles.shopButton}
               onPress={() => navigation.navigate('Shop')}
+              activeOpacity={0.7}
             >
               <Text style={styles.shopButtonText}>Start Shopping</Text>
             </TouchableOpacity>
@@ -382,6 +386,7 @@ Thank you for your order! 🙏`;
             <TouchableOpacity 
               style={styles.shopButton}
               onPress={() => handleFilterPress('All')}
+              activeOpacity={0.7}
             >
               <Text style={styles.shopButtonText}>View All Orders</Text>
             </TouchableOpacity>
@@ -417,7 +422,7 @@ Thank you for your order! 🙏`;
               <TouchableOpacity onPress={() => {
                 setDetailModalVisible(false);
                 setPaymentDetails(null);
-              }}>
+              }} activeOpacity={0.7}>
                 <MaterialIcons name="close" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -488,7 +493,7 @@ Thank you for your order! 🙏`;
                           <Image source={{ uri: item.images[0] }} style={styles.modalItemImage} />
                         ) : (
                           <View style={styles.modalItemImagePlaceholder}>
-                            <MaterialIcons name="image" size={20} color="#d1d5db" />
+                            <MaterialIcons name="image" size={18} color="#d1d5db" />
                           </View>
                         )}
                       </View>
@@ -591,6 +596,7 @@ Thank you for your order! 🙏`;
                   <TouchableOpacity 
                     style={styles.viewPaymentButton}
                     onPress={() => handleViewPaymentDetails(selectedOrder)}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="visibility" size={16} color="#3b82f6" />
                     <Text style={styles.viewPaymentButtonText}>View Full Payment Details</Text>
@@ -602,6 +608,7 @@ Thank you for your order! 🙏`;
                   <TouchableOpacity 
                     style={[styles.modalActionButton, styles.modalActionShare]}
                     onPress={() => handleShareOrder(selectedOrder)}
+                    activeOpacity={0.7}
                   >
                     <MaterialIcons name="share" size={18} color="#ffffff" />
                     <Text style={styles.modalActionText}>Share</Text>
@@ -635,6 +642,7 @@ Thank you for your order! 🙏`;
                           ]
                         );
                       }}
+                      activeOpacity={0.7}
                     >
                       <MaterialIcons name="cancel" size={18} color="#ffffff" />
                       <Text style={styles.modalActionText}>Cancel Order</Text>
@@ -648,6 +656,7 @@ Thank you for your order! 🙏`;
                     setDetailModalVisible(false);
                     setPaymentDetails(null);
                   }}
+                  activeOpacity={0.7}
                 >
                   <Text style={styles.modalCloseButtonText}>Close</Text>
                 </TouchableOpacity>
@@ -693,11 +702,13 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -709,29 +720,29 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
 
   statsContainer: { 
-    maxHeight: 80,
+    maxHeight: 72,
   },
   statsContent: { 
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
     paddingHorizontal: 4,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
-    padding: 8,
-    minWidth: 70,
-    width: 75,
+    borderRadius: 10,
+    padding: 6,
+    minWidth: 62,
+    width: 68,
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 70,
+    height: 62,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -742,28 +753,32 @@ const styles = StyleSheet.create({
   statContent: { 
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statLabel: { 
     fontFamily: Fonts.Regular,
-    fontSize: 8, 
+    fontSize: 7, 
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statValue: { 
     fontFamily: Fonts.Bold,
-    fontSize: 14, 
+    fontSize: 13, 
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statIcon: { 
-    width: 24, 
-    height: 24, 
-    borderRadius: 12, 
+    width: 22, 
+    height: 22, 
+    borderRadius: 11, 
     justifyContent: 'center', 
     alignItems: 'center', 
     backgroundColor: 'rgba(255,255,255,0.2)',
-    marginTop: 2,
+    marginTop: 1,
   },
 
   filterIndicator: {
@@ -780,6 +795,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   filterIndicatorHighlight: {
     fontFamily: Fonts.SemiBold,
@@ -789,6 +806,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   loadingContainer: {
@@ -802,6 +821,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
@@ -831,12 +852,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderStatusBadge: {
     flexDirection: 'row',
@@ -849,6 +874,8 @@ const styles = StyleSheet.create({
   orderStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderBody: {
     flexDirection: 'row',
@@ -862,11 +889,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDiscount: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderPriceContainer: {
     alignItems: 'flex-end',
@@ -876,11 +907,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     textDecorationLine: 'line-through',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderTotal: {
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderFooter: {
     flexDirection: 'row',
@@ -900,6 +935,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentIdBadge: {
     backgroundColor: '#f3f4f6',
@@ -911,6 +948,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   emptyState: {
@@ -924,12 +963,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#1f2937',
     marginTop: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
     marginTop: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   shopButton: {
     backgroundColor: '#3b82f6',
@@ -942,6 +985,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Enhanced Modal Styles
@@ -967,6 +1012,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalOrderHeader: {
     marginBottom: 16,
@@ -986,12 +1033,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalOrderDate: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalStatusBadge: {
     flexDirection: 'row',
@@ -1004,6 +1055,8 @@ const styles = StyleSheet.create({
   modalStatusText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalOrderTypeBadge: {
     flexDirection: 'row',
@@ -1019,6 +1072,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalSummaryGrid: {
     flexDirection: 'row',
@@ -1039,12 +1094,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalSummaryLabel: {
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalSection: {
     marginBottom: 16,
@@ -1059,11 +1118,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalSectionCount: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItem: {
     flexDirection: 'row',
@@ -1074,20 +1137,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   modalItemImageContainer: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: '#f3f4f6',
   },
   modalItemImage: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     resizeMode: 'cover',
   },
   modalItemImagePlaceholder: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
@@ -1099,12 +1162,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemQty: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemPriceInfo: {
     flex: 1,
@@ -1114,12 +1181,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalItemTotal: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#10b981',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceRow: {
     flexDirection: 'row',
@@ -1130,21 +1201,29 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceValue: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceLabelDiscount: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceValueDiscount: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceDivider: {
     height: 1,
@@ -1158,11 +1237,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalPriceTotalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoCard: {
     backgroundColor: '#f9fafb',
@@ -1182,6 +1265,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginLeft: 8,
     width: 50,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoValue: {
     fontFamily: Fonts.Regular,
@@ -1189,6 +1274,8 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     flex: 1,
     textAlign: 'right',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalInfoAddress: {
     fontSize: 12,
@@ -1211,6 +1298,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalActions: {
     flexDirection: 'row',
@@ -1239,17 +1328,22 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   modalCloseButton: {
     backgroundColor: '#6b7280',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 4,
   },
   modalCloseButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

@@ -6,8 +6,18 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f8fafc"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#f8fafc"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,7 +26,12 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.callhubpro567567567.NGOAppFresh"
+      "package": "com.callhubpro567567567.NGOAppFresh",
+      "splash": {
+        "image": "./assets/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#f8fafc"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -24,7 +39,9 @@
     "plugins": [
       "expo-sharing",
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      "expo-splash-screen",
+      "expo-asset"
     ],
     "extra": {
       "eas": {

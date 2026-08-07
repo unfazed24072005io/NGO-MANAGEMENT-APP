@@ -1,12 +1,16 @@
 // screens/admin/EmployeeManagement.js - Updated with Password Field
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, FlatList, Image, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Modal, ActivityIndicator, RefreshControl, FlatList, Image, Switch, Platform, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, getDoc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import * as ImagePicker from 'expo-image-picker';
 import { Fonts } from '../../config/fonts';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width, height } = Dimensions.get('window');
+const isSmallDevice = width < 375;
 
 export default function EmployeeManagement({ navigation }) {
   const [employees, setEmployees] = useState([]);
@@ -124,7 +128,6 @@ export default function EmployeeManagement({ navigation }) {
       return;
     }
 
-    // Validate password if canLogin is true
     if (formData.canLogin && !editingEmployee && !formData.password) {
       Alert.alert('Error', 'Password is required when enabling login');
       return;
@@ -137,7 +140,6 @@ export default function EmployeeManagement({ navigation }) {
 
     setLoading(true);
     try {
-      // Check if email already exists
       const emailQuery = query(collection(db, 'employees'), where('email', '==', formData.email));
       const emailSnap = await getDocs(emailQuery);
       if (!emailSnap.empty && !editingEmployee) {
@@ -172,12 +174,9 @@ export default function EmployeeManagement({ navigation }) {
       if (editingEmployee) {
         await updateDoc(doc(db, 'employees', editingEmployee.id), data);
         
-        // If password is provided and canLogin is true, update auth password
         if (formData.canLogin && formData.password) {
-          // Note: Updating password requires re-authentication or admin SDK
-          // We'll store the password hash in Firestore for verification
           await updateDoc(doc(db, 'employees', editingEmployee.id), {
-            passwordHash: formData.password // In production, use proper hashing
+            passwordHash: formData.password
           });
         }
         
@@ -186,10 +185,8 @@ export default function EmployeeManagement({ navigation }) {
         data.createdAt = new Date().toISOString();
         data.createdBy = auth.currentUser?.uid || 'admin';
         
-        // Create employee document
         const docRef = await addDoc(collection(db, 'employees'), data);
         
-        // If canLogin is true, create auth user
         if (formData.canLogin && formData.password) {
           try {
             const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
@@ -198,7 +195,6 @@ export default function EmployeeManagement({ navigation }) {
               photoURL: formData.profilePhoto || null
             });
             
-            // Store employee reference in user doc
             await setDoc(doc(db, 'users', userCredential.user.uid), {
               employeeId: docRef.id,
               fullName: formData.fullName,
@@ -212,13 +208,9 @@ export default function EmployeeManagement({ navigation }) {
               isEmployee: true
             });
             
-            // Update employee with auth uid
             await updateDoc(doc(db, 'employees', docRef.id), {
               authUid: userCredential.user.uid
             });
-            
-            // Sign out the employee (they should login separately)
-            // Note: We need to handle this carefully since admin is logged in
           } catch (authError) {
             console.error('Auth creation error:', authError);
             Alert.alert('Warning', 'Employee added but login creation failed: ' + authError.message);
@@ -453,11 +445,11 @@ export default function EmployeeManagement({ navigation }) {
   const StatCard = ({ label, count, icon, color }) => (
     <View style={[styles.statCard, { borderLeftColor: color }]}>
       <View style={styles.statIconContainer}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={isSmallDevice ? 16 : 20} color={color} />
       </View>
       <View>
-        <Text style={styles.statCount}>{count}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={[styles.statCount, { fontSize: isSmallDevice ? 12 : 14 }]}>{count}</Text>
+        <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 8 : 9 }]}>{label}</Text>
       </View>
     </View>
   );
@@ -478,19 +470,23 @@ export default function EmployeeManagement({ navigation }) {
             <Image source={{ uri: employee.profilePhoto }} style={styles.employeeAvatar} />
           ) : (
             <View style={styles.employeeAvatarPlaceholder}>
-              <Text style={styles.employeeAvatarText}>
+              <Text style={[styles.employeeAvatarText, { fontSize: isSmallDevice ? 16 : 18 }]}>
                 {employee.fullName?.charAt(0) || '?'}
               </Text>
             </View>
           )}
-          <View>
-            <Text style={styles.employeeName}>{employee.fullName}</Text>
-            <Text style={styles.employeePosition}>{employee.position}</Text>
-            <Text style={styles.employeeIdText}>ID: {employee.employeeId}</Text>
+          <View style={styles.employeeTextInfo}>
+            <Text style={[styles.employeeName, { fontSize: isSmallDevice ? 13 : 14 }]} numberOfLines={1}>
+              {employee.fullName}
+            </Text>
+            <Text style={[styles.employeePosition, { fontSize: isSmallDevice ? 10 : 12 }]} numberOfLines={1}>
+              {employee.position}
+            </Text>
+            <Text style={[styles.employeeIdText, { fontSize: isSmallDevice ? 9 : 10 }]}>ID: {employee.employeeId}</Text>
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(employee.status) + '15' }]}>
-          <Text style={[styles.statusBadgeText, { color: getStatusColor(employee.status) }]}>
+          <Text style={[styles.statusBadgeText, { color: getStatusColor(employee.status), fontSize: isSmallDevice ? 9 : 10 }]}>
             {employee.status || 'active'}
           </Text>
         </View>
@@ -498,23 +494,27 @@ export default function EmployeeManagement({ navigation }) {
 
       <View style={styles.employeeDetails}>
         <View style={styles.employeeDetail}>
-          <MaterialIcons name="email" size={14} color="#6b7280" />
-          <Text style={styles.employeeDetailText}>{employee.email}</Text>
+          <MaterialIcons name="email" size={isSmallDevice ? 12 : 14} color="#6b7280" />
+          <Text style={[styles.employeeDetailText, { fontSize: isSmallDevice ? 9 : 10 }]} numberOfLines={1}>
+            {employee.email}
+          </Text>
         </View>
         <View style={styles.employeeDetail}>
-          <MaterialIcons name="phone" size={14} color="#6b7280" />
-          <Text style={styles.employeeDetailText}>{employee.phone || 'N/A'}</Text>
+          <MaterialIcons name="phone" size={isSmallDevice ? 12 : 14} color="#6b7280" />
+          <Text style={[styles.employeeDetailText, { fontSize: isSmallDevice ? 9 : 10 }]}>{employee.phone || 'N/A'}</Text>
         </View>
         <View style={styles.employeeDetail}>
-          <MaterialIcons name="business" size={14} color="#6b7280" />
-          <Text style={styles.employeeDetailText}>{employee.department}</Text>
+          <MaterialIcons name="business" size={isSmallDevice ? 12 : 14} color="#6b7280" />
+          <Text style={[styles.employeeDetailText, { fontSize: isSmallDevice ? 9 : 10 }]} numberOfLines={1}>
+            {employee.department}
+          </Text>
         </View>
       </View>
 
       {employee.canLogin && (
         <View style={styles.loginBadge}>
-          <MaterialIcons name="check-circle" size={14} color="#10b981" />
-          <Text style={styles.loginBadgeText}>Login Enabled</Text>
+          <MaterialIcons name="check-circle" size={12} color="#10b981" />
+          <Text style={[styles.loginBadgeText, { fontSize: isSmallDevice ? 9 : 10 }]}>Login Enabled</Text>
         </View>
       )}
 
@@ -527,31 +527,31 @@ export default function EmployeeManagement({ navigation }) {
             setModalVisible(true);
           }}
         >
-          <MaterialIcons name="edit" size={14} color="#ffffff" />
-          <Text style={styles.actionButtonText}>Edit</Text>
+          <MaterialIcons name="edit" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+          <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 8 : 10 }]}>Edit</Text>
         </TouchableOpacity>
         {employee.status === 'active' ? (
           <TouchableOpacity 
             style={[styles.actionButton, styles.suspendButton]}
             onPress={() => handleStatusUpdate(employee.id, 'suspended')}
           >
-            <MaterialIcons name="block" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Suspend</Text>
+            <MaterialIcons name="block" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 8 : 10 }]}>Suspend</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
             style={[styles.actionButton, styles.activateButton]}
             onPress={() => handleStatusUpdate(employee.id, 'active')}
           >
-            <MaterialIcons name="check-circle" size={14} color="#ffffff" />
-            <Text style={styles.actionButtonText}>Activate</Text>
+            <MaterialIcons name="check-circle" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+            <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 8 : 10 }]}>Activate</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity 
           style={[styles.actionButton, styles.deleteButton]}
           onPress={() => handleDelete(employee.id)}
         >
-          <MaterialIcons name="delete" size={14} color="#ffffff" />
+          <MaterialIcons name="delete" size={isSmallDevice ? 16 : 18} color="#ffffff" />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -560,21 +560,27 @@ export default function EmployeeManagement({ navigation }) {
   const TaskItem = ({ task }) => (
     <View style={styles.taskItem}>
       <View style={styles.taskHeader}>
-        <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
+        <Text style={[styles.taskTitle, { fontSize: isSmallDevice ? 12 : 14 }]} numberOfLines={1}>
+          {task.title}
+        </Text>
         <View style={[styles.taskStatusBadge, { backgroundColor: getTaskStatusColor(task.status) + '15' }]}>
-          <Text style={[styles.taskStatusText, { color: getTaskStatusColor(task.status) }]}>
+          <Text style={[styles.taskStatusText, { color: getTaskStatusColor(task.status), fontSize: isSmallDevice ? 8 : 10 }]}>
             {task.status || 'pending'}
           </Text>
         </View>
       </View>
-      <Text style={styles.taskDescription} numberOfLines={2}>{task.description || 'No description'}</Text>
+      <Text style={[styles.taskDescription, { fontSize: isSmallDevice ? 11 : 12 }]} numberOfLines={2}>
+        {task.description || 'No description'}
+      </Text>
       <View style={styles.taskFooter}>
         <View style={[styles.taskPriorityBadge, { backgroundColor: getPriorityColor(task.priority) + '15' }]}>
-          <Text style={[styles.taskPriorityText, { color: getPriorityColor(task.priority) }]}>
+          <Text style={[styles.taskPriorityText, { color: getPriorityColor(task.priority), fontSize: isSmallDevice ? 8 : 10 }]}>
             {task.priority || 'medium'}
           </Text>
         </View>
-        <Text style={styles.taskDueDate}>Due: {task.dueDate || 'N/A'}</Text>
+        <Text style={[styles.taskDueDate, { fontSize: isSmallDevice ? 10 : 11 }]}>
+          Due: {task.dueDate || 'N/A'}
+        </Text>
       </View>
       <View style={styles.taskActions}>
         {task.status === 'pending' && (
@@ -582,8 +588,8 @@ export default function EmployeeManagement({ navigation }) {
             style={[styles.taskActionButton, styles.taskStartButton]}
             onPress={() => handleTaskStatusUpdate(task.id, 'in-progress')}
           >
-            <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
-            <Text style={styles.taskActionText}>Start</Text>
+            <MaterialIcons name="play-arrow" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+            <Text style={[styles.taskActionText, { fontSize: isSmallDevice ? 8 : 9 }]}>Start</Text>
           </TouchableOpacity>
         )}
         {task.status === 'in-progress' && (
@@ -591,8 +597,8 @@ export default function EmployeeManagement({ navigation }) {
             style={[styles.taskActionButton, styles.taskCompleteButton]}
             onPress={() => handleTaskStatusUpdate(task.id, 'completed')}
           >
-            <MaterialIcons name="check" size={14} color="#ffffff" />
-            <Text style={styles.taskActionText}>Complete</Text>
+            <MaterialIcons name="check" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+            <Text style={[styles.taskActionText, { fontSize: isSmallDevice ? 8 : 9 }]}>Complete</Text>
           </TouchableOpacity>
         )}
         {task.status !== 'completed' && task.status !== 'cancelled' && (
@@ -600,8 +606,8 @@ export default function EmployeeManagement({ navigation }) {
             style={[styles.taskActionButton, styles.taskCancelButton]}
             onPress={() => handleTaskStatusUpdate(task.id, 'cancelled')}
           >
-            <MaterialIcons name="cancel" size={14} color="#ffffff" />
-            <Text style={styles.taskActionText}>Cancel</Text>
+            <MaterialIcons name="cancel" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+            <Text style={[styles.taskActionText, { fontSize: isSmallDevice ? 8 : 9 }]}>Cancel</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity 
@@ -621,590 +627,618 @@ export default function EmployeeManagement({ navigation }) {
             setTaskModalVisible(true);
           }}
         >
-          <MaterialIcons name="edit" size={14} color="#ffffff" />
-          <Text style={styles.taskActionText}>Edit</Text>
+          <MaterialIcons name="edit" size={isSmallDevice ? 12 : 14} color="#ffffff" />
+          <Text style={[styles.taskActionText, { fontSize: isSmallDevice ? 8 : 9 }]}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.taskActionButton, styles.taskDeleteButton]}
           onPress={() => handleTaskDelete(task.id)}
         >
-          <MaterialIcons name="delete" size={14} color="#ffffff" />
+          <MaterialIcons name="delete" size={isSmallDevice ? 16 : 18} color="#ffffff" />
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Employee Management</Text>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setModalVisible(true);
-            }}
-          >
-            <MaterialIcons name="add" size={20} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search employees by name, email, ID..."
-            placeholderTextColor="#9ca3af"
-            value={searchQuery}
-            onChangeText={handleSearch}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <StatCard 
-            label="Total" 
-            count={employees.length} 
-            icon="people" 
-            color="#FF7722" 
-          />
-          <StatCard 
-            label="Active" 
-            count={employees.filter(e => e.status === 'active').length} 
-            icon="check-circle" 
-            color="#10b981" 
-          />
-          <StatCard 
-            label="Suspended" 
-            count={employees.filter(e => e.status === 'suspended').length} 
-            icon="block" 
-            color="#ef4444" 
-          />
-          <StatCard 
-            label="Can Login" 
-            count={employees.filter(e => e.canLogin).length} 
-            icon="login" 
-            color="#8b5cf6" 
-          />
-        </View>
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF7722" />
+        <Text style={[styles.loadingText, { fontSize: isSmallDevice ? 13 : 14 }]}>Loading Employees...</Text>
       </View>
+    );
+  }
 
-      {/* Employee List */}
-      <FlatList
-        data={filteredEmployees}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <EmployeeCard employee={item} />}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialIcons name="people" size={44} color="#d1d5db" />
-            <Text style={styles.emptyStateText}>No employees found</Text>
-            <Text style={styles.emptyStateSubtext}>Add your first employee</Text>
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-      />
-
-      {/* Add/Edit Employee Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingEmployee ? 'Edit Employee' : 'Add Employee'}
-              </Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
-              {formData.profilePhoto ? (
-                <Image source={{ uri: formData.profilePhoto }} style={styles.photoPreview} />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <MaterialIcons name="person" size={40} color="#FF7722" />
-                  <Text style={styles.photoText}>Add Photo</Text>
-                </View>
-              )}
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
+            <Text style={[styles.headerTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>Employee Management</Text>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => {
+                resetForm();
+                setModalVisible(true);
+              }}
+            >
+              <MaterialIcons name="add" size={isSmallDevice ? 18 : 20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Full Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.fullName}
-                onChangeText={(text) => setFormData({...formData, fullName: text})}
-                placeholder="Enter full name"
-              />
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <MaterialIcons name="search" size={20} color="#9ca3af" />
+            <TextInput
+              style={[styles.searchInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+              placeholder="Search employees..."
+              placeholderTextColor="#9ca3af"
+              value={searchQuery}
+              onChangeText={handleSearch}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <MaterialIcons name="close" size={20} color="#9ca3af" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <StatCard 
+              label="Total" 
+              count={employees.length} 
+              icon="people" 
+              color="#FF7722" 
+            />
+            <StatCard 
+              label="Active" 
+              count={employees.filter(e => e.status === 'active').length} 
+              icon="check-circle" 
+              color="#10b981" 
+            />
+            <StatCard 
+              label="Suspended" 
+              count={employees.filter(e => e.status === 'suspended').length} 
+              icon="block" 
+              color="#ef4444" 
+            />
+            <StatCard 
+              label="Can Login" 
+              count={employees.filter(e => e.canLogin).length} 
+              icon="login" 
+              color="#8b5cf6" 
+            />
+          </View>
+        </View>
+
+        {/* Employee List */}
+        <FlatList
+          data={filteredEmployees}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <EmployeeCard employee={item} />}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialIcons name="people" size={44} color="#d1d5db" />
+              <Text style={[styles.emptyStateText, { fontSize: isSmallDevice ? 15 : 16 }]}>No employees found</Text>
+              <Text style={[styles.emptyStateSubtext, { fontSize: isSmallDevice ? 12 : 13 }]}>Add your first employee</Text>
             </View>
+          }
+          contentContainerStyle={styles.listContent}
+        />
 
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Email *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.email}
-                onChangeText={(text) => setFormData({...formData, email: text})}
-                placeholder="Enter email"
-                keyboardType="email-address"
-              />
-            </View>
+        {/* Add/Edit Employee Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>
+                  {editingEmployee ? 'Edit Employee' : 'Add Employee'}
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.formRow}>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Phone</Text>
+              <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
+                {formData.profilePhoto ? (
+                  <Image source={{ uri: formData.profilePhoto }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <MaterialIcons name="person" size={40} color="#FF7722" />
+                    <Text style={[styles.photoText, { fontSize: isSmallDevice ? 9 : 10 }]}>Add Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Full Name *</Text>
                 <TextInput
-                  style={styles.formInput}
-                  value={formData.phone}
-                  onChangeText={(text) => setFormData({...formData, phone: text})}
-                  placeholder="Phone number"
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.fullName}
+                  onChangeText={(text) => setFormData({...formData, fullName: text})}
+                  placeholder="Enter full name"
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Email *</Text>
+                <TextInput
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.email}
+                  onChangeText={(text) => setFormData({...formData, email: text})}
+                  placeholder="Enter email"
+                  keyboardType="email-address"
+                />
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Phone</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.phone}
+                    onChangeText={(text) => setFormData({...formData, phone: text})}
+                    placeholder="Phone"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Position</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.position}
+                    onChangeText={(text) => setFormData({...formData, position: text})}
+                    placeholder="Position"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formRow}>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Department</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.department}
+                    onChangeText={(text) => setFormData({...formData, department: text})}
+                    placeholder="Department"
+                  />
+                </View>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Joining Date</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.joiningDate}
+                    onChangeText={(text) => setFormData({...formData, joiningDate: text})}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Salary (₹)</Text>
+                <TextInput
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.salary}
+                  onChangeText={(text) => setFormData({...formData, salary: text})}
+                  placeholder="Enter salary"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Address</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.address}
+                  onChangeText={(text) => setFormData({...formData, address: text})}
+                  placeholder="Enter address"
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Emergency Contact</Text>
+                <TextInput
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.emergencyContact}
+                  onChangeText={(text) => setFormData({...formData, emergencyContact: text})}
+                  placeholder="Emergency contact"
                   keyboardType="phone-pad"
                 />
               </View>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Position</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.position}
-                  onChangeText={(text) => setFormData({...formData, position: text})}
-                  placeholder="Position"
-                />
+
+              <View style={styles.formRow}>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Bank Account</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.bankAccount}
+                    onChangeText={(text) => setFormData({...formData, bankAccount: text})}
+                    placeholder="Bank account"
+                  />
+                </View>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>PAN Number</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.panNumber}
+                    onChangeText={(text) => setFormData({...formData, panNumber: text})}
+                    placeholder="PAN number"
+                  />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.formRow}>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Department</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.department}
-                  onChangeText={(text) => setFormData({...formData, department: text})}
-                  placeholder="Department"
-                />
-              </View>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Joining Date</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.joiningDate}
-                  onChangeText={(text) => setFormData({...formData, joiningDate: text})}
-                  placeholder="YYYY-MM-DD"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Salary (₹)</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.salary}
-                onChangeText={(text) => setFormData({...formData, salary: text})}
-                placeholder="Enter salary"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Address</Text>
-              <TextInput
-                style={[styles.formInput, styles.formTextArea]}
-                value={formData.address}
-                onChangeText={(text) => setFormData({...formData, address: text})}
-                placeholder="Enter address"
-                multiline
-                numberOfLines={2}
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Emergency Contact</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.emergencyContact}
-                onChangeText={(text) => setFormData({...formData, emergencyContact: text})}
-                placeholder="Emergency contact number"
-                keyboardType="phone-pad"
-              />
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Bank Account</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.bankAccount}
-                  onChangeText={(text) => setFormData({...formData, bankAccount: text})}
-                  placeholder="Bank account number"
-                />
-              </View>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>PAN Number</Text>
-                <TextInput
-                  style={styles.formInput}
-                  value={formData.panNumber}
-                  onChangeText={(text) => setFormData({...formData, panNumber: text})}
-                  placeholder="PAN number"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Aadhar Number</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formData.aadharNumber}
-                onChangeText={(text) => setFormData({...formData, aadharNumber: text})}
-                placeholder="Aadhar number"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Status</Text>
-              <View style={styles.statusContainer}>
-                {['active', 'inactive', 'suspended'].map((status) => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[styles.statusOption, formData.status === status && styles.statusOptionActive]}
-                    onPress={() => setFormData({...formData, status})}
-                  >
-                    <Text style={[styles.statusOptionText, formData.status === status && styles.statusOptionTextActive]}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Enable Login</Text>
-              <View style={styles.loginToggleContainer}>
-                <Switch
-                  value={formData.canLogin || false}
-                  onValueChange={(value) => setFormData({...formData, canLogin: value})}
-                  trackColor={{ false: '#767577', true: '#FF7722' }}
-                  thumbColor={formData.canLogin ? '#ffffff' : '#f4f3f4'}
-                />
-                <Text style={styles.loginToggleText}>
-                  {formData.canLogin ? 'Login enabled for this employee' : 'Login disabled'}
-                </Text>
-              </View>
-            </View>
-
-            {/* PASSWORD FIELD - Visible when canLogin is true */}
-            {formData.canLogin && (
               <View style={styles.formField}>
-                <Text style={styles.formLabel}>
-                  {editingEmployee ? 'New Password (optional)' : 'Password *'}
-                </Text>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Aadhar Number</Text>
                 <TextInput
-                  style={styles.formInput}
-                  value={formData.password}
-                  onChangeText={(text) => setFormData({...formData, password: text})}
-                  placeholder={editingEmployee ? 'Enter new password (leave blank to keep current)' : 'Enter password (min 6 characters)'}
-                  secureTextEntry
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={formData.aadharNumber}
+                  onChangeText={(text) => setFormData({...formData, aadharNumber: text})}
+                  placeholder="Aadhar number"
                 />
-                {editingEmployee && (
-                  <Text style={styles.helperText}>Leave blank to keep current password</Text>
-                )}
-                {!editingEmployee && (
-                  <Text style={styles.helperText}>Password must be at least 6 characters</Text>
-                )}
               </View>
-            )}
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={loading}>
-              <Text style={styles.submitButtonText}>
-                {loading ? 'Saving...' : editingEmployee ? 'Update Employee' : 'Add Employee'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Employee Detail & Task Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={detailModalVisible}
-        onRequestClose={() => setDetailModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
-            {selectedEmployee && (
-              <>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Employee Details</Text>
-                  <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
-                    <MaterialIcons name="close" size={24} color="#6b7280" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.detailProfile}>
-                  {selectedEmployee.profilePhoto ? (
-                    <Image source={{ uri: selectedEmployee.profilePhoto }} style={styles.detailAvatar} />
-                  ) : (
-                    <View style={styles.detailAvatarPlaceholder}>
-                      <Text style={styles.detailAvatarText}>
-                        {selectedEmployee.fullName?.charAt(0) || '?'}
-                      </Text>
-                    </View>
-                  )}
-                  <Text style={styles.detailName}>{selectedEmployee.fullName}</Text>
-                  <Text style={styles.detailPosition}>{selectedEmployee.position}</Text>
-                  <Text style={styles.detailEmployeeId}>ID: {selectedEmployee.employeeId}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Email</Text>
-                  <Text style={styles.detailValue}>{selectedEmployee.email}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Phone</Text>
-                  <Text style={styles.detailValue}>{selectedEmployee.phone || 'N/A'}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <View style={[styles.detailSection, { flex: 1 }]}>
-                    <Text style={styles.detailLabel}>Department</Text>
-                    <Text style={styles.detailValue}>{selectedEmployee.department}</Text>
-                  </View>
-                  <View style={[styles.detailSection, { flex: 1 }]}>
-                    <Text style={styles.detailLabel}>Joining Date</Text>
-                    <Text style={styles.detailValue}>{selectedEmployee.joiningDate || 'N/A'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Salary</Text>
-                  <Text style={[styles.detailValue, { color: '#10b981', fontFamily: Fonts.Bold }]}>
-                    ₹{selectedEmployee.salary?.toLocaleString() || '0'}
-                  </Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Address</Text>
-                  <Text style={styles.detailValue}>{selectedEmployee.address || 'N/A'}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Emergency Contact</Text>
-                  <Text style={styles.detailValue}>{selectedEmployee.emergencyContact || 'N/A'}</Text>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Login Access</Text>
-                  <View style={styles.detailLoginBadge}>
-                    <MaterialIcons 
-                      name={selectedEmployee.canLogin ? 'check-circle' : 'block'} 
-                      size={16} 
-                      color={selectedEmployee.canLogin ? '#10b981' : '#ef4444'} 
-                    />
-                    <Text style={[styles.detailLoginText, { color: selectedEmployee.canLogin ? '#10b981' : '#ef4444' }]}>
-                      {selectedEmployee.canLogin ? 'Enabled' : 'Disabled'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedEmployee.status) + '15' }]}>
-                    <Text style={[styles.detailStatusText, { color: getStatusColor(selectedEmployee.status) }]}>
-                      {selectedEmployee.status || 'active'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Tasks Section */}
-                <View style={styles.tasksSection}>
-                  <View style={styles.tasksHeader}>
-                    <Text style={styles.tasksTitle}>Tasks</Text>
-                    <TouchableOpacity 
-                      style={styles.addTaskButton}
-                      onPress={() => {
-                        setTaskData({
-                          title: '',
-                          description: '',
-                          priority: 'medium',
-                          status: 'pending',
-                          dueDate: '',
-                          assignedTo: selectedEmployee.id,
-                          assignedToName: selectedEmployee.fullName,
-                          category: ''
-                        });
-                        setEditingTask(null);
-                        setTaskModalVisible(true);
-                      }}
-                    >
-                      <MaterialIcons name="add" size={18} color="#ffffff" />
-                      <Text style={styles.addTaskButtonText}>Add Task</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {tasks.length === 0 ? (
-                    <View style={styles.noTasksContainer}>
-                      <MaterialIcons name="assignment" size={30} color="#d1d5db" />
-                      <Text style={styles.noTasksText}>No tasks assigned</Text>
-                    </View>
-                  ) : (
-                    tasks.map((task) => <TaskItem key={task.id} task={task} />)
-                  )}
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setDetailModalVisible(false)}
-                >
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
-        </View>
-      </Modal>
-
-      {/* Task Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={taskModalVisible}
-        onRequestClose={() => setTaskModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingTask ? 'Edit Task' : 'Add Task'}
-              </Text>
-              <TouchableOpacity onPress={() => setTaskModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Task Title *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={taskData.title}
-                onChangeText={(text) => setTaskData({...taskData, title: text})}
-                placeholder="Enter task title"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Description</Text>
-              <TextInput
-                style={[styles.formInput, styles.formTextArea]}
-                value={taskData.description}
-                onChangeText={(text) => setTaskData({...taskData, description: text})}
-                placeholder="Enter task description"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Priority</Text>
-                <View style={styles.priorityContainer}>
-                  {['low', 'medium', 'high'].map((priority) => (
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Status</Text>
+                <View style={styles.statusContainer}>
+                  {['active', 'inactive', 'suspended'].map((status) => (
                     <TouchableOpacity
-                      key={priority}
-                      style={[styles.priorityOption, taskData.priority === priority && styles.priorityOptionActive]}
-                      onPress={() => setTaskData({...taskData, priority})}
+                      key={status}
+                      style={[styles.statusOption, formData.status === status && styles.statusOptionActive]}
+                      onPress={() => setFormData({...formData, status})}
                     >
-                      <Text style={[styles.priorityOptionText, taskData.priority === priority && styles.priorityOptionTextActive]}>
-                        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                      <Text style={[styles.statusOptionText, formData.status === status && styles.statusOptionTextActive, { fontSize: isSmallDevice ? 10 : 12 }]}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
-              <View style={[styles.formField, styles.formHalf]}>
-                <Text style={styles.formLabel}>Due Date</Text>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Enable Login</Text>
+                <View style={styles.loginToggleContainer}>
+                  <Switch
+                    value={formData.canLogin || false}
+                    onValueChange={(value) => setFormData({...formData, canLogin: value})}
+                    trackColor={{ false: '#767577', true: '#FF7722' }}
+                    thumbColor={formData.canLogin ? '#ffffff' : '#f4f3f4'}
+                  />
+                  <Text style={[styles.loginToggleText, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                    {formData.canLogin ? 'Login enabled' : 'Login disabled'}
+                  </Text>
+                </View>
+              </View>
+
+              {formData.canLogin && (
+                <View style={styles.formField}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                    {editingEmployee ? 'New Password (optional)' : 'Password *'}
+                  </Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={formData.password}
+                    onChangeText={(text) => setFormData({...formData, password: text})}
+                    placeholder={editingEmployee ? 'New password (leave blank to keep current)' : 'Enter password (min 6 chars)'}
+                    secureTextEntry
+                  />
+                  <Text style={[styles.helperText, { fontSize: isSmallDevice ? 10 : 11 }]}>
+                    {editingEmployee ? 'Leave blank to keep current password' : 'Password must be at least 6 characters'}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleSave} disabled={loading}>
+                <Text style={[styles.submitButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  {loading ? 'Saving...' : editingEmployee ? 'Update Employee' : 'Add Employee'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </Modal>
+
+        {/* Employee Detail & Task Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={detailModalVisible}
+          onRequestClose={() => setDetailModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <ScrollView style={styles.modalContent}>
+              {selectedEmployee && (
+                <>
+                  <View style={styles.modalHeader}>
+                    <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>Employee Details</Text>
+                    <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                      <MaterialIcons name="close" size={24} color="#6b7280" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.detailProfile}>
+                    {selectedEmployee.profilePhoto ? (
+                      <Image source={{ uri: selectedEmployee.profilePhoto }} style={styles.detailAvatar} />
+                    ) : (
+                      <View style={styles.detailAvatarPlaceholder}>
+                        <Text style={[styles.detailAvatarText, { fontSize: isSmallDevice ? 28 : 32 }]}>
+                          {selectedEmployee.fullName?.charAt(0) || '?'}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={[styles.detailName, { fontSize: isSmallDevice ? 18 : 20 }]}>
+                      {selectedEmployee.fullName}
+                    </Text>
+                    <Text style={[styles.detailPosition, { fontSize: isSmallDevice ? 12 : 14 }]}>
+                      {selectedEmployee.position}
+                    </Text>
+                    <Text style={[styles.detailEmployeeId, { fontSize: isSmallDevice ? 11 : 12 }]}>
+                      ID: {selectedEmployee.employeeId}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Email</Text>
+                    <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.email}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Phone</Text>
+                    <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.phone || 'N/A'}</Text>
+                  </View>
+
+                  <View style={styles.detailRow}>
+                    <View style={[styles.detailSection, { flex: 1 }]}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Department</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.department}</Text>
+                    </View>
+                    <View style={[styles.detailSection, { flex: 1 }]}>
+                      <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Joining Date</Text>
+                      <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.joiningDate || 'N/A'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Salary</Text>
+                    <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 15 : 16, color: '#10b981', fontFamily: Fonts.Bold }]}>
+                      ₹{selectedEmployee.salary?.toLocaleString() || '0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Address</Text>
+                    <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.address || 'N/A'}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Emergency Contact</Text>
+                    <Text style={[styles.detailValue, { fontSize: isSmallDevice ? 13 : 14 }]}>{selectedEmployee.emergencyContact || 'N/A'}</Text>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Login Access</Text>
+                    <View style={styles.detailLoginBadge}>
+                      <MaterialIcons 
+                        name={selectedEmployee.canLogin ? 'check-circle' : 'block'} 
+                        size={16} 
+                        color={selectedEmployee.canLogin ? '#10b981' : '#ef4444'} 
+                      />
+                      <Text style={[styles.detailLoginText, { color: selectedEmployee.canLogin ? '#10b981' : '#ef4444', fontSize: isSmallDevice ? 13 : 14 }]}>
+                        {selectedEmployee.canLogin ? 'Enabled' : 'Disabled'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailLabel, { fontSize: isSmallDevice ? 11 : 12 }]}>Status</Text>
+                    <View style={[styles.detailStatusBadge, { backgroundColor: getStatusColor(selectedEmployee.status) + '15' }]}>
+                      <Text style={[styles.detailStatusText, { color: getStatusColor(selectedEmployee.status), fontSize: isSmallDevice ? 11 : 12 }]}>
+                        {selectedEmployee.status || 'active'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Tasks Section */}
+                  <View style={styles.tasksSection}>
+                    <View style={styles.tasksHeader}>
+                      <Text style={[styles.tasksTitle, { fontSize: isSmallDevice ? 14 : 16 }]}>Tasks</Text>
+                      <TouchableOpacity 
+                        style={styles.addTaskButton}
+                        onPress={() => {
+                          setTaskData({
+                            title: '',
+                            description: '',
+                            priority: 'medium',
+                            status: 'pending',
+                            dueDate: '',
+                            assignedTo: selectedEmployee.id,
+                            assignedToName: selectedEmployee.fullName,
+                            category: ''
+                          });
+                          setEditingTask(null);
+                          setTaskModalVisible(true);
+                        }}
+                      >
+                        <MaterialIcons name="add" size={16} color="#ffffff" />
+                        <Text style={[styles.addTaskButtonText, { fontSize: isSmallDevice ? 11 : 12 }]}>Add Task</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {tasks.length === 0 ? (
+                      <View style={styles.noTasksContainer}>
+                        <MaterialIcons name="assignment" size={30} color="#d1d5db" />
+                        <Text style={[styles.noTasksText, { fontSize: isSmallDevice ? 12 : 14 }]}>No tasks assigned</Text>
+                      </View>
+                    ) : (
+                      tasks.map((task) => <TaskItem key={task.id} task={task} />)
+                    )}
+                  </View>
+
+                  <TouchableOpacity 
+                    style={styles.closeButton}
+                    onPress={() => setDetailModalVisible(false)}
+                  >
+                    <Text style={[styles.closeButtonText, { fontSize: isSmallDevice ? 13 : 14 }]}>Close</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </Modal>
+
+        {/* Task Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={taskModalVisible}
+          onRequestClose={() => setTaskModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>
+                  {editingTask ? 'Edit Task' : 'Add Task'}
+                </Text>
+                <TouchableOpacity onPress={() => setTaskModalVisible(false)}>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Task Title *</Text>
                 <TextInput
-                  style={styles.formInput}
-                  value={taskData.dueDate}
-                  onChangeText={(text) => setTaskData({...taskData, dueDate: text})}
-                  placeholder="YYYY-MM-DD"
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={taskData.title}
+                  onChangeText={(text) => setTaskData({...taskData, title: text})}
+                  placeholder="Enter task title"
                 />
               </View>
-            </View>
 
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Category</Text>
-              <TextInput
-                style={styles.formInput}
-                value={taskData.category}
-                onChangeText={(text) => setTaskData({...taskData, category: text})}
-                placeholder="e.g., Development, Design"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.formLabel}>Status</Text>
-              <View style={styles.statusContainer}>
-                {['pending', 'in-progress', 'completed', 'cancelled'].map((status) => (
-                  <TouchableOpacity
-                    key={status}
-                    style={[styles.statusOption, taskData.status === status && styles.statusOptionActive]}
-                    onPress={() => setTaskData({...taskData, status})}
-                  >
-                    <Text style={[styles.statusOptionText, taskData.status === status && styles.statusOptionTextActive]}>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {editingTask && (
               <View style={styles.formField}>
-                <Text style={styles.formLabel}>Assigned To</Text>
-                <Text style={styles.assignedToText}>{taskData.assignedToName}</Text>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Description</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formTextArea, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={taskData.description}
+                  onChangeText={(text) => setTaskData({...taskData, description: text})}
+                  placeholder="Enter task description"
+                  multiline
+                  numberOfLines={3}
+                />
               </View>
-            )}
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleTaskSave} disabled={loading}>
-              <Text style={styles.submitButtonText}>
-                {loading ? 'Saving...' : editingTask ? 'Update Task' : 'Assign Task'}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Modal>
-    </View>
+              <View style={styles.formRow}>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Priority</Text>
+                  <View style={styles.priorityContainer}>
+                    {['low', 'medium', 'high'].map((priority) => (
+                      <TouchableOpacity
+                        key={priority}
+                        style={[styles.priorityOption, taskData.priority === priority && styles.priorityOptionActive]}
+                        onPress={() => setTaskData({...taskData, priority})}
+                      >
+                        <Text style={[styles.priorityOptionText, taskData.priority === priority && styles.priorityOptionTextActive, { fontSize: isSmallDevice ? 9 : 10 }]}>
+                          {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={[styles.formField, styles.formHalf]}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Due Date</Text>
+                  <TextInput
+                    style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    value={taskData.dueDate}
+                    onChangeText={(text) => setTaskData({...taskData, dueDate: text})}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Category</Text>
+                <TextInput
+                  style={[styles.formInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                  value={taskData.category}
+                  onChangeText={(text) => setTaskData({...taskData, category: text})}
+                  placeholder="e.g., Development, Design"
+                />
+              </View>
+
+              <View style={styles.formField}>
+                <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Status</Text>
+                <View style={styles.statusContainer}>
+                  {['pending', 'in-progress', 'completed', 'cancelled'].map((status) => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[styles.statusOption, taskData.status === status && styles.statusOptionActive]}
+                      onPress={() => setTaskData({...taskData, status})}
+                    >
+                      <Text style={[styles.statusOptionText, taskData.status === status && styles.statusOptionTextActive, { fontSize: isSmallDevice ? 9 : 10 }]}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {editingTask && (
+                <View style={styles.formField}>
+                  <Text style={[styles.formLabel, { fontSize: isSmallDevice ? 12 : 14 }]}>Assigned To</Text>
+                  <Text style={[styles.assignedToText, { fontSize: isSmallDevice ? 13 : 14 }]}>{taskData.assignedToName}</Text>
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.submitButton} onPress={handleTaskSave} disabled={loading}>
+                <Text style={[styles.submitButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                  {loading ? 'Saving...' : editingTask ? 'Update Task' : 'Assign Task'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fdf8f3',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fdf8f3',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fdf8f3',
+  },
+  loadingText: {
+    fontFamily: Fonts.Regular,
+    marginTop: 10,
+    color: '#6b7280',
+  },
   headerCard: {
     backgroundColor: '#FF7722',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 20 : 50,
     paddingBottom: 16,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -1220,7 +1254,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
@@ -1245,7 +1278,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
   },
   statsContainer: {
@@ -1272,12 +1304,10 @@ const styles = StyleSheet.create({
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 14,
     color: '#ffffff',
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 9,
     color: 'rgba(255,255,255,0.8)',
   },
   listContent: {
@@ -1305,6 +1335,9 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
   },
+  employeeTextInfo: {
+    flex: 1,
+  },
   employeeAvatar: {
     width: 44,
     height: 44,
@@ -1320,22 +1353,18 @@ const styles = StyleSheet.create({
   },
   employeeAvatarText: {
     fontFamily: Fonts.Bold,
-    fontSize: 18,
     color: '#FF7722',
   },
   employeeName: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
   },
   employeePosition: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
   },
   employeeIdText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#9ca3af',
   },
   statusBadge: {
@@ -1345,7 +1374,6 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
   },
   employeeDetails: {
     flexDirection: 'row',
@@ -1359,10 +1387,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
   },
   employeeDetailText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#6b7280',
   },
   loginBadge: {
@@ -1378,13 +1406,13 @@ const styles = StyleSheet.create({
   },
   loginBadgeText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
     color: '#10b981',
   },
   employeeActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 4,
+    flexWrap: 'wrap',
   },
   actionButton: {
     flexDirection: 'row',
@@ -1409,7 +1437,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 10,
   },
   emptyState: {
     alignItems: 'center',
@@ -1419,12 +1446,10 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
     color: '#6b7280',
   },
   modalContainer: {
@@ -1447,7 +1472,6 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#1f2937',
   },
   photoUpload: {
@@ -1472,7 +1496,6 @@ const styles = StyleSheet.create({
   },
   photoText: {
     fontFamily: Fonts.Regular,
-    fontSize: 10,
     color: '#FF7722',
     marginTop: 4,
   },
@@ -1488,7 +1511,6 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
   },
@@ -1497,9 +1519,9 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     borderRadius: 8,
     padding: 10,
-    fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    color: '#1f2937',
   },
   formTextArea: {
     height: 60,
@@ -1507,7 +1529,6 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#9ca3af',
     marginTop: 2,
   },
@@ -1518,7 +1539,6 @@ const styles = StyleSheet.create({
   },
   loginToggleText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
   },
   statusContainer: {
@@ -1539,7 +1559,6 @@ const styles = StyleSheet.create({
   },
   statusOptionText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#6b7280',
   },
   statusOptionTextActive: {
@@ -1555,7 +1574,6 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 16,
   },
   detailProfile: {
     alignItems: 'center',
@@ -1576,22 +1594,18 @@ const styles = StyleSheet.create({
   },
   detailAvatarText: {
     fontFamily: Fonts.Bold,
-    fontSize: 32,
     color: '#FF7722',
   },
   detailName: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#1f2937',
   },
   detailPosition: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
   },
   detailEmployeeId: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#9ca3af',
   },
   detailSection: {
@@ -1603,13 +1617,11 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#6b7280',
     marginBottom: 2,
   },
   detailValue: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
   },
   detailStatusBadge: {
@@ -1620,7 +1632,6 @@ const styles = StyleSheet.create({
   },
   detailStatusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
   },
   detailLoginBadge: {
     flexDirection: 'row',
@@ -1629,7 +1640,6 @@ const styles = StyleSheet.create({
   },
   detailLoginText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
   },
   tasksSection: {
     marginTop: 16,
@@ -1645,7 +1655,6 @@ const styles = StyleSheet.create({
   },
   tasksTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
   },
   addTaskButton: {
@@ -1659,7 +1668,6 @@ const styles = StyleSheet.create({
   },
   addTaskButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#ffffff',
   },
   noTasksContainer: {
@@ -1670,7 +1678,6 @@ const styles = StyleSheet.create({
   },
   noTasksText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#9ca3af',
   },
   taskItem: {
@@ -1689,7 +1696,6 @@ const styles = StyleSheet.create({
   },
   taskTitle: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
     flex: 1,
   },
@@ -1700,11 +1706,9 @@ const styles = StyleSheet.create({
   },
   taskStatusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
   },
   taskDescription: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
     marginBottom: 6,
   },
@@ -1720,11 +1724,9 @@ const styles = StyleSheet.create({
   },
   taskPriorityText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
   },
   taskDueDate: {
     fontFamily: Fonts.Regular,
-    fontSize: 11,
     color: '#9ca3af',
   },
   taskActions: {
@@ -1760,7 +1762,6 @@ const styles = StyleSheet.create({
   taskActionText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 9,
   },
   closeButton: {
     backgroundColor: '#6b7280',
@@ -1772,7 +1773,6 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
-    fontSize: 14,
   },
   priorityContainer: {
     flexDirection: 'row',
@@ -1792,7 +1792,6 @@ const styles = StyleSheet.create({
   },
   priorityOptionText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 10,
     color: '#6b7280',
   },
   priorityOptionTextActive: {
@@ -1800,7 +1799,6 @@ const styles = StyleSheet.create({
   },
   assignedToText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
     paddingVertical: 8,
   },

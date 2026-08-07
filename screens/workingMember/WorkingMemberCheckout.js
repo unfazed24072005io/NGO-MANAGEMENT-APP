@@ -86,7 +86,6 @@ export default function WorkingMemberCheckout({ navigation, route }) {
       const totalAmount = discountedTotal || total || 0;
       const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
-      // Create order data
       const orderData = {
         orderId: orderId,
         userId: user.uid,
@@ -122,10 +121,8 @@ export default function WorkingMemberCheckout({ navigation, route }) {
         updatedAt: new Date().toISOString()
       };
 
-      // Save order to Firestore
       await addDoc(collection(db, 'orders'), orderData);
 
-      // Initiate Razorpay payment
       const paymentResult = await initiateRazorpayPayment({
         amount: totalAmount,
         name: formData.name || 'Working Member',
@@ -135,7 +132,6 @@ export default function WorkingMemberCheckout({ navigation, route }) {
       });
 
       if (paymentResult && paymentResult.success) {
-        // Verify payment
         let verificationResult = { success: true };
         if (paymentResult.paymentId) {
           verificationResult = await verifyRazorpayPayment({
@@ -146,14 +142,12 @@ export default function WorkingMemberCheckout({ navigation, route }) {
         }
 
         if (verificationResult.success) {
-          // Update order status
           await updateDoc(doc(db, 'orders', orderId), {
             status: 'completed',
             paymentId: paymentResult.paymentId || 'pending_verification',
             updatedAt: new Date().toISOString(),
           });
 
-          // Update product stock
           for (const item of cart) {
             const productRef = doc(db, 'products', item.id);
             const productDoc = await getDoc(productRef);
@@ -209,6 +203,7 @@ export default function WorkingMemberCheckout({ navigation, route }) {
         placeholder={placeholder}
         placeholderTextColor="#9ca3af"
         keyboardType={keyboardType}
+        textAlignVertical="center"
       />
     </View>
   );
@@ -225,7 +220,7 @@ export default function WorkingMemberCheckout({ navigation, route }) {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Payment</Text>
-            <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+            <TouchableOpacity onPress={() => setShowPaymentModal(false)} activeOpacity={0.7}>
               <MaterialIcons name="close" size={24} color="#6b7280" />
             </TouchableOpacity>
           </View>
@@ -274,6 +269,7 @@ export default function WorkingMemberCheckout({ navigation, route }) {
             style={[styles.payButton, loading && styles.payButtonDisabled]}
             onPress={processPayment}
             disabled={loading}
+            activeOpacity={0.7}
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -331,12 +327,14 @@ export default function WorkingMemberCheckout({ navigation, route }) {
             <TouchableOpacity
               style={[styles.successButton, styles.successButtonSecondary]}
               onPress={() => handleSuccessAction('close')}
+              activeOpacity={0.7}
             >
               <Text style={styles.successButtonTextSecondary}>Continue Shopping</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.successButton, styles.successButtonPrimary]}
               onPress={() => handleSuccessAction('orders')}
+              activeOpacity={0.7}
             >
               <Text style={styles.successButtonTextPrimary}>View Orders</Text>
             </TouchableOpacity>
@@ -351,7 +349,7 @@ export default function WorkingMemberCheckout({ navigation, route }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Checkout</Text>
@@ -461,6 +459,7 @@ export default function WorkingMemberCheckout({ navigation, route }) {
           style={styles.placeOrderButton}
           onPress={handlePlaceOrder}
           disabled={loading}
+          activeOpacity={0.7}
         >
           {loading ? (
             <ActivityIndicator size="small" color="#ffffff" />
@@ -501,18 +500,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  backButton: { padding: 4 },
+  backButton: { 
+    padding: 4 
+  },
   headerTitle: {
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
 
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    paddingBottom: 20,
   },
 
   card: {
@@ -528,6 +532,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   orderItem: {
@@ -539,11 +545,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderItemPrice: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   discountRow: {
@@ -559,11 +569,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   discountValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#8b5cf6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   totalRow: {
@@ -578,11 +592,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   totalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   field: {
@@ -593,6 +611,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   requiredStar: {
     color: '#ef4444',
@@ -606,6 +626,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
     color: '#1f2937',
+    includeFontPadding: false,
   },
 
   paymentOption: {
@@ -620,6 +641,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#3b82f6',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   placeOrderButton: {
@@ -636,6 +659,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal Styles
@@ -661,6 +686,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummary: {
     backgroundColor: '#f9fafb',
@@ -673,6 +700,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummaryRow: {
     flexDirection: 'row',
@@ -683,11 +712,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderSummaryValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderDivider: {
     height: 1,
@@ -698,11 +731,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 15,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   orderTotalValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentInfo: {
     backgroundColor: '#f3f4f6',
@@ -721,12 +758,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   payButton: {
     backgroundColor: '#10b981',
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   payButtonDisabled: {
     opacity: 0.6,
@@ -735,6 +775,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 18,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentNote: {
     fontFamily: Fonts.Regular,
@@ -742,6 +784,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Success Modal
@@ -765,6 +809,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successSubtitle: {
     fontFamily: Fonts.Regular,
@@ -772,6 +818,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successDetails: {
     backgroundColor: '#f9fafb',
@@ -786,6 +834,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1f2937',
     paddingVertical: 3,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successDetailLabel: {
     fontFamily: Fonts.SemiBold,
@@ -801,6 +851,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   successButtonPrimary: {
     backgroundColor: '#10b981',
@@ -814,10 +865,14 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   successButtonTextSecondary: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

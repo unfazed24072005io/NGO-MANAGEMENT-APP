@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   FlatList,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { db, auth } from '../../config/firebase';
@@ -35,8 +36,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { Fonts } from '../../config/fonts';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+const isSmallDevice = width < 375;
 
 export default function QuoteManagement({ navigation }) {
   const [quotes, setQuotes] = useState([]);
@@ -77,7 +80,6 @@ export default function QuoteManagement({ navigation }) {
       const quotesList = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // Convert Firestore timestamps to Date objects
         const startDate = data.startDate?.toDate?.() || new Date(data.startDate);
         const endDate = data.endDate?.toDate?.() || new Date(data.endDate);
         quotesList.push({ 
@@ -151,10 +153,8 @@ export default function QuoteManagement({ navigation }) {
     setUploading(true);
 
     try {
-      // Upload image first
       const imageUrl = await uploadImage(quoteImage.uri);
 
-      // Prepare data for Firestore
       const quoteData = {
         text: quoteText.trim(),
         author: author.trim() || 'Unknown',
@@ -168,12 +168,10 @@ export default function QuoteManagement({ navigation }) {
       };
 
       if (isEditing && editingId) {
-        // Update existing quote
         const quoteRef = doc(db, 'quotes', editingId);
         await updateDoc(quoteRef, quoteData);
         Alert.alert('Success', 'Quote updated successfully');
       } else {
-        // Add new quote
         await addDoc(collection(db, 'quotes'), quoteData);
         Alert.alert('Success', 'Quote added successfully');
       }
@@ -280,19 +278,23 @@ export default function QuoteManagement({ navigation }) {
       <View style={[styles.quoteCard, !active && styles.quoteCardInactive]}>
         <Image source={{ uri: quote.imageUrl }} style={styles.quoteImage} />
         <View style={styles.quoteContent}>
-          <Text style={styles.quoteText}>"{quote.text}"</Text>
+          <Text style={[styles.quoteText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+            "{quote.text}"
+          </Text>
           {quote.author && (
-            <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+            <Text style={[styles.quoteAuthor, { fontSize: isSmallDevice ? 12 : 14 }]}>
+              — {quote.author}
+            </Text>
           )}
           <View style={styles.quoteMeta}>
             <View style={styles.dateInfo}>
-              <MaterialIcons name="event" size={14} color="#6b7280" />
-              <Text style={styles.dateText}>
+              <MaterialIcons name="event" size={isSmallDevice ? 12 : 14} color="#6b7280" />
+              <Text style={[styles.dateText, { fontSize: isSmallDevice ? 10 : 12 }]}>
                 {formatDate(quote.startDate)} - {formatDate(quote.endDate)}
               </Text>
             </View>
             <View style={[styles.statusBadge, active ? styles.statusActive : styles.statusInactive]}>
-              <Text style={[styles.statusText, active ? styles.statusTextActive : styles.statusTextInactive]}>
+              <Text style={[styles.statusText, active ? styles.statusTextActive : styles.statusTextInactive, { fontSize: isSmallDevice ? 9 : 11 }]}>
                 {active ? 'Active' : 'Inactive'}
               </Text>
             </View>
@@ -302,8 +304,8 @@ export default function QuoteManagement({ navigation }) {
               style={[styles.actionButton, styles.editButton]}
               onPress={() => handleEditQuote(quote)}
             >
-              <MaterialIcons name="edit" size={18} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Edit</Text>
+              <MaterialIcons name="edit" size={isSmallDevice ? 14 : 18} color="#ffffff" />
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 10 : 12 }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.actionButton, styles.statusToggleButton]}
@@ -311,10 +313,10 @@ export default function QuoteManagement({ navigation }) {
             >
               <MaterialIcons 
                 name={active ? "pause" : "play-arrow"} 
-                size={18} 
+                size={isSmallDevice ? 14 : 18} 
                 color="#ffffff" 
               />
-              <Text style={styles.actionButtonText}>
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 10 : 12 }]}>
                 {active ? 'Deactivate' : 'Activate'}
               </Text>
             </TouchableOpacity>
@@ -322,8 +324,8 @@ export default function QuoteManagement({ navigation }) {
               style={[styles.actionButton, styles.deleteButton]}
               onPress={() => handleDeleteQuote(quote.id)}
             >
-              <MaterialIcons name="delete" size={18} color="#ffffff" />
-              <Text style={styles.actionButtonText}>Delete</Text>
+              <MaterialIcons name="delete" size={isSmallDevice ? 14 : 18} color="#ffffff" />
+              <Text style={[styles.actionButtonText, { fontSize: isSmallDevice ? 10 : 12 }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -335,238 +337,248 @@ export default function QuoteManagement({ navigation }) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF7722" />
-        <Text style={styles.loadingText}>Loading quotes...</Text>
+        <Text style={[styles.loadingText, { fontSize: isSmallDevice ? 13 : 14 }]}>Loading quotes...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Blue Header Card */}
-      <View style={styles.headerCard}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Quote Management</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setModalVisible(true);
-            }}
-          >
-            <MaterialIcons name="add" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{quotes.length}</Text>
-          <Text style={styles.statLabel}>Total Quotes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, styles.statActive]}>
-            {quotes.filter(q => isQuoteActive(q)).length}
-          </Text>
-          <Text style={styles.statLabel}>Active</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, styles.statInactive]}>
-            {quotes.filter(q => !isQuoteActive(q)).length}
-          </Text>
-          <Text style={styles.statLabel}>Inactive</Text>
-        </View>
-      </View>
-
-      {/* Quotes List */}
-      <FlatList
-        data={quotes}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <QuoteCard quote={item} />}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialIcons name="format-quote" size={44} color="#d1d5db" />
-            <Text style={styles.emptyStateText}>No quotes yet</Text>
-            <Text style={styles.emptyStateSubtext}>Tap the + button to add your first quote</Text>
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-      />
-
-      {/* Add/Edit Quote Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => {
-          resetForm();
-          setModalVisible(false);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {isEditing ? 'Edit Quote' : 'Add New Quote'}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  resetForm();
-                  setModalVisible(false);
-                }}
-              >
-                <MaterialIcons name="close" size={24} color="#6b7280" />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        {/* Orange Header Card */}
+        <View style={styles.headerCard}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerLeft}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
               </TouchableOpacity>
+              <Text style={[styles.headerTitle, { fontSize: isSmallDevice ? 18 : 22 }]}>Quote Management</Text>
             </View>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => {
+                resetForm();
+                setModalVisible(true);
+              }}
+            >
+              <MaterialIcons name="add" size={isSmallDevice ? 20 : 24} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Image Picker */}
-              <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                {previewImage ? (
-                  <Image source={{ uri: previewImage }} style={styles.previewImage} />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <MaterialIcons name="add-photo-alternative" size={40} color="#9ca3af" />
-                    <Text style={styles.imagePickerText}>Tap to select image</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+        {/* Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={[styles.statNumber, { fontSize: isSmallDevice ? 16 : 20 }]}>
+              {quotes.length}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 10 : 12 }]}>Total Quotes</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statNumber, styles.statActive, { fontSize: isSmallDevice ? 16 : 20 }]}>
+              {quotes.filter(q => isQuoteActive(q)).length}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 10 : 12 }]}>Active</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statNumber, styles.statInactive, { fontSize: isSmallDevice ? 16 : 20 }]}>
+              {quotes.filter(q => !isQuoteActive(q)).length}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: isSmallDevice ? 10 : 12 }]}>Inactive</Text>
+          </View>
+        </View>
 
-              {/* Quote Text */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Quote Text *</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="Enter the quote..."
-                  placeholderTextColor="#9ca3af"
-                  value={quoteText}
-                  onChangeText={setQuoteText}
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
+        {/* Quotes List */}
+        <FlatList
+          data={quotes}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <QuoteCard quote={item} />}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialIcons name="format-quote" size={44} color="#d1d5db" />
+              <Text style={[styles.emptyStateText, { fontSize: isSmallDevice ? 15 : 16 }]}>No quotes yet</Text>
+              <Text style={[styles.emptyStateSubtext, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                Tap the + button to add your first quote
+              </Text>
+            </View>
+          }
+          contentContainerStyle={styles.listContent}
+        />
 
-              {/* Author */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Author (Optional)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter author name..."
-                  placeholderTextColor="#9ca3af"
-                  value={author}
-                  onChangeText={setAuthor}
-                />
-              </View>
-
-              {/* Start Date */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Start Date *</Text>
+        {/* Add/Edit Quote Modal */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => {
+            resetForm();
+            setModalVisible(false);
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { fontSize: isSmallDevice ? 18 : 20 }]}>
+                  {isEditing ? 'Edit Quote' : 'Add New Quote'}
+                </Text>
                 <TouchableOpacity 
-                  style={styles.datePicker}
-                  onPress={() => setShowStartPicker(true)}
+                  onPress={() => {
+                    resetForm();
+                    setModalVisible(false);
+                  }}
                 >
-                  <MaterialIcons name="calendar-today" size={20} color="#6b7280" />
-                  <Text style={styles.datePickerText}>
-                    {formatDate(startDate)}
-                  </Text>
+                  <MaterialIcons name="close" size={24} color="#6b7280" />
                 </TouchableOpacity>
-                {showStartPicker && (
-                  <DateTimePicker
-                    value={startDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowStartPicker(false);
-                      if (selectedDate) {
-                        setStartDate(selectedDate);
-                        // If end date is before start date, update end date
-                        if (endDate < selectedDate) {
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Image Picker */}
+                <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                  {previewImage ? (
+                    <Image source={{ uri: previewImage }} style={styles.previewImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <MaterialIcons name="add-photo-alternative" size={40} color="#9ca3af" />
+                      <Text style={[styles.imagePickerText, { fontSize: isSmallDevice ? 12 : 13 }]}>
+                        Tap to select image
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Quote Text */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Quote Text *</Text>
+                  <TextInput
+                    style={[styles.textInput, styles.textArea, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    placeholder="Enter the quote..."
+                    placeholderTextColor="#9ca3af"
+                    value={quoteText}
+                    onChangeText={setQuoteText}
+                    multiline
+                    numberOfLines={4}
+                  />
+                </View>
+
+                {/* Author */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Author (Optional)</Text>
+                  <TextInput
+                    style={[styles.textInput, { fontSize: isSmallDevice ? 13 : 14 }]}
+                    placeholder="Enter author name..."
+                    placeholderTextColor="#9ca3af"
+                    value={author}
+                    onChangeText={setAuthor}
+                  />
+                </View>
+
+                {/* Start Date */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Start Date *</Text>
+                  <TouchableOpacity 
+                    style={styles.datePicker}
+                    onPress={() => setShowStartPicker(true)}
+                  >
+                    <MaterialIcons name="calendar-today" size={isSmallDevice ? 16 : 20} color="#6b7280" />
+                    <Text style={[styles.datePickerText, { fontSize: isSmallDevice ? 13 : 14 }]}>
+                      {formatDate(startDate)}
+                    </Text>
+                  </TouchableOpacity>
+                  {showStartPicker && (
+                    <DateTimePicker
+                      value={startDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowStartPicker(false);
+                        if (selectedDate) {
+                          setStartDate(selectedDate);
+                          if (endDate < selectedDate) {
+                            setEndDate(selectedDate);
+                          }
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+
+                {/* End Date */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>End Date *</Text>
+                  <TouchableOpacity 
+                    style={styles.datePicker}
+                    onPress={() => setShowEndPicker(true)}
+                  >
+                    <MaterialIcons name="calendar-today" size={isSmallDevice ? 16 : 20} color="#6b7280" />
+                    <Text style={[styles.datePickerText, { fontSize: isSmallDevice ? 13 : 14 }]}>
+                      {formatDate(endDate)}
+                    </Text>
+                  </TouchableOpacity>
+                  {showEndPicker && (
+                    <DateTimePicker
+                      value={endDate}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setShowEndPicker(false);
+                        if (selectedDate) {
                           setEndDate(selectedDate);
                         }
-                      }
-                    }}
-                  />
-                )}
-              </View>
+                      }}
+                    />
+                  )}
+                </View>
 
-              {/* End Date */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>End Date *</Text>
+                {/* Active Switch */}
+                <View style={styles.switchContainer}>
+                  <Text style={[styles.inputLabel, { fontSize: isSmallDevice ? 13 : 14 }]}>Active Status</Text>
+                  <TouchableOpacity 
+                    style={[styles.switch, isActive && styles.switchActive]}
+                    onPress={() => setIsActive(!isActive)}
+                  >
+                    <View style={[styles.switchThumb, isActive && styles.switchThumbActive]} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Save Button */}
                 <TouchableOpacity 
-                  style={styles.datePicker}
-                  onPress={() => setShowEndPicker(true)}
+                  style={[styles.saveButton, uploading && styles.saveButtonDisabled]}
+                  onPress={handleSaveQuote}
+                  disabled={uploading}
                 >
-                  <MaterialIcons name="calendar-today" size={20} color="#6b7280" />
-                  <Text style={styles.datePickerText}>
-                    {formatDate(endDate)}
-                  </Text>
+                  {uploading ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="save" size={20} color="#ffffff" />
+                      <Text style={[styles.saveButtonText, { fontSize: isSmallDevice ? 14 : 16 }]}>
+                        {isEditing ? 'Update Quote' : 'Add Quote'}
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
-                {showEndPicker && (
-                  <DateTimePicker
-                    value={endDate}
-                    mode="date"
-                    display="default"
-                    onChange={(event, selectedDate) => {
-                      setShowEndPicker(false);
-                      if (selectedDate) {
-                        setEndDate(selectedDate);
-                      }
-                    }}
-                  />
-                )}
-              </View>
-
-              {/* Active Switch */}
-              <View style={styles.switchContainer}>
-                <Text style={styles.inputLabel}>Active Status</Text>
-                <TouchableOpacity 
-                  style={[styles.switch, isActive && styles.switchActive]}
-                  onPress={() => setIsActive(!isActive)}
-                >
-                  <View style={[styles.switchThumb, isActive && styles.switchThumbActive]} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Save Button */}
-              <TouchableOpacity 
-                style={[styles.saveButton, uploading && styles.saveButtonDisabled]}
-                onPress={handleSaveQuote}
-                disabled={uploading}
-              >
-                {uploading ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <>
-                    <MaterialIcons name="save" size={20} color="#ffffff" />
-                    <Text style={styles.saveButtonText}>
-                      {isEditing ? 'Update Quote' : 'Add Quote'}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -575,20 +587,16 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
     marginTop: 10,
   },
-
-  // Header
   headerCard: {
     backgroundColor: '#FF7722',
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'ios' ? 20 : 50,
     paddingBottom: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    height: 190
   },
   headerTop: {
     flexDirection: 'row',
@@ -605,7 +613,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 22,
     color: '#ffffff',
   },
   addButton: {
@@ -616,8 +623,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  // Stats
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -625,8 +630,8 @@ const styles = StyleSheet.create({
     marginTop: -20,
     marginBottom: 16,
   },
-statCard: {
-    backgroundColor: 'rgba(255,255,255,0.25)',  // 70% opacity white
+  statCard: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -638,10 +643,9 @@ statCard: {
     elevation: 3,
     minWidth: 80,
     marginTop: -50
-},
+  },
   statNumber: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#ffffff',
   },
   statActive: {
@@ -652,17 +656,13 @@ statCard: {
   },
   statLabel: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#ffffff',
     marginTop: 2,
   },
-
-  // Quotes List
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-
   quoteCard: {
     backgroundColor: '#ffffff',
     borderRadius: 14,
@@ -688,14 +688,12 @@ statCard: {
   },
   quoteText: {
     fontFamily: Fonts.Medium,
-    fontSize: 16,
     color: '#1f2937',
     fontStyle: 'italic',
     lineHeight: 24,
   },
   quoteAuthor: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#6b7280',
     marginTop: 8,
     textAlign: 'right',
@@ -716,7 +714,6 @@ statCard: {
   },
   dateText: {
     fontFamily: Fonts.Regular,
-    fontSize: 12,
     color: '#6b7280',
   },
   statusBadge: {
@@ -732,7 +729,6 @@ statCard: {
   },
   statusText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 11,
   },
   statusTextActive: {
     color: '#065f46',
@@ -740,7 +736,6 @@ statCard: {
   statusTextInactive: {
     color: '#991b1b',
   },
-
   quoteActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -770,11 +765,8 @@ statCard: {
   },
   actionButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 12,
     color: '#ffffff',
   },
-
-  // Empty State
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -783,17 +775,13 @@ statCard: {
   },
   emptyStateText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#1f2937',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
     color: '#6b7280',
     textAlign: 'center',
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -814,11 +802,8 @@ statCard: {
   },
   modalTitle: {
     fontFamily: Fonts.Bold,
-    fontSize: 20,
     color: '#1f2937',
   },
-
-  // Form
   imagePicker: {
     width: '100%',
     height: 180,
@@ -840,16 +825,13 @@ statCard: {
   },
   imagePickerText: {
     fontFamily: Fonts.Regular,
-    fontSize: 13,
     color: '#6b7280',
   },
-
   inputGroup: {
     marginBottom: 16,
   },
   inputLabel: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 14,
     color: '#1f2937',
     marginBottom: 6,
   },
@@ -859,7 +841,6 @@ statCard: {
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
     borderWidth: 1,
     borderColor: '#e5e7eb',
@@ -881,10 +862,8 @@ statCard: {
   },
   datePickerText: {
     fontFamily: Fonts.Regular,
-    fontSize: 14,
     color: '#1f2937',
   },
-
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -916,7 +895,6 @@ statCard: {
   switchThumbActive: {
     transform: [{ translateX: 20 }],
   },
-
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -932,7 +910,6 @@ statCard: {
   },
   saveButtonText: {
     fontFamily: Fonts.SemiBold,
-    fontSize: 16,
     color: '#ffffff',
   },
 });

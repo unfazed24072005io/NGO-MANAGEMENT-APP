@@ -1,11 +1,14 @@
 // screens/LoginScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform, ActivityIndicator, Switch, ScrollView, KeyboardAvoidingView, Dimensions } from 'react-native';
 import { signInWithEmailAndPassword, signInWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { doc, getDoc, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Fonts } from '../config/fonts';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation, route }) {
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
@@ -219,208 +222,227 @@ export default function LoginScreen({ navigation, route }) {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Recaptcha Container for Phone Auth */}
-      <View id="recaptcha-container" style={styles.recaptchaContainer} />
-
-      {/* Back Button */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
-      </TouchableOpacity>
-
-      {/* Title */}
-      <Text style={styles.title}>Log into</Text>
-      <Text style={styles.subtitle}>your account</Text>
-
-      {/* Login Method Toggle - Saffron Theme */}
-      <View style={styles.methodToggle}>
-        <TouchableOpacity
-          style={[styles.methodButton, loginMethod === 'email' && styles.methodButtonActive]}
-          onPress={() => {
-            setLoginMethod('email');
-            setShowOtpInput(false);
-            setOtp('');
-          }}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <MaterialIcons name="email" size={20} color={loginMethod === 'email' ? '#ffffff' : '#6b7280'} />
-          <Text style={[styles.methodText, loginMethod === 'email' && styles.methodTextActive]}>Email</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.methodButton, loginMethod === 'phone' && styles.methodButtonActive]}
-          onPress={() => {
-            setLoginMethod('phone');
-            setShowOtpInput(false);
-            setOtp('');
-          }}
-        >
-          <MaterialIcons name="phone" size={20} color={loginMethod === 'phone' ? '#ffffff' : '#6b7280'} />
-          <Text style={[styles.methodText, loginMethod === 'phone' && styles.methodTextActive]}>Phone</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Recaptcha Container for Phone Auth */}
+          <View id="recaptcha-container" style={styles.recaptchaContainer} />
 
-      {/* Form */}
-      <View style={styles.formContainer}>
-        {loginMethod === 'email' ? (
-          // Email Login
-          <>
-            <View style={styles.fieldContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#9ca3af"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <View style={styles.bottomLine} />
-            </View>
+          {/* Back Button */}
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialIcons name="arrow-back" size={24} color="#1f2937" />
+          </TouchableOpacity>
 
-            <View style={styles.fieldContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#9ca3af"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-              <View style={styles.bottomLine} />
-            </View>
-          </>
-        ) : (
-          // Phone Login
-          <>
-            <View style={styles.fieldContainer}>
-              <View style={styles.phoneInputContainer}>
-                <View style={styles.countryCodeContainer}>
-                  <Text style={styles.countryCodeText}>+91</Text>
-                </View>
-                <TextInput
-                  style={[styles.input, styles.phoneInput]}
-                  placeholder="Phone Number"
-                  placeholderTextColor="#9ca3af"
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                />
-              </View>
-              <View style={styles.bottomLine} />
-            </View>
+          {/* Title */}
+          <Text style={styles.title}>Log into</Text>
+          <Text style={styles.subtitle}>your account</Text>
 
-            {showOtpInput && (
-              <View style={styles.fieldContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter OTP"
-                  placeholderTextColor="#9ca3af"
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-                <View style={styles.bottomLine} />
-              </View>
-            )}
-
+          {/* Login Method Toggle - Saffron Theme */}
+          <View style={styles.methodToggle}>
             <TouchableOpacity
-              style={[styles.sendOtpButton, loading && styles.disabledButton]}
-              onPress={showOtpInput ? handleVerifyOtp : handleSendOtp}
-              disabled={loading}
+              style={[styles.methodButton, loginMethod === 'email' && styles.methodButtonActive]}
+              onPress={() => {
+                setLoginMethod('email');
+                setShowOtpInput(false);
+                setOtp('');
+              }}
             >
-              {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.sendOtpText}>
-                  {showOtpInput ? 'Verify OTP' : 'Send OTP'}
-                </Text>
-              )}
+              <MaterialIcons name="email" size={20} color={loginMethod === 'email' ? '#ffffff' : '#6b7280'} />
+              <Text style={[styles.methodText, loginMethod === 'email' && styles.methodTextActive]}>Email</Text>
             </TouchableOpacity>
-          </>
-        )}
-
-        {/* Role Selection - Saffron Theme */}
-        <View style={styles.roleContainer}>
-          <Text style={styles.roleLabel}>Login as:</Text>
-          <View style={styles.roleButtonsContainer}>
-            {roles.map((role) => (
-              <TouchableOpacity
-                key={role.id}
-                style={[
-                  styles.roleButton,
-                  selectedRole === role.id && styles.roleButtonActive
-                ]}
-                onPress={() => setSelectedRole(role.id)}
-              >
-                <Text style={[
-                  styles.roleText,
-                  selectedRole === role.id && styles.roleTextActive
-                ]}>
-                  {role.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              style={[styles.methodButton, loginMethod === 'phone' && styles.methodButtonActive]}
+              onPress={() => {
+                setLoginMethod('phone');
+                setShowOtpInput(false);
+                setOtp('');
+              }}
+            >
+              <MaterialIcons name="phone" size={20} color={loginMethod === 'phone' ? '#ffffff' : '#6b7280'} />
+              <Text style={[styles.methodText, loginMethod === 'phone' && styles.methodTextActive]}>Phone</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Forgot Password - Only for Email Login */}
-        {loginMethod === 'email' && (
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-          </TouchableOpacity>
-        )}
+          {/* Form */}
+          <View style={styles.formContainer}>
+            {loginMethod === 'email' ? (
+              // Email Login
+              <>
+                <View style={styles.fieldContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="#9ca3af"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <View style={styles.bottomLine} />
+                </View>
 
-        {/* Login Button - Saffron Theme */}
-        {loginMethod === 'email' && (
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.disabledButton]}
-            onPress={handleEmailLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+                <View style={styles.fieldContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#9ca3af"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                  />
+                  <View style={styles.bottomLine} />
+                </View>
+              </>
             ) : (
-              <Text style={styles.loginButtonText}>Login</Text>
+              // Phone Login
+              <>
+                <View style={styles.fieldContainer}>
+                  <View style={styles.phoneInputContainer}>
+                    <View style={styles.countryCodeContainer}>
+                      <Text style={styles.countryCodeText}>+91</Text>
+                    </View>
+                    <TextInput
+                      style={[styles.input, styles.phoneInput]}
+                      placeholder="Phone Number"
+                      placeholderTextColor="#9ca3af"
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                    />
+                  </View>
+                  <View style={styles.bottomLine} />
+                </View>
+
+                {showOtpInput && (
+                  <View style={styles.fieldContainer}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter OTP"
+                      placeholderTextColor="#9ca3af"
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                    />
+                    <View style={styles.bottomLine} />
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.sendOtpButton, loading && styles.disabledButton]}
+                  onPress={showOtpInput ? handleVerifyOtp : handleSendOtp}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.sendOtpText}>
+                      {showOtpInput ? 'Verify OTP' : 'Send OTP'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </>
             )}
-          </TouchableOpacity>
-        )}
 
-        {/* Sign Up Link - Saffron Theme */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.signUpLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Role Selection - Saffron Theme */}
+            <View style={styles.roleContainer}>
+              <Text style={styles.roleLabel}>Login as:</Text>
+              <View style={styles.roleButtonsContainer}>
+                {roles.map((role) => (
+                  <TouchableOpacity
+                    key={role.id}
+                    style={[
+                      styles.roleButton,
+                      selectedRole === role.id && styles.roleButtonActive
+                    ]}
+                    onPress={() => setSelectedRole(role.id)}
+                  >
+                    <Text style={[
+                      styles.roleText,
+                      selectedRole === role.id && styles.roleTextActive
+                    ]}>
+                      {role.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-        {/* Donation Register Link - Saffron Theme */}
-        {!isDonationFlow && (
-          <View style={styles.donationContainer}>
-            <Text style={styles.donationText}>Want to donate? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('DonationRegister')}>
-              <Text style={styles.donationLink}>Register as Donor</Text>
-            </TouchableOpacity>
+            {/* Forgot Password - Only for Email Login */}
+            {loginMethod === 'email' && (
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Login Button - Saffron Theme */}
+            {loginMethod === 'email' && (
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.disabledButton]}
+                onPress={handleEmailLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Login</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Sign Up Link - Saffron Theme */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text style={styles.signUpLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Donation Register Link - Saffron Theme */}
+            {!isDonationFlow && (
+              <View style={styles.donationContainer}>
+                <Text style={styles.donationText}>Want to donate? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('DonationRegister')}>
+                  <Text style={styles.donationLink}>Register as Donor</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        )}
-      </View>
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fdf8f3',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#fdf8f3', // Saffron theme background
+    backgroundColor: '#fdf8f3',
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 30,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 20 : 40,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   title: {
     fontFamily: Fonts.Bold,
@@ -431,7 +453,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 32,
     color: '#1f2937',
-    marginBottom: 30,
+    marginBottom: 20,
   },
   recaptchaContainer: {
     position: 'absolute',
@@ -448,7 +470,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     borderRadius: 12,
     padding: 4,
-    marginBottom: 25,
+    marginBottom: 20,
   },
   methodButton: {
     flex: 1,
@@ -475,7 +497,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fieldContainer: {
-    marginBottom: 25,
+    marginBottom: 20,
   },
   input: {
     fontFamily: Fonts.Regular,
@@ -517,7 +539,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#FF7722',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -532,22 +554,22 @@ const styles = StyleSheet.create({
 
   // Role Selection - Saffron Theme
   roleContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   roleLabel: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   roleButtonsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   roleButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#d1d5db',
@@ -568,7 +590,7 @@ const styles = StyleSheet.create({
 
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 25,
+    marginBottom: 20,
   },
   forgotPasswordText: {
     fontFamily: Fonts.Regular,
@@ -603,7 +625,7 @@ const styles = StyleSheet.create({
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 16,
   },
   signUpText: {
     fontFamily: Fonts.Regular,
@@ -618,7 +640,8 @@ const styles = StyleSheet.create({
   donationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 10,
+    marginBottom: 10,
   },
   donationText: {
     fontFamily: Fonts.Regular,

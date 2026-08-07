@@ -69,11 +69,11 @@ export default function WorkingMemberIDCard({ navigation }) {
       {/* Blue Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My ID Card</Text>
-          <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+          <TouchableOpacity onPress={handleShare} style={styles.shareButton} activeOpacity={0.7}>
             <MaterialIcons name="share" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
@@ -89,7 +89,7 @@ export default function WorkingMemberIDCard({ navigation }) {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.cardLogo}>
-                <MaterialIcons name="work" size={28} color="#ffffff" />
+                <MaterialIcons name="work" size={24} color="#ffffff" />
               </View>
               <Text style={styles.cardTitle}>WORKING MEMBER</Text>
               <View style={styles.cardBadge}>
@@ -103,7 +103,7 @@ export default function WorkingMemberIDCard({ navigation }) {
                   <Image source={{ uri: userData.profilePhoto }} style={styles.cardAvatar} />
                 ) : (
                   <View style={styles.cardAvatarPlaceholder}>
-                    <MaterialIcons name="person" size={50} color="#3b82f6" />
+                    <MaterialIcons name="person" size={44} color="#3b82f6" />
                   </View>
                 )}
               </View>
@@ -140,11 +140,11 @@ export default function WorkingMemberIDCard({ navigation }) {
         </View>
 
         <View style={styles.actionContainer}>
-          <TouchableOpacity style={styles.downloadButton} onPress={handleDownload}>
+          <TouchableOpacity style={styles.downloadButton} onPress={handleDownload} activeOpacity={0.7}>
             <MaterialIcons name="download" size={20} color="#ffffff" />
             <Text style={styles.downloadButtonText}>Download</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.printButton} onPress={handleShare}>
+          <TouchableOpacity style={styles.printButton} onPress={handleShare} activeOpacity={0.7}>
             <MaterialIcons name="print" size={20} color="#ffffff" />
             <Text style={styles.printButtonText}>Share</Text>
           </TouchableOpacity>
@@ -240,6 +240,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   shareButton: {
     padding: 4,
@@ -264,6 +266,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#6b7280',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   cardContainer: {
@@ -293,9 +297,9 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   cardLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -307,6 +311,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     letterSpacing: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardBadge: {
     backgroundColor: '#10b981',
@@ -318,6 +324,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardBody: {
     alignItems: 'center',
@@ -348,18 +356,24 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardPosition: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardId: {
     fontFamily: 'monospace',
     fontSize: 12,
     color: '#6b7280',
     marginTop: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardFooter: {
     padding: 16,
@@ -376,6 +390,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardBottom: {
     flexDirection: 'row',
@@ -391,6 +407,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 10,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   actionContainer: {
@@ -412,6 +430,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   printButton: {
     flex: 1,
@@ -427,6 +447,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   infoCard: {
@@ -442,6 +464,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   infoItem: {
     flexDirection: 'row',
@@ -454,12 +478,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     width: 90,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   infoValue: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#1f2937',
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -480,5 +508,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#10b981',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

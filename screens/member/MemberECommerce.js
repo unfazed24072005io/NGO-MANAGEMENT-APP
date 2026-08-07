@@ -159,6 +159,7 @@ export default function MemberECommerce({ navigation }) {
     <TouchableOpacity
       style={[styles.categoryChip, selectedCategory === label && styles.categoryChipActive]}
       onPress={() => handleCategoryPress(label)}
+      activeOpacity={0.7}
     >
       <View style={styles.categoryChipContent}>
         <Text style={[styles.categoryChipLabel, selectedCategory === label && styles.categoryChipLabelActive]}>{label}</Text>
@@ -170,7 +171,6 @@ export default function MemberECommerce({ navigation }) {
   const ProductCard = ({ product }) => {
     const hasWholesalePrice = product.wholesalePrice && product.wholesalePrice > 0;
     
-    // Get quantity from cart for this product
     const cartItem = cart.find(item => item.id === product.id);
     const quantity = cartItem ? cartItem.quantity : 0;
 
@@ -211,7 +211,7 @@ export default function MemberECommerce({ navigation }) {
             <Image source={{ uri: product.images[0] }} style={styles.productCardImage} />
           ) : (
             <View style={styles.productCardImagePlaceholder}>
-              <MaterialIcons name="image" size={35} color="#9ca3af" />
+              <MaterialIcons name="image" size={32} color="#9ca3af" />
             </View>
           )}
           {showWholesale && hasWholesalePrice && (
@@ -233,14 +233,14 @@ export default function MemberECommerce({ navigation }) {
           )}
         </TouchableOpacity>
         
-        {/* Add to Cart / Quantity Selector */}
         {quantity > 0 ? (
           <View style={styles.quantitySelectorContainer}>
             <TouchableOpacity 
               style={[styles.quantityControlButton, styles.quantityMinusButton]}
               onPress={handleDecrement}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="remove" size={16} color="#ffffff" />
+              <MaterialIcons name="remove" size={14} color="#ffffff" />
             </TouchableOpacity>
             
             <Text style={styles.quantityDisplay}>{quantity}</Text>
@@ -249,8 +249,9 @@ export default function MemberECommerce({ navigation }) {
               style={[styles.quantityControlButton, styles.quantityPlusButton]}
               onPress={handleIncrement}
               disabled={product.stock === 0}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="add" size={16} color="#ffffff" />
+              <MaterialIcons name="add" size={14} color="#ffffff" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -258,6 +259,7 @@ export default function MemberECommerce({ navigation }) {
             style={[styles.addToCartButton, (product.stock === 0) && styles.disabledButton]}
             onPress={handleAddToCart}
             disabled={product.stock === 0}
+            activeOpacity={0.7}
           >
             <Text style={styles.addToCartButtonText}>
               {product.stock === 0 ? 'Out of Stock' : 'Add'}
@@ -325,27 +327,29 @@ export default function MemberECommerce({ navigation }) {
       <View style={styles.headerCard}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
               <MaterialIcons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Shop</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity 
-  style={styles.ordersButton}
-  onPress={() => navigation.navigate('MemberTabs', { screen: 'Orders' })}  // ✅ Navigate to Orders tab
->
-              <MaterialIcons name="receipt" size={18} color="#ffffff" />
+              style={styles.ordersButton}
+              onPress={() => navigation.navigate('MemberTabs', { screen: 'Orders' })}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="receipt" size={16} color="#ffffff" />
               <Text style={styles.ordersButtonText}>Orders</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.profileIcon}
               onPress={() => navigation.navigate('MemberProfile')}
+              activeOpacity={0.7}
             >
               {profilePhoto ? (
                 <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
               ) : (
-                <MaterialIcons name="person" size={28} color="#3b82f6" />
+                <MaterialIcons name="person" size={26} color="#3b82f6" />
               )}
             </TouchableOpacity>
           </View>
@@ -353,17 +357,18 @@ export default function MemberECommerce({ navigation }) {
 
         {/* Search Bar inside header */}
         <View style={styles.searchContainer}>
-          <MaterialIcons name="search" size={20} color="#9ca3af" />
+          <MaterialIcons name="search" size={18} color="#9ca3af" />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
             placeholderTextColor="#9ca3af"
             value={searchQuery}
             onChangeText={handleSearch}
+            textAlignVertical="center"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
-              <MaterialIcons name="close" size={20} color="#9ca3af" />
+            <TouchableOpacity onPress={() => handleSearch('')} activeOpacity={0.7}>
+              <MaterialIcons name="close" size={18} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
@@ -411,6 +416,7 @@ export default function MemberECommerce({ navigation }) {
       <TouchableOpacity 
         style={styles.cartFloatingButton}
         onPress={handleViewCart}
+        activeOpacity={0.7}
       >
         <MaterialIcons name="shopping-cart" size={24} color="#ffffff" />
         {cart.length > 0 && (
@@ -423,8 +429,6 @@ export default function MemberECommerce({ navigation }) {
   );
 }
 
-// All styles remain EXACTLY the same as your original file
-// ... (keep all your existing styles)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -441,6 +445,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Blue Header Card
@@ -470,15 +476,18 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 22,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   ordersButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -491,10 +500,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   profileIcon: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
     backgroundColor: '#ffffff',
     justifyContent: 'center',
@@ -507,8 +518,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   profileImage: {
-    width: 70,
-    height: 70,
+    width: 64,
+    height: 64,
     borderRadius: 50,
   },
 
@@ -518,7 +529,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -527,22 +538,25 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   categoryChipsContainer: {
-    maxHeight: 50,
+    maxHeight: 46,
   },
   categoryChipsContent: {
-    gap: 10,
+    gap: 8,
   },
   categoryChip: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
-    minWidth: 80,
+    minWidth: 70,
   },
   categoryChipActive: {
     backgroundColor: '#ffffff',
@@ -552,12 +566,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
   },
   categoryChipLabel: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: 'rgba(255,255,255,0.8)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   categoryChipLabelActive: {
     color: '#3b82f6',
@@ -566,6 +582,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 10,
     color: 'rgba(255,255,255,0.6)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   categoryChipCountActive: {
     color: '#3b82f6',
@@ -580,14 +598,16 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     paddingHorizontal: 16,
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   categorySectionContent: {
     paddingHorizontal: 12,
-    gap: 14,
+    gap: 12,
   },
 
   productCard: {
-    width: 170,
+    width: 160,
     backgroundColor: '#ffffff',
     borderRadius: 14,
     borderWidth: 1,
@@ -605,15 +625,15 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   productCardImage: {
-    width: 146,
-    height: 150,
+    width: 136,
+    height: 140,
     borderRadius: 10,
     alignSelf: 'center',
     backgroundColor: '#f3f4f6',
   },
   productCardImagePlaceholder: {
-    width: 146,
-    height: 150,
+    width: 136,
+    height: 140,
     borderRadius: 10,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
@@ -627,6 +647,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     height: 36,
     lineHeight: 18,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   productCardDescription: {
     fontFamily: Fonts.Regular,
@@ -635,6 +657,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     height: 30,
     lineHeight: 15,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   priceWrapper: {
     marginTop: 6,
@@ -644,6 +668,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#10b981',
     marginTop: 6,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   retailPriceStrikethrough: {
     fontFamily: Fonts.Regular,
@@ -651,6 +677,8 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     textDecorationLine: 'line-through',
     marginTop: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   wholesaleBadge: {
     position: 'absolute',
@@ -666,6 +694,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 9,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   addToCartButton: {
@@ -684,6 +714,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#ffffff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   quantitySelectorContainer: {
@@ -696,12 +728,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     marginHorizontal: 12,
     minHeight: 36,
-    gap: 8,
+    gap: 6,
   },
   quantityControlButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -715,8 +747,10 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#ffffff',
-    minWidth: 24,
+    minWidth: 20,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   listContent: {
@@ -733,11 +767,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   cartFloatingButton: {
@@ -745,9 +783,9 @@ const styles = StyleSheet.create({
     bottom: 20,
     right: 20,
     backgroundColor: '#3b82f6',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -764,12 +802,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    minWidth: 22,
+    minWidth: 20,
     alignItems: 'center',
   },
   cartBadgeText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });

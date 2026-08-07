@@ -57,100 +57,108 @@ export default function FinancesManagement({ navigation }) {
   }, []);
 
   const setupRealtimeListener = () => {
-    const qDonations = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
-    const unsubscribeDonations = onSnapshot(qDonations, (snapshot) => {
-      const donationsList = [];
-      let totalDonations = 0;
-      let totalDonors = 0;
-      const donorSet = new Set();
+  const qDonations = query(collection(db, 'donations'), orderBy('createdAt', 'desc'));
+  const unsubscribeDonations = onSnapshot(qDonations, (snapshot) => {
+    const donationsList = [];
+    let totalDonations = 0;
+    let totalDonors = 0;
+    const donorSet = new Set();
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const donation = { id: doc.id, ...data, type: 'donation' };
-        donationsList.push(donation);
-        totalDonations += data.amount || 0;
-        if (data.donorEmail || data.donorName) {
-          donorSet.add(data.donorEmail || data.donorName);
-        }
-      });
-      totalDonors = donorSet.size;
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const donation = { id: doc.id, ...data, type: 'donation' };
+      donationsList.push(donation);
+      totalDonations += data.amount || 0;
+      if (data.donorEmail || data.donorName) {
+        donorSet.add(data.donorEmail || data.donorName);
+      }
+    });
+    totalDonors = donorSet.size;
 
-      const monthlyDonations = new Array(12).fill(0);
-      donationsList.forEach(t => {
-        if (t.createdAt) {
-          const month = new Date(t.createdAt).getMonth();
-          monthlyDonations[month] += t.amount || 0;
-        }
-      });
+    const monthlyDonations = new Array(12).fill(0);
+    donationsList.forEach(t => {
+      if (t.createdAt) {
+        const month = new Date(t.createdAt).getMonth();
+        monthlyDonations[month] += t.amount || 0;
+      }
+    });
 
-      const donorMap = {};
-      donationsList.forEach(d => {
-        const key = d.donorEmail || d.donorName || 'Anonymous';
-        if (!donorMap[key]) donorMap[key] = 0;
-        donorMap[key] += d.amount || 0;
-      });
-      const topDonors = Object.entries(donorMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([name, amount]) => ({ name, amount }));
+    const donorMap = {};
+    donationsList.forEach(d => {
+      const key = d.donorEmail || d.donorName || 'Anonymous';
+      if (!donorMap[key]) donorMap[key] = 0;
+      donorMap[key] += d.amount || 0;
+    });
+    const topDonors = Object.entries(donorMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, amount]) => ({ name, amount }));
 
-      setStats(prev => ({
-        ...prev,
-        totalDonations,
-        totalDonors,
-        monthlyDonations,
-        donationData: donationsList,
-        topDonors
-      }));
+    setStats(prev => ({
+      ...prev,
+      totalDonations: totalDonations,
+      totalDonors: totalDonors,
+      monthlyDonations: monthlyDonations,
+      donationData: donationsList,
+      topDonors: topDonors
+    }));
 
-      const allTransactions = [...donationsList, ...prev.commissionData];
+    // Use a separate variable for the all transactions
+    setStats(prevStats => {
+      const allTransactions = [...donationsList, ...prevStats.commissionData];
       setTransactions(allTransactions);
       applyFilters(allTransactions, searchQuery, filterType);
       setLoading(false);
+      return prevStats;
+    });
+  });
+
+  const qCommissions = query(collection(db, 'commissions'), orderBy('createdAt', 'desc'));
+  const unsubscribeCommissions = onSnapshot(qCommissions, (snapshot) => {
+    const commissionsList = [];
+    let totalCommission = 0;
+    let pendingCommission = 0;
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const commission = { id: doc.id, ...data, type: 'commission' };
+      commissionsList.push(commission);
+      totalCommission += data.amount || 0;
+      if (data.status === 'pending') {
+        pendingCommission += data.amount || 0;
+      }
     });
 
-    const qCommissions = query(collection(db, 'commissions'), orderBy('createdAt', 'desc'));
-    const unsubscribeCommissions = onSnapshot(qCommissions, (snapshot) => {
-      const commissionsList = [];
-      let totalCommission = 0;
-      let pendingCommission = 0;
+    const monthlyCommission = new Array(12).fill(0);
+    commissionsList.forEach(t => {
+      if (t.createdAt) {
+        const month = new Date(t.createdAt).getMonth();
+        monthlyCommission[month] += t.amount || 0;
+      }
+    });
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        const commission = { id: doc.id, ...data, type: 'commission' };
-        commissionsList.push(commission);
-        totalCommission += data.amount || 0;
-        if (data.status === 'pending') {
-          pendingCommission += data.amount || 0;
-        }
-      });
+    setStats(prev => ({
+      ...prev,
+      totalCommission: totalCommission,
+      pendingCommission: pendingCommission,
+      monthlyCommission: monthlyCommission,
+      commissionData: commissionsList
+    }));
 
-      const monthlyCommission = new Array(12).fill(0);
-      commissionsList.forEach(t => {
-        if (t.createdAt) {
-          const month = new Date(t.createdAt).getMonth();
-          monthlyCommission[month] += t.amount || 0;
-        }
-      });
-
-      setStats(prev => ({
-        ...prev,
-        totalCommission,
-        pendingCommission,
-        monthlyCommission,
-        commissionData: commissionsList
-      }));
-
-      const allTransactions = [...prev.donationData, ...commissionsList];
+    // Use a separate variable for the all transactions
+    setStats(prevStats => {
+      const allTransactions = [...prevStats.donationData, ...commissionsList];
       setTransactions(allTransactions);
       applyFilters(allTransactions, searchQuery, filterType);
+      return prevStats;
     });
+  });
 
-    return () => {
-      unsubscribeDonations();
-      unsubscribeCommissions();
-    };
+  return () => {
+    unsubscribeDonations();
+    unsubscribeCommissions();
   };
+};
 
   const applyFilters = (data, searchText, filter) => {
     let filtered = data;
@@ -298,11 +306,12 @@ export default function FinancesManagement({ navigation }) {
     <TouchableOpacity 
       style={[styles.statCard, active && styles.statCardActive]} 
       onPress={onPress}
+      activeOpacity={0.7}
     >
       <View style={[styles.statIconCircle, { backgroundColor: color + '15' }]}>
-        <MaterialIcons name={icon} size={20} color={color} />
+        <MaterialIcons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statType}>{label}</Text>
+      <Text style={styles.statType} numberOfLines={1}>{label}</Text>
       <Text style={[styles.statCount, { color }]}>{count}</Text>
     </TouchableOpacity>
   );
@@ -318,12 +327,12 @@ export default function FinancesManagement({ navigation }) {
       <View style={[styles.transactionCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
         <View style={styles.transactionHeader}>
           <View style={[styles.transactionIconContainer, { backgroundColor: color + '15' }]}>
-            <MaterialIcons name={icon} size={20} color={color} />
+            <MaterialIcons name={icon} size={18} color={color} />
           </View>
           <View style={styles.transactionInfo}>
             <Text style={styles.transactionCategory}>{isDonation ? 'Donation' : 'Commission'}</Text>
-            <Text style={styles.transactionName}>{name || 'Anonymous'}</Text>
-            {purpose && <Text style={styles.transactionDescription}>{purpose}</Text>}
+            <Text style={styles.transactionName} numberOfLines={1}>{name || 'Anonymous'}</Text>
+            {purpose && <Text style={styles.transactionDescription} numberOfLines={1}>{purpose}</Text>}
           </View>
           <Text style={[styles.transactionAmount, { color }]}>
             {formatCurrency(transaction.amount)}
@@ -344,6 +353,7 @@ export default function FinancesManagement({ navigation }) {
     );
   };
 
+  // Fix: Add SafeAreaView wrapper or ensure navigation is properly passed
   return (
     <View style={styles.container}>
       {/* Saffron Header */}
@@ -360,8 +370,9 @@ export default function FinancesManagement({ navigation }) {
                 fetchWorkingMembers();
                 setCommissionModalVisible(true);
               }}
+              activeOpacity={0.7}
             >
-              <MaterialIcons name="attach-money" size={18} color="#ffffff" />
+              <MaterialIcons name="attach-money" size={16} color="#ffffff" />
               <Text style={styles.addButtonText}>Commission</Text>
             </TouchableOpacity>
           </View>
@@ -372,6 +383,7 @@ export default function FinancesManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'overview' && styles.activeTab]} 
             onPress={() => setActiveTab('overview')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="dashboard" size={16} color={activeTab === 'overview' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>Overview</Text>
@@ -379,6 +391,7 @@ export default function FinancesManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'transactions' && styles.activeTab]} 
             onPress={() => setActiveTab('transactions')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="list" size={16} color={activeTab === 'transactions' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'transactions' && styles.activeTabText]}>Transactions</Text>
@@ -386,6 +399,7 @@ export default function FinancesManagement({ navigation }) {
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'reports' && styles.activeTab]} 
             onPress={() => setActiveTab('reports')}
+            activeOpacity={0.7}
           >
             <MaterialIcons name="assessment" size={16} color={activeTab === 'reports' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
             <Text style={[styles.tabText, activeTab === 'reports' && styles.activeTabText]}>Reports</Text>
@@ -395,17 +409,18 @@ export default function FinancesManagement({ navigation }) {
         {/* Search Bar inside header - only for Transactions tab */}
         {activeTab === 'transactions' && (
           <View style={styles.searchContainer}>
-            <MaterialIcons name="search" size={20} color="#9ca3af" />
+            <MaterialIcons name="search" size={18} color="#9ca3af" />
             <TextInput
               style={styles.searchInput}
               placeholder="Search transactions..."
               placeholderTextColor="#9ca3af"
               value={searchQuery}
               onChangeText={handleSearch}
+              textAlignVertical="center"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearch('')}>
-                <MaterialIcons name="close" size={20} color="#9ca3af" />
+                <MaterialIcons name="close" size={18} color="#9ca3af" />
               </TouchableOpacity>
             )}
           </View>
@@ -449,7 +464,10 @@ export default function FinancesManagement({ navigation }) {
 
       {/* Content Area */}
       {activeTab === 'overview' && (
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}
+        >
           <View style={styles.summaryGrid}>
             <View style={[styles.summaryCard, styles.donationCard]}>
               <Text style={styles.summaryLabel}>Total Donations</Text>
@@ -486,8 +504,8 @@ export default function FinancesManagement({ navigation }) {
                     strokeWidth: 3
                   }]
                 }}
-                width={Math.min(screenWidth - 60, 320)}
-                height={220}
+                width={Math.min(screenWidth - 40, 320)}
+                height={200}
                 yAxisLabel="₹"
                 chartConfig={{
                   backgroundColor: '#ffffff',
@@ -533,7 +551,7 @@ export default function FinancesManagement({ navigation }) {
                   <View style={styles.donorRank}>
                     <Text style={styles.donorRankText}>#{index + 1}</Text>
                   </View>
-                  <Text style={styles.donorName}>{donor.name}</Text>
+                  <Text style={styles.donorName} numberOfLines={1}>{donor.name}</Text>
                   <Text style={styles.donorAmount}>{formatCurrency(donor.amount)}</Text>
                 </View>
               ))
@@ -563,7 +581,10 @@ export default function FinancesManagement({ navigation }) {
 
       {/* Reports Tab */}
       {activeTab === 'reports' && (
-        <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7722']} />}
+        >
           <View style={styles.reportCard}>
             <Text style={styles.reportTitle}>Financial Summary Report</Text>
             
@@ -623,7 +644,7 @@ export default function FinancesManagement({ navigation }) {
         onRequestClose={() => setDonationModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Donation</Text>
               <TouchableOpacity onPress={() => setDonationModalVisible(false)}>
@@ -638,6 +659,7 @@ export default function FinancesManagement({ navigation }) {
                 value={donationData.donorName}
                 onChangeText={(text) => setDonationData({...donationData, donorName: text})}
                 placeholder="Enter donor name"
+                textAlignVertical="center"
               />
             </View>
 
@@ -649,6 +671,7 @@ export default function FinancesManagement({ navigation }) {
                 onChangeText={(text) => setDonationData({...donationData, donorEmail: text})}
                 placeholder="Enter donor email"
                 keyboardType="email-address"
+                textAlignVertical="center"
               />
             </View>
 
@@ -660,6 +683,7 @@ export default function FinancesManagement({ navigation }) {
                 onChangeText={(text) => setDonationData({...donationData, phone: text})}
                 placeholder="Enter phone number"
                 keyboardType="phone-pad"
+                textAlignVertical="center"
               />
             </View>
 
@@ -671,6 +695,7 @@ export default function FinancesManagement({ navigation }) {
                 onChangeText={(text) => setDonationData({...donationData, amount: text})}
                 placeholder="Enter amount"
                 keyboardType="numeric"
+                textAlignVertical="center"
               />
             </View>
 
@@ -681,6 +706,7 @@ export default function FinancesManagement({ navigation }) {
                 value={donationData.purpose}
                 onChangeText={(text) => setDonationData({...donationData, purpose: text})}
                 placeholder="Enter purpose (e.g., Education, Medical)"
+                textAlignVertical="center"
               />
             </View>
 
@@ -692,6 +718,7 @@ export default function FinancesManagement({ navigation }) {
                     key={method}
                     style={[styles.paymentButton, donationData.paymentMethod === method && styles.paymentButtonActive]}
                     onPress={() => setDonationData({...donationData, paymentMethod: method})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.paymentButtonText, donationData.paymentMethod === method && styles.paymentButtonTextActive]}>
                       {method.charAt(0).toUpperCase() + method.slice(1)}
@@ -709,6 +736,7 @@ export default function FinancesManagement({ navigation }) {
                     key={status}
                     style={[styles.statusButton, donationData.status === status && styles.statusButtonActive]}
                     onPress={() => setDonationData({...donationData, status: status})}
+                    activeOpacity={0.7}
                   >
                     <Text style={[styles.statusButtonText, donationData.status === status && styles.statusButtonTextActive]}>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -718,7 +746,7 @@ export default function FinancesManagement({ navigation }) {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.submitButton} onPress={handleAddDonation} disabled={loading}>
+            <TouchableOpacity style={styles.submitButton} onPress={handleAddDonation} disabled={loading} activeOpacity={0.7}>
               <Text style={styles.submitButtonText}>
                 {loading ? 'Saving...' : 'Add Donation'}
               </Text>
@@ -735,7 +763,7 @@ export default function FinancesManagement({ navigation }) {
         onRequestClose={() => setCommissionModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Commission</Text>
               <TouchableOpacity onPress={() => setCommissionModalVisible(false)}>
@@ -760,6 +788,7 @@ export default function FinancesManagement({ navigation }) {
                           memberName: member.fullName || member.email || 'Unknown'
                         });
                       }}
+                      activeOpacity={0.7}
                     >
                       <Text style={[styles.memberItemText, commissionData.memberId === member.id && styles.memberItemTextActive]}>
                         {member.fullName || member.email || 'Unknown'}
@@ -783,6 +812,7 @@ export default function FinancesManagement({ navigation }) {
                     onChangeText={(text) => setCommissionData({...commissionData, amount: text})}
                     placeholder="Enter commission amount"
                     keyboardType="numeric"
+                    textAlignVertical="center"
                   />
                 </View>
 
@@ -795,6 +825,7 @@ export default function FinancesManagement({ navigation }) {
                     placeholder="Enter description"
                     multiline
                     numberOfLines={2}
+                    textAlignVertical="top"
                   />
                 </View>
 
@@ -806,6 +837,7 @@ export default function FinancesManagement({ navigation }) {
                         key={period}
                         style={[styles.periodButton, commissionData.period === period && styles.periodButtonActive]}
                         onPress={() => setCommissionData({...commissionData, period: period})}
+                        activeOpacity={0.7}
                       >
                         <Text style={[styles.periodButtonText, commissionData.period === period && styles.periodButtonTextActive]}>
                           {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -823,6 +855,7 @@ export default function FinancesManagement({ navigation }) {
                         key={status}
                         style={[styles.statusButton, commissionData.status === status && styles.statusButtonActive]}
                         onPress={() => setCommissionData({...commissionData, status: status})}
+                        activeOpacity={0.7}
                       >
                         <Text style={[styles.statusButtonText, commissionData.status === status && styles.statusButtonTextActive]}>
                           {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -832,7 +865,7 @@ export default function FinancesManagement({ navigation }) {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.submitButton} onPress={handleCommissionPayment} disabled={loading}>
+                <TouchableOpacity style={styles.submitButton} onPress={handleCommissionPayment} disabled={loading} activeOpacity={0.7}>
                   <Text style={styles.submitButtonText}>
                     {loading ? 'Processing...' : 'Add Commission'}
                   </Text>
@@ -876,6 +909,8 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     flex: 1,
     textAlign: 'center',
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   headerRight: {
     flexDirection: 'row',
@@ -884,6 +919,7 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -898,6 +934,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Tabs inside header
@@ -925,6 +963,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activeTabText: {
     color: '#ffffff',
@@ -937,7 +977,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 8,
     marginBottom: 12,
   },
@@ -946,6 +986,9 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Stats inside header
@@ -953,18 +996,19 @@ const styles = StyleSheet.create({
     maxHeight: 65,
   },
   statsContent: {
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
+    paddingVertical: 2,
   },
   statCard: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 6,
     minWidth: 70,
-    width: 80,
+    width: 75,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 55,
+    height: 58,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
@@ -978,19 +1022,23 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statType: {
     fontFamily: Fonts.Regular,
     fontSize: 8,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statCount: {
     fontFamily: Fonts.Bold,
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Summary
@@ -1015,12 +1063,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   summaryValue: {
     fontFamily: Fonts.Bold,
     fontSize: 18,
     color: '#1f2937',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   cardIcon: {
     position: 'absolute',
@@ -1043,6 +1095,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Table
@@ -1064,12 +1118,16 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   tableSubtitle: {
     fontFamily: Fonts.Regular,
     fontSize: 11,
     color: '#6b7280',
     marginTop: 2,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donorItem: {
     flexDirection: 'row',
@@ -1078,33 +1136,44 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
+  donorRank: {
+    width: 30,
+  },
   donorRankText: {
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donorName: {
     fontFamily: Fonts.SemiBold,
     flex: 1,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   donorAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#10b981',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Transactions
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
+    paddingTop: 4,
   },
   transactionCard: {
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
@@ -1113,12 +1182,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   transactionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   transactionInfo: {
     flex: 1,
@@ -1127,20 +1196,28 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionName: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionDescription: {
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionAmount: {
     fontFamily: Fonts.Bold,
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionFooter: {
     flexDirection: 'row',
@@ -1154,6 +1231,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   transactionStatusBadge: {
     paddingHorizontal: 8,
@@ -1164,6 +1243,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 10,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Empty State
@@ -1177,11 +1258,15 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 16,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyStateSubtext: {
     fontFamily: Fonts.Regular,
     fontSize: 13,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   emptyText: {
     fontFamily: Fonts.Regular,
@@ -1189,6 +1274,8 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     paddingVertical: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Modal
@@ -1214,6 +1301,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Bold,
     fontSize: 20,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formField: {
     marginBottom: 12,
@@ -1223,6 +1312,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   formInput: {
     borderWidth: 1,
@@ -1232,6 +1323,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: '#f9fafb',
     fontFamily: Fonts.Regular,
+    includeFontPadding: false,
   },
   formTextArea: {
     height: 60,
@@ -1248,6 +1340,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statusButtonActive: {
     backgroundColor: '#FF7722',
@@ -1257,6 +1350,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 12,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   statusButtonTextActive: {
     color: '#ffffff',
@@ -1281,6 +1376,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   paymentButtonTextActive: {
     color: '#ffffff',
@@ -1305,6 +1402,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   memberItemTextActive: {
     color: '#FF7722',
@@ -1313,6 +1412,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6b7280',
     paddingVertical: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   periodToggle: {
     flexDirection: 'row',
@@ -1325,6 +1426,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e5e7eb',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   periodButtonActive: {
     backgroundColor: '#f97316',
@@ -1334,6 +1436,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.SemiBold,
     fontSize: 11,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   periodButtonTextActive: {
     color: '#ffffff',
@@ -1343,12 +1447,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
   },
   submitButtonText: {
     fontFamily: Fonts.SemiBold,
     color: '#ffffff',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 
   // Reports
@@ -1367,6 +1474,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#1f2937',
     marginBottom: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportItem: {
     flexDirection: 'row',
@@ -1377,21 +1486,29 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportValue: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportValueIncome: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#FF7722',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportValueExpense: {
     fontFamily: Fonts.Bold,
     fontSize: 14,
     color: '#f97316',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportDivider: {
     height: 1,
@@ -1403,6 +1520,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportCategoryItem: {
     flexDirection: 'row',
@@ -1410,14 +1529,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 6,
   },
+  reportCategoryInfo: {
+    flex: 1,
+  },
   reportCategoryName: {
     fontFamily: Fonts.Regular,
     fontSize: 14,
     color: '#1f2937',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   reportCategoryAmount: {
     fontFamily: Fonts.SemiBold,
     fontSize: 14,
     color: '#6b7280',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 });
